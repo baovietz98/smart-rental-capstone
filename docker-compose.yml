@@ -1,0 +1,29 @@
+version: '3.8'
+services:
+  db:
+    image: postgres:15-alpine
+    container_name: quanlytro_db
+    restart: always
+    environment:
+      POSTGRES_USER: admin        # Tên đăng nhập
+      POSTGRES_PASSWORD: admin    # Mật khẩu
+      POSTGRES_DB: quanlytro_db   # Tên Database
+    ports:
+      - '5432:5432'
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  # Tặng kèm bạn: pgAdmin (Giao diện quản lý DB xịn như Workbench)
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: pgadmin4_container
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@admin.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+    ports:
+      - "5050:80"
+    depends_on:
+      - db
+
+volumes:
+  postgres_data:

@@ -1,0 +1,150 @@
+// file: backend/prisma/schema.prisma
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// --------------------------------------
+// 1. NHÓM QUẢN LÝ TÀI SẢN (Asset Management)
+// --------------------------------------
+
+model Building {
+  id          Int      @id @default(autoincrement())
+  name        String   // Tên nhà (VD: Nhà trọ Xanh)
+  address     String?  // Địa chỉ
+  createdAt   DateTime @default(now())
+  
+  rooms       Room[]   // Một nhà có nhiều phòng
+}
+
+model Room {
+  id          Int       @id @default(autoincrement())
+  name        String    // Tên phòng (P.101, P.102)
+  area        Float?    // Diện tích (m2)
+  price       Float     // Giá thuê cơ bản
+  maxTenants  Int       @default(2) // Số người tối đa
+  status      RoomStatus @default(AVAILABLE) // Trạng thái
+  
+  buildingId  Int
+  building    Building  @relation(fields: [buildingId], references: [id])
+  
+  assets      Json?     // JSON: Lưu danh sách tài sản (Điều hòa, Nóng lạnh...)
+  contracts   Contract[]
+  issues      Issue[]
+}
+
+enum RoomStatus {
+  AVAILABLE   // Trống
+  RENTED      // Đang thuê
+  MAINTENANCE // Đang sửa
+}
+
+// --------------------------------------
+// 2. NHÓM CON NGƯỜI (Human Resources)
+// --------------------------------------
+
+model Tenant {
+  id          Int      @id @default(autoincrement())
+  fullName    String
+  phone       String   @unique
+  cccd        String?  // Số căn cước
+  info        Json?    // JSON: Lưu ảnh CCCD mặt trước/sau, quê quán
+  
+  contracts   Contract[] // Một người có thể ký nhiều hợp đồng (theo thời gian)
+}
+
+// --------------------------------------
+// 3. NHÓM NGHIỆP VỤ (Business Logic)
+// --------------------------------------
+
+model Contract {
+  id             Int       @id @default(autoincrement())
+  startDate      DateTime
+  endDate        DateTime? // Có thể null nếu thuê không thời hạn
+  deposit        Float     // Tiền cọc
+  price          Float     // Giá chốt tại thời điểm thuê
+  isActive       Boolean   @default(true)
+  
+  roomId         Int
+  room           Room      @relation(fields: [roomId], references: [id])
+  
+  tenantId       Int
+  tenant         Tenant    @relation(fields: [tenantId], references: [id])
+
+  invoices       Invoice[]
+}
+
+model Service {
+  id          Int         @id @default(autoincrement())
+  name        String      // VD: Điện, Nước, Mạng
+  price       Float       // Đơn giá (VD: 3500)
+  unit        String      // Đơn vị: kwh, m3, month, person
+  type        ServiceType // Cách tính
+}
+
+enum ServiceType {
+  INDEX   // Tính theo chỉ số (Điện, Nước)
+  FIXED   // Tính cố định (Wifi, Rác)
+}
+
+// --------------------------------------
+// 4. NHÓM TÀI CHÍNH (Finance)
+// --------------------------------------
+
+// Bảng lưu chỉ số điện nước hàng tháng
+model ServiceReading {
+  id          Int      @id @default(autoincrement())
+  month       DateTime // Tháng chốt (VD: 2025-11-01)
+  
+  roomId      Int
+  
+  // Lưu JSON cho linh hoạt. VD: { "dien": { "old": 100, "new": 150 }, "nuoc": ... }
+  readings    Json     
+  
+  totalAmount Float    // Tổng tiền dịch vụ tháng đó
+  invoiceId   Int?     // Gắn với hóa đơn nào (nếu đã tạo)
+}
+
+model Invoice {
+  id          Int           @id @default(autoincrement())
+  month       DateTime      // Hóa đơn tháng mấy
+  amount      Float         // Tổng tiền phải trả
+  paidAmount  Float         @default(0) // Đã trả bao nhiêu
+  status      InvoiceStatus @default(UNPAID)
+  
+  // Lưu chi tiết lúc tính tiền để sau này không bị cãi nhau
+  // VD: { "roomPrice": 3tr, "electric": 500k, "water": 100k ... }
+  details     Json          
+
+  contractId  Int
+  contract    Contract      @relation(fields: [contractId], references: [id])
+  
+  createdAt   DateTime      @default(now())
+}
+
+enum InvoiceStatus {
+  UNPAID  // Chưa trả
+  PARTIAL // Trả thiếu
+  PAID    // Đã trả đủ
+}
+
+// --------------------------------------
+// 5. TIỆN ÍCH
+// --------------------------------------
+
+model Issue {
+  id          Int      @id @default(autoincrement())
+  title       String
+  description String?
+  status      String   @default("OPEN") // OPEN, PROCESSING, DONE
+  
+  roomId      Int
+  room        Room     @relation(fields: [roomId], references: [id])
+  
+  createdAt   DateTime @default(now())
+}
