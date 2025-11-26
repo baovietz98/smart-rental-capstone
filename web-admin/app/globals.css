@@ -1,26 +1,96 @@
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&display=swap');
 @import "tailwindcss";
+
+@theme {
+  --font-sans: 'Space Grotesk', sans-serif;
+}
 
 :root {
   --background: #ffffff;
   --foreground: #171717;
-}
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
+  /* Gumroad Theme (Pop Art / Brutalism) */
+  --bg-page: #F4F4F0;
+  /* Light grey/beige for contrast */
+  --bg-card: #FFFFFF;
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --color-gumroad-pink: #FF90E8;
+  --color-gumroad-yellow: #FFC900;
+  --color-gumroad-black: #000000;
+
+  --border-thick: 2px solid #000000;
+  --shadow-hard: 4px 4px 0px #000000;
+  --shadow-hard-hover: 6px 6px 0px #000000;
+
+  --text-primary: #000000;
+  --text-secondary: #000000;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--bg-page);
+  color: var(--text-primary);
+  font-family: 'Space Grotesk', sans-serif;
+  /* Apply Gumroad-like font globally */
+  border: none;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family: 'Space Grotesk', sans-serif;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+/* Sui Utilities */
+@layer utilities {
+  .gumroad-card {
+    @apply bg-white border-2 border-black p-6 relative transition-all duration-200 hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[6px_6px_0px_#000];
+    box-shadow: 4px 4px 0px #000;
+  }
+
+  .gumroad-btn-primary {
+    @apply bg-black text-white border-2 border-black px-8 py-4 font-bold text-lg transition-all duration-200 relative;
+    box-shadow: 4px 4px 0px #000;
+  }
+
+  .gumroad-btn-primary:hover {
+    transform: translate(-2px, -2px);
+    box-shadow: 4px 4px 0px #FFC900, 8px 8px 0px #FF90E8;
+    /* Yellow then Pink shadow */
+  }
+
+  .gumroad-btn-primary:active {
+    transform: translate(2px, 2px);
+    box-shadow: 0px 0px 0px #000;
+  }
+
+  .gumroad-btn-secondary {
+    @apply bg-white text-black border-2 border-black px-8 py-4 font-bold text-lg transition-all duration-200 relative;
+    box-shadow: 4px 4px 0px #000;
+  }
+
+  .gumroad-btn-secondary:hover {
+    background-color: #FFC900;
+    transform: translate(-2px, -2px);
+    box-shadow: 4px 4px 0px #000, 8px 8px 0px #FF90E8;
+    /* Black then Pink shadow */
+  }
+
+  .gumroad-btn-secondary:active {
+    transform: translate(2px, 2px);
+    box-shadow: 0px 0px 0px #000;
+  }
+
+  .gumroad-input {
+    @apply w-full bg-white border-2 border-black p-3 text-black focus:outline-none focus:bg-[#FFF0F5] transition-colors;
+    box-shadow: 4px 4px 0px #000;
+  }
+
+  .gumroad-badge {
+    @apply bg-[#FF90E8] border-2 border-black px-2 py-1 text-xs font-bold text-black;
+  }
 }
