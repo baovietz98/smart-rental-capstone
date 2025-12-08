@@ -1,0 +1,233 @@
+// Smart Rental Management System - Database Schema
+// Copy this to dbdiagram.io to visualize
+
+// ===================== ENUMS =====================
+
+Enum RoomStatus {
+  AVAILABLE
+  RENTED
+  MAINTENANCE
+}
+
+Enum Gender {
+  ALL
+  MALE
+  FEMALE
+}
+
+Enum ServiceType {
+  INDEX     // Based on meter readings
+  FIXED     // Fixed monthly charge
+}
+
+Enum CalculationType {
+  PER_ROOM
+  PER_PERSON
+  PER_USAGE
+}
+
+Enum InvoiceStatus {
+  DRAFT
+  PUBLISHED
+  PARTIAL
+  PAID
+  OVERDUE
+  CANCELLED
+}
+
+Enum TransactionType {
+  DEPOSIT
+  INVOICE_PAYMENT
+  OTHER
+}
+
+Enum UserRole {
+  ADMIN
+  TENANT
+}
+
+// ===================== TABLES =====================
+
+Table Building {
+  id Int [pk, increment]
+  name String [not null, unique, note: 'Tên tòa nhà/nhà trọ']
+  address String [note: 'Địa chỉ đầy đủ']
+  createdAt DateTime [default: `now()`]
+
+  Note: 'Tòa nhà/Nhà trọ'
+}
+
+Table Room {
+  id Int [pk, increment]
+  name String [not null, note: 'Số phòng (101, P.102)']
+  floor Int [default: 1, note: 'Tầng']
+  area Float [note: 'Diện tích (m²)']
+  price Float [not null, note: 'Giá thuê tháng (VND)']
+  depositPrice Float [note: 'Tiền cọc (VND)']
+  maxTenants Int [default: 2, note: 'Số người tối đa']
+  status RoomStatus [default: 'AVAILABLE']
+  gender Gender [default: 'ALL', note: 'Giới tính cho phép']
+  buildingId Int [not null, ref: > Building.id]
+  assets Json [note: 'Danh sách tài sản trong phòng']
+
+  Note: 'Phòng cho thuê'
+}
+
+Table Tenant {
+  id Int [pk, increment]
+  fullName String [not null, note: 'Họ và tên']
+  phone String [unique, not null, note: 'Số điện thoại']
+  cccd String [note: 'CCCD (12 số)']
+  info Json [note: 'Thông tin bổ sung (quê quán, ảnh CCCD)']
+
+  Note: 'Khách thuê'
+}
+
+Table Contract {
+  id Int [pk, increment]
+  startDate DateTime [not null, note: 'Ngày bắt đầu']
+  endDate DateTime [note: 'Ngày kết thúc']
+  deposit Float [not null, note: 'Tiền cọc yêu cầu (VND)']
+  paidDeposit Float [default: 0, note: 'Tiền cọc đã đóng (VND)']
+  price Float [not null, note: 'Giá thuê cố định/tháng (VND)']
+  paymentDay Int [default: 5, note: 'Ngày thanh toán hàng tháng']
+  isActive Boolean [default: true, note: 'Hợp đồng còn hiệu lực']
+  numTenants Int [default: 1, note: 'Số người thuê']
+  initialIndexes Json [note: 'Chỉ số đầu vào (điện, nước)']
+  roomId Int [not null, ref: > Room.id]
+  tenantId Int [not null, ref: > Tenant.id]
+
+  Note: 'Hợp đồng thuê phòng'
+}
+
+Table Service {
+  id Int [pk, increment]
+  name String [not null, note: 'Tên dịch vụ (Điện, Nước, Internet)']
+  price Float [not null, note: 'Đơn giá']
+  unit String [not null, note: 'Đơn vị (kWh, m³, tháng)']
+  type ServiceType [not null, note: 'INDEX=theo chỉ số, FIXED=cố định']
+  calculationType CalculationType [default: 'PER_ROOM']
+  isActive Boolean [default: true]
+
+  Note: 'Dịch vụ (điện, nước, internet, rác...)'
+}
+
+Table ServiceReading {
+  id Int [pk, increment]
+  contractId Int [not null, ref: > Contract.id]
+  serviceId Int [not null, ref: > Service.id]
+  month String [not null, note: 'Tháng ghi (MM-YYYY)']
+  oldIndex Float [not null, note: 'Chỉ số cũ']
+  newIndex Float [not null, note: 'Chỉ số mới']
+  usage Float [not null, note: 'Tiêu thụ = newIndex - oldIndex']
+  unitPrice Float [not null, note: 'Đơn giá tại thời điểm ghi']
+  totalCost Float [not null, note: 'Thành tiền = usage × unitPrice']
+  invoiceId Int [note: 'Liên kết hóa đơn (optional)']
+  isBilled Boolean [default: false, note: 'Đã tính vào hóa đơn']
+  isMeterReset Boolean [default: false, note: 'Đồng hồ reset']
+  readingDate DateTime [default: `now()`, note: 'Ngày ghi chỉ số']
+  createdAt DateTime [default: `now()`]
+  updatedAt DateTime
+  note String
+
+  indexes {
+    (contractId, serviceId, month) [unique, note: 'Mỗi hợp đồng/dịch vụ/tháng chỉ 1 bản ghi']
+  }
+
+  Note: 'Chỉ số dịch vụ hàng tháng'
+}
+
+Table Invoice {
+  id Int [pk, increment]
+  contractId Int [not null, ref: > Contract.id]
+  month String [not null, note: 'Tháng hóa đơn (MM-YYYY)']
+  roomCharge Float [not null, note: 'Tiền phòng (VND)']
+  serviceCharge Float [not null, note: 'Tổng tiền dịch vụ (VND)']
+  totalAmount Float [not null, note: 'Tổng tiền (VND)']
+  paidAmount Float [default: 0, note: 'Đã thanh toán (VND)']
+  debtAmount Float [default: 0, note: 'Còn nợ (VND)']
+  discount Float [default: 0, note: 'Giảm giá (VND)']
+  extraCharge Float [default: 0, note: 'Phụ thu (VND)']
+  previousDebt Float [default: 0, note: 'Nợ cũ kỳ trước']
+  status InvoiceStatus [default: 'DRAFT']
+  lineItems Json [not null, note: 'Chi tiết từng khoản (JSON array)']
+  paymentHistory Json [note: 'Lịch sử thanh toán']
+  dueDate DateTime [note: 'Hạn thanh toán']
+  accessCode String [unique, note: 'Mã truy cập hóa đơn (UUID)']
+  publishedAt DateTime [note: 'Ngày gửi cho khách']
+  createdAt DateTime [default: `now()`]
+  updatedAt DateTime
+  note String
+
+  indexes {
+    (contractId, month) [unique, note: 'Mỗi hợp đồng/tháng chỉ 1 hóa đơn']
+  }
+
+  Note: 'Hóa đơn hàng tháng'
+}
+
+Table Transaction {
+  id Int [pk, increment]
+  code String [unique, note: 'Mã giao dịch']
+  contractId Int [not null, ref: > Contract.id]
+  invoiceId Int [ref: > Invoice.id, note: 'Hóa đơn liên quan (optional)']
+  amount Float [not null, note: 'Số tiền (VND)']
+  type TransactionType [not null, note: 'Loại giao dịch']
+  date DateTime [default: `now()`, note: 'Ngày giao dịch']
+  note String [note: 'Ghi chú (phương thức thanh toán)']
+  createdAt DateTime [default: `now()`]
+  updatedAt DateTime
+
+  Note: 'Giao dịch thanh toán'
+}
+
+Table Issue {
+  id Int [pk, increment]
+  roomId Int [not null, ref: > Room.id]
+  title String [not null, note: 'Tiêu đề sự cố']
+  description String [note: 'Mô tả chi tiết']
+  status String [default: 'OPEN', note: 'OPEN, IN_PROGRESS, RESOLVED, CLOSED']
+  createdAt DateTime [default: `now()`]
+
+  Note: 'Sự cố/Bảo trì'
+}
+
+Table User {
+  id Int [pk, increment]
+  email String [unique, not null]
+  password String [not null, note: 'Mật khẩu (hashed)']
+  name String [not null, note: 'Họ tên']
+  role UserRole [default: 'ADMIN']
+  isActive Boolean [default: true]
+  refreshToken String [note: 'JWT refresh token']
+  resetToken String [note: 'Token reset mật khẩu']
+  resetTokenExp DateTime [note: 'Hết hạn reset token']
+  createdAt DateTime [default: `now()`]
+  updatedAt DateTime
+
+  Note: 'Người dùng hệ thống'
+}
+
+// ===================== TABLE GROUPS =====================
+
+TableGroup property_management {
+  Building
+  Room
+}
+
+TableGroup tenant_management {
+  Tenant
+  Contract
+}
+
+TableGroup billing {
+  Service
+  ServiceReading
+  Invoice
+  Transaction
+}
+
+TableGroup system {
+  User
+  Issue
+}
