@@ -1,11 +1,12 @@
 'use client';
 
 import { useState, useEffect, use, useMemo } from 'react';
-import { Form, message, Spin, Empty, Checkbox } from 'antd';
-import { ArrowLeftOutlined, PlusOutlined, LoadingOutlined, FileTextOutlined, SendOutlined, DollarOutlined, ToolOutlined, AppstoreOutlined, UnorderedListOutlined } from '@ant-design/icons';
+import { Form, message, Spin, Empty, Checkbox, Dropdown, MenuProps, Modal } from 'antd';
+import { ArrowLeftOutlined, PlusOutlined, LoadingOutlined, FileTextOutlined, SendOutlined, DollarOutlined, ToolOutlined, AppstoreOutlined, UnorderedListOutlined, EditOutlined, DeleteOutlined, MoreOutlined, CheckCircleOutlined, WarningOutlined } from '@ant-design/icons';
 import Link from 'next/link';
 import axios from '@/lib/axios-client';
 import CreateRoomModal from '@/components/rooms/CreateRoomModal';
+import EditRoomModal from '@/components/rooms/EditRoomModal';
 import RoomListView from '@/components/rooms/RoomListView';
 
 // Hàm format tiền tệ
@@ -14,6 +15,7 @@ const formatCurrency = (value: number) =>
 
 export default function RoomMatrixPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
+  console.log('DEBUG: RoomMatrixPage id:', id);
   
   // Data State
   const [rooms, setRooms] = useState<any[]>([]);
@@ -23,6 +25,8 @@ export default function RoomMatrixPage({ params }: { params: Promise<{ id: strin
   // UI State
   const [activeFilter, setActiveFilter] = useState('ALL');
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editingRoom, setEditingRoom] = useState<any>(null);
   const [selectedRooms, setSelectedRooms] = useState<number[]>([]);
   const [isSelectionMode, setIsSelectionMode] = useState(false);
   const [viewMode, setViewMode] = useState<'GRID' | 'LIST'>('GRID');
@@ -34,6 +38,7 @@ export default function RoomMatrixPage({ params }: { params: Promise<{ id: strin
   const fetchData = async () => {
     setLoading(true);
     try {
+      console.log('DEBUG: Fetching data for building', id);
       const [roomsRes, buildingsRes] = await Promise.all([
         axios.get(`/rooms/by-building/${id}`),
         axios.get('/buildings')
@@ -49,13 +54,16 @@ export default function RoomMatrixPage({ params }: { params: Promise<{ id: strin
   };
 
   useEffect(() => {
-    fetchData();
-    setSelectedRooms([]); // Reset selection on building change
+    if (id) {
+      fetchData();
+      setSelectedRooms([]); // Reset selection on building change
+    }
   }, [id]);
 
   // 2. ACTIONS
   const handleCreateRoom = async (values: any) => {
     try {
+      console.log('DEBUG: handleCreateRoom values:', values);
       const payload = {
         ...values,
         price: Number(values.price),
@@ -66,15 +74,72 @@ export default function RoomMatrixPage({ params }: { params: Promise<{ id: strin
         maxTenants: values.maxTenants ? Number(values.maxTenants) : 2,
         buildingId: Number(id),
       };
+      console.log('DEBUG: handleCreateRoom payload:', payload);
 
       await axios.post('/rooms', payload);
       message.success('Thêm phòng thành công! 🎉');
       setIsModalOpen(false);
       form.resetFields();
       fetchData();
-    } catch (error) {
-      message.error('Lỗi khi thêm phòng');
+    } catch (error: any) {
+      console.error('Create room error:', error);
+      const errorMsg = error.response?.data?.message || 'Lỗi khi thêm phòng';
+      message.error(Array.isArray(errorMsg) ? errorMsg[0] : errorMsg);
     }
+  };
+
+  const handleUpdateRoom = async (roomId: number, values: any) => {
+      try {
+          const payload = {
+              ...values,
+              price: Number(values.price),
+              depositPrice: values.depositPrice ? Number(values.depositPrice) : undefined,
+              area: values.area ? Number(values.area) : undefined,
+              floor: values.floor ? Number(values.floor) : 1,
+              maxTenants: values.maxTenants ? Number(values.maxTenants) : 2,
+          };
+          
+          await axios.patch(`/rooms/${roomId}`, payload);
+          message.success('Cập nhật phòng thành công! ✅');
+          setIsEditModalOpen(false);
+          setEditingRoom(null);
+          fetchData();
+      } catch (error: any) {
+          console.error('Update room error:', error);
+          const errorMsg = error.response?.data?.message || 'Lỗi khi cập nhật phòng';
+          message.error(Array.isArray(errorMsg) ? errorMsg[0] : errorMsg);
+      }
+  };
+
+  const handleDeleteRoom = (room: any) => {
+      Modal.confirm({
+          title: 'Xóa phòng?',
+          content: `Bạn có chắc chắn muốn xóa phòng ${room.name}? Hành động này không thể hoàn tác.`,
+          okText: 'Xóa ngay',
+          okType: 'danger',
+          cancelText: 'Hủy',
+          onOk: async () => {
+              try {
+                  await axios.delete(`/rooms/${room.id}`);
+                  message.success('Đã xóa phòng thành công! 🗑️');
+                  fetchData();
+              } catch (error: any) {
+                  console.error('Delete room error:', error);
+                  const errorMsg = error.response?.data?.message || 'Lỗi khi xóa phòng';
+                  message.error(Array.isArray(errorMsg) ? errorMsg[0] : errorMsg);
+              }
+          }
+      });
+  };
+
+  const handleUpdateStatus = async (roomId: number, status: string) => {
+      try {
+          await axios.patch(`/rooms/${roomId}/status`, null, { params: { status } });
+          message.success('Cập nhật trạng thái thành công!');
+          fetchData();
+      } catch (error: any) {
+          message.error('Lỗi khi cập nhật trạng thái');
+      }
   };
 
   // 3. BULK ACTIONS
@@ -240,9 +305,10 @@ export default function RoomMatrixPage({ params }: { params: Promise<{ id: strin
                     key={room.id}
                     onClick={() => isSelectionMode && toggleSelection(room.id)}
                     className={`
-                        relative p-4 border-2 h-72 flex flex-col justify-between group bg-white transition-all cursor-pointer
-                        ${isSelected ? 'border-[#FF4D4D] bg-red-50 shadow-[8px_8px_0px_0px_#FF4D4D]' : 'border-black shadow-[6px_6px_0px_0px_black] hover:-translate-y-1 hover:shadow-[8px_8px_0px_0px_black]'}
+                        relative flex flex-col justify-between group bg-white transition-all cursor-pointer overflow-hidden
+                        ${isSelected ? 'border-2 border-[#FF4D4D] bg-red-50 shadow-[8px_8px_0px_0px_#FF4D4D]' : 'border-2 border-black shadow-[4px_4px_0px_0px_black] hover:-translate-y-1 hover:shadow-[6px_6px_0px_0px_black]'}
                     `}
+                    style={{ height: '320px' }}
                     >
                     {/* SELECTION CHECKBOX (Visible in mode or hovered) */}
                     {(isSelectionMode || isSelected) && (
@@ -251,58 +317,96 @@ export default function RoomMatrixPage({ params }: { params: Promise<{ id: strin
                         </div>
                     )}
 
-                    {/* STATUS TAG */}
-                    <div className={`absolute top-0 right-0 px-3 py-1 text-xs font-bold border-l-2 border-b-2 border-black ${
-                        room.status === 'RENTED' ? 'bg-[#ffcdfa]' : 
-                        room.status === 'MAINTENANCE' ? 'bg-[#fff59d]' : 'bg-[#00E054] text-white'
-                    }`}>
-                        {room.status === 'RENTED' ? 'ĐANG THUÊ' : room.status === 'MAINTENANCE' ? 'BẢO TRÌ' : 'TRỐNG'}
+                    {/* HEADER: STATUS & ACTIONS */}
+                    <div className="flex justify-between items-start p-3 border-b-2 border-black bg-gray-50">
+                        <div className="flex gap-2">
+                             {/* EDIT & DELETE ACTIONS */}
+                            <button 
+                                onClick={(e) => { e.stopPropagation(); setEditingRoom(room); setIsEditModalOpen(true); }}
+                                className="bg-white border-2 border-black w-8 h-8 flex items-center justify-center hover:bg-gray-100 shadow-[2px_2px_0px_0px_black] hover:translate-y-[1px] hover:translate-x-[1px] hover:shadow-none transition-all"
+                                title="Chỉnh sửa"
+                            >
+                                <EditOutlined />
+                            </button>
+                            <button 
+                                onClick={(e) => { e.stopPropagation(); handleDeleteRoom(room); }}
+                                className="bg-white border-2 border-black w-8 h-8 flex items-center justify-center hover:bg-red-50 text-red-500 shadow-[2px_2px_0px_0px_black] hover:translate-y-[1px] hover:translate-x-[1px] hover:shadow-none transition-all"
+                                title="Xóa phòng"
+                            >
+                                <DeleteOutlined />
+                            </button>
+                        </div>
+
+                        <Dropdown 
+                            menu={{ 
+                                items: [
+                                    { key: 'AVAILABLE', label: 'Trống', icon: <CheckCircleOutlined className="text-green-500"/>, onClick: () => handleUpdateStatus(room.id, 'AVAILABLE') },
+                                    { key: 'MAINTENANCE', label: 'Bảo trì', icon: <WarningOutlined className="text-yellow-500"/>, onClick: () => handleUpdateStatus(room.id, 'MAINTENANCE') },
+                                ] 
+                            }} 
+                            trigger={['click']}
+                        >
+                            <div className={`px-3 py-1 text-xs font-bold border-2 border-black cursor-pointer hover:opacity-80 flex items-center gap-1 shadow-[2px_2px_0px_0px_rgba(0,0,0,0.2)] ${
+                                room.status === 'RENTED' ? 'bg-[#ffcdfa]' : 
+                                room.status === 'MAINTENANCE' ? 'bg-[#fff59d]' : 'bg-[#00E054] text-white'
+                            }`}>
+                                {room.status === 'RENTED' ? 'ĐANG THUÊ' : room.status === 'MAINTENANCE' ? 'BẢO TRÌ' : 'TRỐNG'}
+                                {room.status !== 'RENTED' && <MoreOutlined />}
+                            </div>
+                        </Dropdown>
                     </div>
 
-                    {/* ROOM NAME & PRICE */}
-                    <div className="mt-6">
-                        <h3 className="font-black text-3xl mb-1">{room.name}</h3>
-                        <div className="font-mono font-bold text-gray-500 border-b-2 border-black inline-block mb-2">
+                    {/* BODY: INFO */}
+                    <div className="p-4 flex-grow flex flex-col">
+                        <div className="flex justify-between items-baseline mb-2">
+                             <h3 className="font-black text-4xl m-0 tracking-tighter">{room.name}</h3>
+                             <span className="font-mono font-bold text-gray-500 text-sm">{room.area} m²</span>
+                        </div>
+                        
+                        <div className="font-mono font-bold text-xl border-b-2 border-black inline-block mb-3 self-start">
                             {formatCurrency(room.price)} ₫
                         </div>
                         
                         {/* ASSETS DISPLAY */}
-                        {room.assets && Array.isArray(room.assets) && room.assets.length > 0 ? (
-                            <div className="flex flex-wrap gap-1 mt-1">
-                                {room.assets.slice(0, 4).map((asset: string, idx: number) => (
-                                    <span key={idx} className="text-[10px] font-bold border border-black px-1 bg-gray-50 text-gray-600">
-                                        {asset}
-                                    </span>
-                                ))}
-                                {room.assets.length > 4 && (
-                                    <span className="text-[10px] font-bold border border-black px-1 bg-gray-50 text-gray-600">
-                                        +{room.assets.length - 4}
-                                    </span>
-                                )}
-                            </div>
-                        ) : (
-                            <div className="text-[10px] italic text-gray-400 mt-1">Chưa có tài sản</div>
-                        )}
+                        <div className="mt-auto">
+                            <div className="text-[10px] font-bold uppercase text-gray-400 mb-1">Tiện ích:</div>
+                            {room.assets && Array.isArray(room.assets) && room.assets.length > 0 ? (
+                                <div className="flex flex-wrap gap-1">
+                                    {room.assets.slice(0, 3).map((asset: string, idx: number) => (
+                                        <span key={idx} className="text-[10px] font-bold border border-black px-1.5 py-0.5 bg-gray-50 text-gray-600">
+                                            {asset}
+                                        </span>
+                                    ))}
+                                    {room.assets.length > 3 && (
+                                        <span className="text-[10px] font-bold border border-black px-1.5 py-0.5 bg-gray-50 text-gray-600">
+                                            +{room.assets.length - 3}
+                                        </span>
+                                    )}
+                                </div>
+                            ) : (
+                                <div className="text-[10px] italic text-gray-400">Chưa có tài sản</div>
+                            )}
+                        </div>
                     </div>
 
-                    {/* SMART ACTIONS */}
-                    <div className="mt-auto pt-4">
+                    {/* FOOTER: SMART ACTIONS */}
+                    <div className="p-3 bg-gray-50 border-t-2 border-black">
                         {room.status === 'AVAILABLE' ? (
-                            <button className="w-full bg-[#00E054] text-black border-2 border-black font-bold py-2 shadow-[2px_2px_0px_0px_black] hover:translate-y-[1px] hover:translate-x-[1px] hover:shadow-none transition-all flex items-center justify-center gap-2">
-                                <FileTextOutlined /> HỢP ĐỒNG MỚI
+                            <button className="w-full bg-[#00E054] text-black border-2 border-black font-bold py-2 shadow-[2px_2px_0px_0px_black] hover:translate-y-[1px] hover:translate-x-[1px] hover:shadow-none transition-all flex items-center justify-center gap-2 text-sm uppercase">
+                                <FileTextOutlined /> Hợp đồng mới
                             </button>
                         ) : room.status === 'RENTED' ? (
                             <div className="grid grid-cols-5 gap-2">
-                                <button className="col-span-4 bg-[#ffcdfa] text-black border-2 border-black font-bold py-2 shadow-[2px_2px_0px_0px_black] hover:translate-y-[1px] hover:translate-x-[1px] hover:shadow-none transition-all flex items-center justify-center gap-2 text-xs">
-                                    <DollarOutlined /> LẬP HÓA ĐƠN
+                                <button className="col-span-4 bg-[#ffcdfa] text-black border-2 border-black font-bold py-2 shadow-[2px_2px_0px_0px_black] hover:translate-y-[1px] hover:translate-x-[1px] hover:shadow-none transition-all flex items-center justify-center gap-2 text-xs uppercase">
+                                    <DollarOutlined /> Lập hóa đơn
                                 </button>
                                 <button className="col-span-1 bg-white border-2 border-black flex items-center justify-center hover:bg-gray-100 shadow-[2px_2px_0px_0px_black] hover:shadow-none hover:translate-y-[1px] hover:translate-x-[1px] transition-all">
-                                    <ToolOutlined className="text-lg" />
+                                    <ToolOutlined />
                                 </button>
                             </div>
                         ) : (
-                            <button className="w-full bg-gray-200 text-gray-500 border-2 border-black font-bold py-2 cursor-not-allowed">
-                                ĐANG BẢO TRÌ
+                            <button className="w-full bg-gray-200 text-gray-500 border-2 border-black font-bold py-2 cursor-not-allowed text-sm uppercase">
+                                <ToolOutlined /> Đang bảo trì
                             </button>
                         )}
                     </div>
@@ -342,6 +446,18 @@ export default function RoomMatrixPage({ params }: { params: Promise<{ id: strin
         onCancel={() => setIsModalOpen(false)} 
         onConfirm={handleCreateRoom}
         loading={loading}
+      />
+
+      {/* EDIT ROOM MODAL */}
+      <EditRoomModal
+        open={isEditModalOpen}
+        onCancel={() => {
+            setIsEditModalOpen(false);
+            setEditingRoom(null);
+        }}
+        onConfirm={handleUpdateRoom}
+        loading={loading}
+        room={editingRoom}
       />
     </div>
   );

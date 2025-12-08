@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import { AntdRegistry } from '@ant-design/nextjs-registry';
+import { ConfigProvider, App } from 'antd';
 import "./globals.css";
-import Sidebar from "@/components/Sidebar";
+
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -24,17 +26,24 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased bg-[#F4F4F0] text-black`}
         suppressHydrationWarning={true}
       >
-        <div className="flex min-h-screen">
-          <Sidebar />
-          <main className="flex-1 ml-64 p-12">
-            {children}
-          </main>
-        </div>
+        <AntdRegistry>
+          <ConfigProvider
+            theme={{
+              token: {
+                colorPrimary: '#000000', // Neobrutalism typically uses black or high contrast
+              },
+            }}
+          >
+            <App>
+              {children}
+            </App>
+          </ConfigProvider>
+        </AntdRegistry>
       </body>
     </html>
   );

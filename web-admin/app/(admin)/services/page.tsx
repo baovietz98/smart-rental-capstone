@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { Table, Button, Modal, Form, Input, InputNumber, Select, Tag, Switch, message } from 'antd';
+import { Table, Button, Modal, Form, Input, InputNumber, Select, Switch, message, Popconfirm } from 'antd';
 import { Plus, Edit, Trash2, Zap, Droplets, Wifi, Box } from 'lucide-react';
 import { servicesApi } from '@/lib/api/services';
 import { Service, ServiceType, CalculationType } from '@/types/service';
@@ -10,7 +10,6 @@ export default function ServicesPage() {
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
-  const [deleteId, setDeleteId] = useState<number | null>(null);
   const [form] = Form.useForm();
   const [submitting, setSubmitting] = useState(false);
 
@@ -63,7 +62,6 @@ export default function ServicesPage() {
     try {
       await servicesApi.delete(id);
       message.success('Đã xóa dịch vụ!');
-      setDeleteId(null);
       fetchServices();
     } catch (error) {
       console.error(error);
@@ -83,90 +81,113 @@ export default function ServicesPage() {
 
   const columns = [
     {
-      title: 'Tên dịch vụ',
+      title: 'DỊCH VỤ',
       dataIndex: 'name',
       key: 'name',
+      className: 'bg-gray-50 text-gray-500 uppercase text-[11px] tracking-wider font-semibold py-3',
       render: (text: string, record: Service) => {
         let Icon = Box;
-        if (text.toLowerCase().includes('điện')) Icon = Zap;
-        if (text.toLowerCase().includes('nước')) Icon = Droplets;
-        if (text.toLowerCase().includes('wifi') || text.toLowerCase().includes('internet')) Icon = Wifi;
+        let colorClass = "text-gray-600 bg-gray-100 border-gray-200";
+        
+        if (text.toLowerCase().includes('điện')) {
+            Icon = Zap;
+            colorClass = "text-yellow-600 bg-yellow-50 border-yellow-100";
+        }
+        if (text.toLowerCase().includes('nước')) {
+            Icon = Droplets;
+            colorClass = "text-blue-600 bg-blue-50 border-blue-100";
+        }
+        if (text.toLowerCase().includes('wifi') || text.toLowerCase().includes('internet')) {
+            Icon = Wifi;
+            colorClass = "text-purple-600 bg-purple-50 border-purple-100";
+        }
         
         return (
-          <div className="flex items-center gap-2 font-bold text-lg">
-            <div className="w-8 h-8 bg-black text-white flex items-center justify-center border-2 border-black">
+          <div className="flex items-center gap-3">
+            <div className={`w-8 h-8 rounded-full flex items-center justify-center border ${colorClass}`}>
                 <Icon size={16} />
             </div>
-            {text}
+            <span className="font-semibold text-gray-700">{text}</span>
           </div>
         );
       },
     },
     {
-      title: 'Đơn giá',
+      title: 'ĐƠN GIÁ',
       dataIndex: 'price',
       key: 'price',
-      render: (val: number) => <span className="font-mono font-bold">{val.toLocaleString()} đ</span>,
+      className: 'bg-gray-50 text-gray-500 uppercase text-[11px] tracking-wider font-semibold py-3',
+      render: (val: number) => <span className="font-mono font-bold text-gray-700">{val.toLocaleString()} đ</span>,
     },
     {
-      title: 'Đơn vị',
+      title: 'ĐƠN VỊ',
       dataIndex: 'unit',
       key: 'unit',
-      render: (text: string) => <Tag className="font-bold border-black">{text}</Tag>,
+      className: 'bg-gray-50 text-gray-500 uppercase text-[11px] tracking-wider font-semibold py-3',
+      render: (text: string) => <span className="text-gray-600 font-medium text-xs bg-gray-100 px-2 py-1 rounded">{text}</span>,
     },
     {
-      title: 'Loại',
+      title: 'LOẠI',
       dataIndex: 'type',
       key: 'type',
+      className: 'bg-gray-50 text-gray-500 uppercase text-[11px] tracking-wider font-semibold py-3',
       render: (type: ServiceType) => (
-        <Tag color={type === ServiceType.INDEX ? 'blue' : 'orange'} className="font-bold border-black">
+        <span className={`text-xs font-medium px-2 py-1 rounded ${type === ServiceType.INDEX ? 'bg-blue-50 text-blue-700' : 'bg-orange-50 text-orange-700'}`}>
           {type === ServiceType.INDEX ? 'Theo chỉ số' : 'Cố định'}
-        </Tag>
+        </span>
       ),
     },
     {
-      title: 'Trạng thái',
+      title: 'TRẠNG THÁI',
       dataIndex: 'isActive',
       key: 'isActive',
+      className: 'bg-gray-50 text-gray-500 uppercase text-[11px] tracking-wider font-semibold py-3',
       render: (isActive: boolean) => (
-        <Tag color={isActive ? 'green' : 'red'} className="font-bold border-black">
+        <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${isActive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
           {isActive ? 'Đang dùng' : 'Ngưng dùng'}
-        </Tag>
+        </span>
       ),
     },
     {
-      title: 'Thao tác',
+      title: 'THAO TÁC',
       key: 'action',
+      className: 'bg-gray-50 text-gray-500 uppercase text-[11px] tracking-wider font-semibold py-3',
       render: (_: any, record: Service) => (
         <div className="flex gap-2">
           <button 
             onClick={() => handleEdit(record)}
-            className="w-8 h-8 flex items-center justify-center bg-[#4DA2FF] border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:translate-y-[1px] hover:translate-x-[1px] hover:shadow-none transition-all text-black"
+            className="text-gray-400 hover:text-blue-500 transition-colors p-1"
           >
             <Edit size={16} />
           </button>
-          <button 
-            onClick={() => setDeleteId(record.id)}
-            className="w-8 h-8 flex items-center justify-center bg-[#FF6B6B] border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:translate-y-[1px] hover:translate-x-[1px] hover:shadow-none transition-all text-black"
+          <Popconfirm 
+            title="Xác nhận xóa?" 
+            description="Hành động này không thể hoàn tác."
+            onConfirm={() => handleDelete(record.id)}
+            okText="Xóa"
+            cancelText="Hủy"
+            okButtonProps={{ danger: true, type: 'primary' }}
           >
-            <Trash2 size={16} />
-          </button>
+            <button className="text-gray-400 hover:text-red-500 transition-colors p-1">
+                <Trash2 size={16} />
+            </button>
+          </Popconfirm>
         </div>
       ),
     },
   ];
 
   return (
-    <div className="min-h-screen bg-[var(--bg-page)] text-black font-sans p-8">
-      <div className="flex justify-between items-end mb-8 border-b-2 border-black pb-4">
+    <div className="min-h-screen bg-[var(--bg-page)] text-gray-800 font-sans p-6">
+      <div className="flex justify-between items-center mb-6">
         <div>
-          <h1 className="text-4xl font-black tracking-tight mb-1">Services</h1>
-          <p className="text-gray-500 font-medium">Quản lý giá điện, nước và các dịch vụ khác.</p>
+          <h1 className="text-2xl font-bold tracking-tight text-gray-900">Quản lý Dịch vụ</h1>
+          <p className="text-gray-500 text-sm mt-1">Thiết lập giá điện, nước và các chi phí khác.</p>
         </div>
         
-        <div className="flex gap-2">
+        <div className="flex gap-3">
             {services.length === 0 && (
-                <Button onClick={handleSeed} className="gumroad-btn-secondary">Khởi tạo mẫu</Button>
+                <Button onClick={handleSeed}>Khởi tạo mẫu</Button>
             )}
             <button 
             onClick={() => {
@@ -174,73 +195,20 @@ export default function ServicesPage() {
                 form.resetFields();
                 setIsModalOpen(true);
             }}
-            className="flex items-center gap-2 bg-black text-white border-2 border-black px-4 py-2 font-bold shadow-[4px_4px_0px_0px_rgba(0,0,0,0.2)] hover:translate-y-[1px] hover:translate-x-[1px] hover:shadow-none transition-all"
+            className="flex items-center gap-2 bg-black text-white px-4 py-2 rounded-lg font-medium shadow-sm hover:bg-gray-800 transition-all text-sm"
             >
-            <Plus size={20} /> Thêm dịch vụ
+            <Plus size={16} /> Thêm dịch vụ
             </button>
         </div>
       </div>
 
-      <style jsx global>{`
-        .neobrutalism-table .ant-table-thead > tr > th {
-          background-color: #000 !important;
-          color: #fff !important;
-          text-transform: uppercase;
-          font-weight: 900;
-          border-right: 1px solid #fff !important;
-          border-bottom: 2px solid #000 !important;
-          border-radius: 0 !important;
-        }
-        .neobrutalism-table .ant-table-thead > tr > th:last-child {
-          border-right: none !important;
-        }
-        .neobrutalism-table .ant-table-tbody > tr > td {
-          border-bottom: 2px solid #000 !important;
-          font-weight: 500;
-        }
-        .neobrutalism-table .ant-table-container {
-          border: 2px solid #000 !important;
-        }
-        
-        /* Modal Styles */
-        .gumroad-modal .ant-modal-content {
-            padding: 0 !important;
-            border: 3px solid black !important;
-            border-radius: 0 !important;
-            box-shadow: 8px 8px 0px 0px #000 !important;
-            overflow: hidden !important;
-        }
-        .gumroad-modal .ant-modal-close {
-            top: -15px !important;
-            right: -15px !important;
-            width: 40px !important;
-            height: 40px !important;
-            background: white !important;
-            border: 2px solid black !important;
-            opacity: 1 !important;
-            border-radius: 50% !important;
-            display: flex !important;
-            align-items: center !important;
-            justify-content: center !important;
-            box-shadow: 2px 2px 0px 0px #000 !important;
-            z-index: 1000 !important;
-        }
-        .gumroad-modal .ant-modal-close:hover {
-            background: black !important;
-            color: white !important;
-            transform: translate(1px, 1px);
-            box-shadow: none !important;
-        }
-      `}</style>
-
-      <div className="bg-white">
+      <div className="border border-gray-200 rounded-lg overflow-hidden shadow-sm bg-white">
         <Table
           columns={columns}
           dataSource={services}
           rowKey="id"
           loading={loading}
           pagination={false}
-          className="neobrutalism-table"
         />
       </div>
 
@@ -376,45 +344,6 @@ export default function ServicesPage() {
             </div>
         </div>
       </Modal>
-
-      {/* DELETE MODAL */}
-      {deleteId && (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setDeleteId(null)}></div>
-          <div className="relative w-full max-w-md bg-white border-[3px] border-black shadow-[8px_8px_0px_0px_#000] p-0 animate-in fade-in zoom-in duration-200 overflow-hidden">
-            <div className="bg-[#FF4D4D] border-b-[3px] border-black p-4 flex items-center gap-4">
-                <div className="bg-white border-2 border-black w-12 h-12 flex items-center justify-center shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
-                    <Trash2 size={24} className="text-black" />
-                </div>
-                <h2 className="text-2xl font-black uppercase text-white tracking-tighter drop-shadow-[2px_2px_0px_rgba(0,0,0,1)]">
-                    XÓA DỊCH VỤ?
-                </h2>
-            </div>
-            
-            <div className="p-6 bg-white" style={{ backgroundImage: 'linear-gradient(#E5E7EB 1px, transparent 1px), linear-gradient(to right, #E5E7EB 1px, transparent 1px)', backgroundSize: '20px 20px' }}>
-                <div className="bg-white border-2 border-black p-4 shadow-[4px_4px_0px_0px_rgba(0,0,0,0.1)] mb-6">
-                    <p className="text-lg font-bold mb-2">Bạn có chắc chắn muốn xóa dịch vụ này?</p>
-                    <p className="text-gray-500 font-mono text-sm">Hành động này không thể hoàn tác và có thể ảnh hưởng đến các hợp đồng đang sử dụng dịch vụ này.</p>
-                </div>
-
-                <div className="flex justify-end gap-4">
-                    <button 
-                        onClick={() => setDeleteId(null)}
-                        className="px-6 py-3 font-black uppercase border-2 border-black bg-white hover:bg-gray-100 transition-colors shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px]"
-                    >
-                        HỦY BỎ
-                    </button>
-                    <button 
-                        onClick={() => handleDelete(deleteId)}
-                        className="px-6 py-3 font-black uppercase border-2 border-black bg-[#FF4D4D] text-white hover:bg-[#ff3333] transition-all shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px]"
-                    >
-                        XÓA NGAY
-                    </button>
-                </div>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

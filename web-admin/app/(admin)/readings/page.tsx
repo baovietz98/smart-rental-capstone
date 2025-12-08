@@ -1,7 +1,7 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { Table, Button, Modal, Form, InputNumber, Select, Tag, message, DatePicker, Popconfirm } from 'antd';
-import { Plus, Edit, Trash2, Zap, Droplets, Filter, Loader2 } from 'lucide-react';
+import { Table, Modal, Form, InputNumber, Select, Tag, message, DatePicker, Popconfirm } from 'antd';
+import { Plus, Trash2, Zap, Droplets, Filter, Check } from 'lucide-react';
 import { readingsApi } from '@/lib/api/readings';
 import { servicesApi } from '@/lib/api/services';
 import { ServiceReading } from '@/types/reading';
@@ -23,8 +23,8 @@ export default function ReadingsPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalLoading, setModalLoading] = useState(false);
   const [form] = Form.useForm();
-  const [contracts, setContracts] = useState<any[]>([]);
-  const [oldIndex, setOldIndex] = useState<number | null>(null);
+
+  const [modalSelectedBuilding, setModalSelectedBuilding] = useState<number | null>(null);
 
   const fetchData = async () => {
     setLoading(true);
@@ -50,24 +50,36 @@ export default function ReadingsPage() {
     fetchData();
   }, [month, selectedService]);
 
-  const handlePrepare = async (contractId: number, serviceId: number) => {
-    try {
-      const res = await readingsApi.prepare(contractId, serviceId, month);
-      setOldIndex(res.oldIndex);
-      form.setFieldsValue({ oldIndex: res.oldIndex });
-    } catch (error) {
-      console.error(error);
-    }
-  };
-
   const handleSave = async (values: any) => {
     try {
       setModalLoading(true);
-      await readingsApi.create({
-        ...values,
-        month,
+      // Flatten the bulkReadings structure
+      const readings: any[] = [];
+      
+      values.bulkReadings.forEach((room: any) => {
+          room.services.forEach((service: any) => {
+              // Only include if newIndex is entered
+              if (service.newIndex !== undefined && service.newIndex !== null) {
+                  readings.push({
+                      contractId: room.contractId,
+                      serviceId: service.serviceId,
+                      newIndex: service.newIndex,
+                      oldIndex: service.oldIndex,
+                      isMeterReset: service.isMeterReset,
+                  });
+              }
+          });
       });
-      message.success('Chốt số thành công!');
+
+      if (readings.length === 0) {
+          message.warning('Chưa nhập chỉ số nào!');
+          setModalLoading(false);
+          return;
+      }
+
+      await readingsApi.bulkCreate(month, readings);
+      
+      message.success(`Đã lưu ${readings.length} chỉ số thành công!`);
       setIsModalOpen(false);
       form.resetFields();
       fetchData();
@@ -89,30 +101,15 @@ export default function ReadingsPage() {
     }
   };
 
-  // Fetch contracts for modal
-  const fetchContracts = async () => {
-    try {
-      const res = await axios.get('/contracts?isActive=true');
-      setContracts(res.data);
-    } catch (error) {
-      console.error(error);
-    }
-  };
-
-  useEffect(() => {
-    if (isModalOpen) {
-      fetchContracts();
-    }
-  }, [isModalOpen]);
-
   const columns = [
     {
       title: 'Phòng / Tòa nhà',
       key: 'room',
+      className: 'bg-gray-50 text-gray-500 uppercase text-[11px] tracking-wider font-semibold py-3',
       render: (_: any, record: ServiceReading) => (
         <div>
-          <div className="font-bold">{record.contract?.room.name}</div>
-          <div className="text-xs text-gray-500">{record.contract?.room.building.name}</div>
+          <div className="font-bold text-gray-900">{record.contract?.room.name}</div>
+          <div className="text-xs text-gray-400 font-medium">{record.contract?.room.building.name}</div>
         </div>
       ),
     },
@@ -120,12 +117,20 @@ export default function ReadingsPage() {
       title: 'Dịch vụ',
       dataIndex: ['service', 'name'],
       key: 'service',
+      className: 'bg-gray-50 text-gray-500 uppercase text-[11px] tracking-wider font-semibold py-3',
       render: (text: string) => {
         let Icon = Zap;
-        if (text.toLowerCase().includes('nước')) Icon = Droplets;
+        let colorClass = "text-yellow-600 bg-yellow-50 border-yellow-100";
+        if (text.toLowerCase().includes('nước')) {
+            Icon = Droplets;
+            colorClass = "text-blue-600 bg-blue-50 border-blue-100";
+        }
         return (
-            <div className="flex items-center gap-2 font-bold">
-                <Icon size={16} /> {text}
+            <div className="flex items-center gap-2">
+                <div className={`w-6 h-6 rounded-full flex items-center justify-center border ${colorClass}`}>
+                    <Icon size={14} />
+                </div>
+                <span className="font-semibold text-gray-700 text-sm">{text}</span>
             </div>
         );
       }
@@ -135,22 +140,25 @@ export default function ReadingsPage() {
       dataIndex: 'oldIndex',
       key: 'oldIndex',
       align: 'right' as const,
-      render: (val: number) => val.toLocaleString(),
+      className: 'bg-gray-50 text-gray-500 uppercase text-[11px] tracking-wider font-semibold py-3',
+      render: (val: number) => <span className="font-mono text-gray-600">{val.toLocaleString()}</span>,
     },
     {
       title: 'Chỉ số mới',
       dataIndex: 'newIndex',
       key: 'newIndex',
       align: 'right' as const,
-      render: (val: number) => <span className="font-bold text-blue-600">{val.toLocaleString()}</span>,
+      className: 'bg-gray-50 text-gray-500 uppercase text-[11px] tracking-wider font-semibold py-3',
+      render: (val: number) => <span className="font-bold text-blue-600 font-mono">{val.toLocaleString()}</span>,
     },
     {
       title: 'Sử dụng',
       dataIndex: 'usage',
       key: 'usage',
       align: 'center' as const,
+      className: 'bg-gray-50 text-gray-500 uppercase text-[11px] tracking-wider font-semibold py-3',
       render: (val: number, record: ServiceReading) => (
-          <Tag color="blue" className="font-bold border-black">{val} {record.service.unit}</Tag>
+          <span className="font-bold text-gray-700 font-mono text-xs bg-gray-100 px-2 py-1 rounded">{val} {record.service.unit}</span>
       ),
     },
     {
@@ -158,25 +166,35 @@ export default function ReadingsPage() {
       dataIndex: 'totalCost',
       key: 'totalCost',
       align: 'right' as const,
-      render: (val: number) => <span className="font-black">{val.toLocaleString()} đ</span>,
+      className: 'bg-gray-50 text-gray-500 uppercase text-[11px] tracking-wider font-semibold py-3',
+      render: (val: number) => <span className="font-bold text-emerald-600 font-mono">{val.toLocaleString()} đ</span>,
     },
     {
       title: 'Trạng thái',
       dataIndex: 'isBilled',
       key: 'isBilled',
+      className: 'bg-gray-50 text-gray-500 uppercase text-[11px] tracking-wider font-semibold py-3',
       render: (isBilled: boolean) => (
-        <Tag color={isBilled ? 'green' : 'orange'} className="font-bold border-black">
+        <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${isBilled ? 'bg-green-100 text-green-800' : 'bg-orange-100 text-orange-800'}`}>
           {isBilled ? 'Đã lên HĐ' : 'Chưa lên HĐ'}
-        </Tag>
+        </span>
       ),
     },
     {
       title: 'Thao tác',
       key: 'action',
+      className: 'bg-gray-50 text-gray-500 uppercase text-[11px] tracking-wider font-semibold py-3',
       render: (_: any, record: ServiceReading) => (
         !record.isBilled && (
-            <Popconfirm title="Xóa bản ghi này?" onConfirm={() => handleDelete(record.id)}>
-                <button className="w-8 h-8 flex items-center justify-center bg-[#FF6B6B] border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:translate-y-[1px] hover:translate-x-[1px] hover:shadow-none transition-all text-black">
+            <Popconfirm 
+                title="Xác nhận xóa?" 
+                description="Hành động này không thể hoàn tác."
+                onConfirm={() => handleDelete(record.id)}
+                okText="Xóa"
+                cancelText="Hủy"
+                okButtonProps={{ danger: true, type: 'primary' }}
+            >
+                <button className="text-gray-400 hover:text-red-500 transition-colors p-1">
                     <Trash2 size={16} />
                 </button>
             </Popconfirm>
@@ -186,142 +204,373 @@ export default function ReadingsPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-[var(--bg-page)] text-black font-sans p-8">
-      <div className="flex justify-between items-end mb-8 border-b-2 border-black pb-4">
-        <div>
-          <h1 className="text-4xl font-black tracking-tight mb-1">Readings</h1>
-          <p className="text-gray-500 font-medium">Ghi nhận chỉ số điện nước hàng tháng.</p>
+    <div className="min-h-screen bg-[var(--bg-page)] text-gray-900 font-sans p-8">
+      <div className="max-w-7xl mx-auto">
+        {/* Header */}
+        <div className="flex justify-between items-end mb-6">
+            <div>
+            <h1 className="text-2xl font-bold tracking-tight text-gray-900">Readings</h1>
+            <p className="text-gray-500 mt-1">Ghi nhận chỉ số điện nước hàng tháng.</p>
+            </div>
+            
+            <button 
+            onClick={() => {
+                form.resetFields();
+                setIsModalOpen(true);
+            }}
+            className="flex items-center gap-2 bg-black text-white px-4 py-2 rounded-lg font-medium shadow-sm hover:bg-gray-800 transition-all text-sm"
+            >
+            <Plus size={16} /> Chốt số mới
+            </button>
         </div>
-        
-        <button 
-          onClick={() => {
-              form.resetFields();
-              setOldIndex(null);
-              setIsModalOpen(true);
-          }}
-          className="flex items-center gap-2 bg-black text-white border-2 border-black px-4 py-2 font-bold shadow-[4px_4px_0px_0px_rgba(0,0,0,0.2)] hover:translate-y-[1px] hover:translate-x-[1px] hover:shadow-none transition-all"
-        >
-          <Plus size={20} /> Chốt số mới
-        </button>
-      </div>
 
-      <div className="flex gap-4 mb-8 bg-white p-4 border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,0.1)] items-center">
-        <div className="flex items-center gap-2">
-          <Filter size={20} />
-          <span className="font-bold uppercase">Bộ lọc:</span>
+        {/* Filter Bar */}
+        <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm mb-6 flex items-center gap-4">
+            <div className="flex items-center gap-2 text-gray-500 mr-2">
+            <Filter size={16} />
+            <span className="text-sm font-medium uppercase tracking-wide">Bộ lọc</span>
+            </div>
+            
+            <DatePicker 
+            picker="month" 
+            format="MM-YYYY"
+            allowClear={false}
+            value={dayjs(month, 'MM-YYYY')}
+            onChange={(date) => setMonth(date ? date.format('MM-YYYY') : dayjs().format('MM-YYYY'))}
+            className="w-40 border-gray-200 hover:border-gray-300 focus:border-black rounded-md"
+            />
+
+            <Select
+            placeholder="Dịch vụ"
+            allowClear
+            className="w-40"
+            onChange={(val) => setSelectedService(val)}
+            bordered={false}
+            style={{ border: '1px solid #e5e7eb', borderRadius: '6px' }}
+            defaultValue={null}
+            >
+                <Select.Option value={null}>Tất cả</Select.Option>
+                {services.map(s => (
+                    <Select.Option key={s.id} value={s.id}>{s.name}</Select.Option>
+                ))}
+            </Select>
         </div>
-        
-        <DatePicker 
-          picker="month" 
-          format="MM-YYYY"
-          allowClear={false}
-          value={dayjs(month, 'MM-YYYY')}
-          onChange={(date) => setMonth(date ? date.format('MM-YYYY') : dayjs().format('MM-YYYY'))}
-          className="gumroad-input w-40"
-        />
 
-        <Select
-          placeholder="Dịch vụ"
-          allowClear
-          className="gumroad-select w-40"
-          onChange={(val) => setSelectedService(val)}
-        >
-            {services.map(s => (
-                <Select.Option key={s.id} value={s.id}>{s.name}</Select.Option>
-            ))}
-        </Select>
-      </div>
-
-      <style jsx global>{`
-        .neobrutalism-table .ant-table-thead > tr > th {
-          background-color: #000 !important;
-          color: #fff !important;
-          text-transform: uppercase;
-          font-weight: 900;
-          border-right: 1px solid #fff !important;
-          border-bottom: 2px solid #000 !important;
-          border-radius: 0 !important;
-        }
-        .neobrutalism-table .ant-table-thead > tr > th:last-child {
-          border-right: none !important;
-        }
-        .neobrutalism-table .ant-table-tbody > tr > td {
-          border-bottom: 2px solid #000 !important;
-          font-weight: 500;
-        }
-        .neobrutalism-table .ant-table-container {
-          border: 2px solid #000 !important;
-        }
-      `}</style>
-
-      <div className="bg-white">
-        <Table
-          columns={columns}
-          dataSource={readings}
-          rowKey="id"
-          loading={loading}
-          pagination={{ pageSize: 10 }}
-          className="neobrutalism-table"
-        />
+        {/* Table */}
+        <div className="bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden">
+            <Table
+            columns={columns}
+            dataSource={readings}
+            rowKey="id"
+            loading={loading}
+            pagination={{ pageSize: 10 }}
+            rowClassName="hover:bg-gray-50 transition-colors"
+            />
+        </div>
       </div>
 
       <Modal
         open={isModalOpen}
         onCancel={() => setIsModalOpen(false)}
         footer={null}
-        title={<span className="text-2xl font-black uppercase">Chốt số tháng {month}</span>}
+        title={null}
         className="gumroad-modal"
-        closeIcon={<span className="text-xl font-bold border-2 border-black w-8 h-8 flex items-center justify-center hover:bg-black hover:text-white transition-colors">✕</span>}
+        width={1200}
+        centered
+        closeIcon={<span>✕</span>}
       >
-        <Form form={form} layout="vertical" onFinish={handleSave} className="font-mono mt-6">
-            <Form.Item label={<span className="font-bold">Hợp đồng / Phòng</span>} name="contractId" rules={[{ required: true }]}>
-                <Select 
-                    className="gumroad-select" 
-                    showSearch
-                    optionFilterProp="children"
-                    onChange={(val) => {
-                        const serviceId = form.getFieldValue('serviceId');
-                        if (serviceId) handlePrepare(val, serviceId);
-                    }}
-                >
-                    {contracts.map(c => (
-                        <Select.Option key={c.id} value={c.id}>
-                            {c.room.name} - {c.tenant.name}
-                        </Select.Option>
-                    ))}
-                </Select>
-            </Form.Item>
-
-            <Form.Item label={<span className="font-bold">Dịch vụ</span>} name="serviceId" rules={[{ required: true }]}>
-                <Select 
-                    className="gumroad-select"
-                    onChange={(val) => {
-                        const contractId = form.getFieldValue('contractId');
-                        if (contractId) handlePrepare(contractId, val);
-                    }}
-                >
-                    {services.map(s => (
-                        <Select.Option key={s.id} value={s.id}>{s.name}</Select.Option>
-                    ))}
-                </Select>
-            </Form.Item>
-
-            <div className="grid grid-cols-2 gap-4">
-                <Form.Item label={<span className="font-bold">Chỉ số cũ</span>} name="oldIndex">
-                    <InputNumber className="w-full gumroad-input bg-gray-100" disabled />
-                </Form.Item>
-                <Form.Item label={<span className="font-bold">Chỉ số mới</span>} name="newIndex" rules={[{ required: true }]}>
-                    <InputNumber className="w-full gumroad-input" autoFocus />
-                </Form.Item>
+        <div className="bg-white">
+            {/* HEADER */}
+            <div className="bg-[#FFD700] border-b-[3px] border-black p-4 flex items-center justify-between">
+                <div className="bg-white border-2 border-black px-4 py-1 transform -rotate-1 shadow-[3px_3px_0px_0px_rgba(0,0,0,1)]">
+                    <h2 className="text-xl font-black uppercase m-0 tracking-tighter">
+                        CHỐT SỐ THÁNG {month}
+                    </h2>
+                </div>
             </div>
 
-            <div className="flex justify-end gap-2 mt-8 border-t-2 border-black pt-4">
-                <button type="button" onClick={() => setIsModalOpen(false)} className="gumroad-btn-secondary px-4 py-2 font-bold uppercase">Hủy</button>
-                <button type="submit" disabled={modalLoading} className="bg-[#00E054] text-white border-2 border-black px-6 py-2 font-bold shadow-[4px_4px_0px_0px_black] hover:translate-y-[2px] hover:translate-x-[2px] hover:shadow-none transition-all uppercase">
-                    {modalLoading ? 'Đang lưu...' : 'Lưu chỉ số'}
-                </button>
+            <div className="p-6 max-h-[80vh] overflow-y-auto bg-gray-50">
+                <Form form={form} layout="vertical" onFinish={handleSave} className="font-mono">
+                    
+                    {/* SECTION 1: BUILDING */}
+                    <div className="mb-6">
+                        <Form.Item name="buildingId" rules={[{ required: true, message: 'Vui lòng chọn tòa nhà' }]} className="mb-0">
+                            <Select
+                                className="gumroad-select w-full text-lg"
+                                placeholder="Chọn tòa nhà để bắt đầu..."
+                                onChange={async (val) => {
+                                    setModalSelectedBuilding(val);
+                                    setModalLoading(true);
+                                    try {
+                                        const data = await readingsApi.prepareBulk({ buildingId: val, month });
+                                        const formReadings = data.map((room: any) => ({
+                                            roomId: room.roomId,
+                                            roomName: room.roomName,
+                                            contractId: room.contractId,
+                                            services: room.services.map((s: any) => ({
+                                                serviceId: s.serviceId,
+                                                serviceName: s.serviceName,
+                                                price: s.price,
+                                                oldIndex: s.oldIndex,
+                                                newIndex: s.newIndex,
+                                                isMeterReset: false,
+                                            }))
+                                        }));
+                                        form.setFieldValue('bulkReadings', formReadings);
+                                    } catch (error) {
+                                        message.error('Lỗi tải dữ liệu tòa nhà');
+                                    } finally {
+                                        setModalLoading(false);
+                                    }
+                                }}
+                            >
+                                {buildings.map(b => (
+                                    <Select.Option key={b.id} value={b.id}>{b.name}</Select.Option>
+                                ))}
+                            </Select>
+                        </Form.Item>
+                    </div>
+
+                    {/* SECTION 2: COMPACT TABLE (PREMIUM) */}
+                    <Form.List name="bulkReadings">
+                        {(fields) => (
+                            <div className="border border-gray-200 rounded-lg overflow-hidden shadow-sm">
+                                <table className="w-full text-left border-collapse">
+                                    <thead>
+                                        <tr className="bg-gray-50 text-gray-500 uppercase text-[11px] tracking-wider border-b border-gray-200">
+                                            <th className="px-4 py-2 font-semibold w-[18%]">Phòng</th>
+                                            <th className="px-4 py-2 font-semibold w-[14%]">Dịch vụ</th>
+                                            <th className="px-4 py-2 font-semibold w-[13%] text-right">Chỉ số cũ</th>
+                                            <th className="px-4 py-2 font-semibold w-[18%] text-center">Chỉ số mới</th>
+                                            <th className="px-4 py-2 font-semibold w-[17%] text-center">Thay đồng hồ</th>
+                                            <th className="px-4 py-2 font-semibold w-[10%] text-right">Sử dụng</th>
+                                            <th className="px-4 py-2 font-semibold w-[10%] text-right">Thành tiền</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="bg-white divide-y divide-gray-100">
+                                        {fields.map((field, index) => {
+                                            const room = form.getFieldValue(['bulkReadings', index]);
+                                            return room.services.map((service: any, sIndex: number) => {
+                                                const isElec = service.serviceName.toLowerCase().includes('điện');
+                                                // Subtle indicator instead of full background
+                                                const indicatorColor = isElec ? 'bg-yellow-400' : 'bg-blue-400';
+                                                const icon = isElec ? <Zap size={14} className="text-yellow-600" /> : <Droplets size={14} className="text-blue-600" />;
+                                                
+                                                const isFirstService = sIndex === 0;
+                                                const rowSpan = room.services.length;
+
+                                                return (
+                                                    <tr key={`${field.key}-${service.serviceId}`} className="hover:bg-gray-50/50 transition-colors group">
+                                                        {/* Room Info (Merged Cell) */}
+                                                        {isFirstService && (
+                                                            <td rowSpan={rowSpan} className="px-4 py-2 border-r border-gray-100 bg-white align-top">
+                                                                <div className="font-bold text-gray-900 text-base">{room.roomName}</div>
+                                                                <div className="text-[11px] text-gray-400 font-medium mt-0.5">HĐ #{room.contractId}</div>
+                                                            </td>
+                                                        )}
+
+                                                        {/* Service Info */}
+                                                        <td className="px-4 py-2 align-middle relative">
+                                                            <div className={`absolute left-0 top-0 bottom-0 w-1 ${indicatorColor} opacity-0 group-hover:opacity-100 transition-opacity`} />
+                                                            <div className="flex items-center gap-3">
+                                                                <div className="w-8 h-8 rounded-full bg-gray-50 flex items-center justify-center border border-gray-100 text-gray-500">
+                                                                    {icon}
+                                                                </div>
+                                                                <span className="font-semibold text-xs text-gray-700 uppercase tracking-tight">{service.serviceName}</span>
+                                                            </div>
+                                                        </td>
+
+                                                        {/* Old Index */}
+                                                        <td className="px-4 py-2 text-right font-mono text-gray-500 align-middle text-sm">
+                                                            <div className="h-[32px] flex items-center justify-end">
+                                                                {service.oldIndex?.toLocaleString()}
+                                                            </div>
+                                                        </td>
+
+                                                        {/* New Index Input */}
+                                                        <td className="px-4 py-2 align-middle relative">
+                                                            <div className="h-[32px] flex items-center justify-center relative w-full">
+                                                                <Form.Item
+                                                                    name={[field.name, 'services', sIndex, 'newIndex']}
+                                                                    rules={[
+                                                                        { required: true, message: '' },
+                                                                        ({ getFieldValue }) => ({
+                                                                            validator(_, value) {
+                                                                                if (!value && value !== 0) return Promise.resolve();
+                                                                                const old = getFieldValue(['bulkReadings', index, 'services', sIndex, 'oldIndex']) || 0;
+                                                                                const isReset = getFieldValue(['bulkReadings', index, 'services', sIndex, 'isMeterReset']);
+                                                                                if (!isReset && value < old) {
+                                                                                    return Promise.reject(new Error('')); // Empty error message to avoid duplication
+                                                                                }
+                                                                                return Promise.resolve();
+                                                                            },
+                                                                        }),
+                                                                    ]}
+                                                                    dependencies={[['bulkReadings', index, 'services', sIndex, 'isMeterReset']]}
+                                                                    className="mb-0 w-auto" // Changed from w-full to w-auto
+                                                                    help={null} // Hide default error message to avoid duplication
+                                                                >
+                                                                    <InputNumber 
+                                                                        className="w-[100px] font-mono font-medium text-gray-900 border border-gray-200 focus:border-black focus:ring-1 focus:ring-black rounded px-2 py-1 text-center h-[32px] shadow-sm transition-all placeholder:text-gray-300 hover:border-gray-300 flex items-center" 
+                                                                        formatter={value => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+                                                                        parser={value => value ? value.replace(/\$\s?|(,*)/g, '') : ''}
+                                                                        placeholder="0"
+                                                                    />
+                                                                </Form.Item>
+                                                                
+                                                                {/* Floating Error */}
+                                                                <Form.Item shouldUpdate className="mb-0">
+                                                                    {({ getFieldValue }) => {
+                                                                        const s = getFieldValue(['bulkReadings', index, 'services', sIndex]);
+                                                                        if (!s || s.newIndex === undefined || s.newIndex === null) return null;
+                                                                        const hasError = !s.isMeterReset && s.newIndex < s.oldIndex;
+                                                                        if (hasError) {
+                                                                            return (
+                                                                                <div className="absolute left-1/2 -translate-x-1/2 -top-2 bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded shadow-sm z-10 animate-in fade-in slide-in-from-bottom-1 pointer-events-none whitespace-nowrap">
+                                                                                    Thấp hơn cũ!
+                                                                                </div>
+                                                                            );
+                                                                        }
+                                                                        return null;
+                                                                    }}
+                                                                </Form.Item>
+                                                            </div>
+                                                        </td>
+
+                                                        {/* Reset Checkbox */}
+                                                        <td className="px-4 py-2 text-center align-middle">
+                                                            <div className="h-[32px] flex items-center justify-center gap-2">
+                                                                <Form.Item 
+                                                                    name={[field.name, 'services', sIndex, 'isMeterReset']} 
+                                                                    valuePropName="checked" 
+                                                                    className="mb-0 flex justify-center"
+                                                                >
+                                                                    <div 
+                                                                        className="cursor-pointer flex justify-center group/check"
+                                                                        onClick={() => {
+                                                                            const readings = form.getFieldValue('bulkReadings');
+                                                                            const currentVal = readings[index].services[sIndex].isMeterReset;
+                                                                            readings[index].services[sIndex].isMeterReset = !currentVal;
+                                                                            form.setFieldValue('bulkReadings', [...readings]);
+                                                                        }}
+                                                                    >
+                                                                        <Form.Item shouldUpdate className="mb-0">
+                                                                            {({ getFieldValue }) => {
+                                                                                const isReset = getFieldValue(['bulkReadings', index, 'services', sIndex, 'isMeterReset']);
+                                                                                return (
+                                                                                    <div className={`w-5 h-5 rounded border transition-all flex items-center justify-center ${isReset ? 'bg-black border-black' : 'bg-white border-gray-300 group-hover/check:border-gray-400'}`}>
+                                                                                        {isReset && <Check size={12} className="text-white" />}
+                                                                                    </div>
+                                                                                );
+                                                                            }}
+                                                                        </Form.Item>
+                                                                    </div>
+                                                                </Form.Item>
+                                                                <Form.Item shouldUpdate className="mb-0">
+                                                                    {({ getFieldValue }) => {
+                                                                        const isReset = getFieldValue(['bulkReadings', index, 'services', sIndex, 'isMeterReset']);
+                                                                        if (isReset) {
+                                                                            return <span className="text-[10px] text-orange-600 font-bold leading-none">Thay mới</span>;
+                                                                        }
+                                                                        return null;
+                                                                    }}
+                                                                </Form.Item>
+                                                            </div>
+                                                        </td>
+
+                                                        {/* Usage */}
+                                                        <td className="px-4 py-2 text-right align-middle">
+                                                            <div className="h-[32px] flex items-center justify-end">
+                                                                <Form.Item shouldUpdate className="mb-0">
+                                                                    {({ getFieldValue }) => {
+                                                                        const s = getFieldValue(['bulkReadings', index, 'services', sIndex]);
+                                                                        if (!s || s.newIndex === undefined || s.newIndex === null) return <span className="text-gray-300 font-mono">-</span>;
+                                                                        const usage = s.isMeterReset ? s.newIndex : Math.max(0, s.newIndex - s.oldIndex);
+                                                                        return <span className="font-bold text-blue-600 font-mono">{usage.toLocaleString()}</span>;
+                                                                    }}
+                                                                </Form.Item>
+                                                            </div>
+                                                        </td>
+
+                                                        {/* Total Cost */}
+                                                        <td className="px-4 py-2 text-right align-middle">
+                                                            <div className="flex flex-col justify-center items-end min-h-[32px]">
+                                                                <Form.Item shouldUpdate className="mb-0">
+                                                                    {({ getFieldValue }) => {
+                                                                        const s = getFieldValue(['bulkReadings', index, 'services', sIndex]);
+                                                                        if (!s || s.newIndex === undefined || s.newIndex === null) return <span className="text-gray-300 font-mono">-</span>;
+                                                                        const usage = s.isMeterReset ? s.newIndex : Math.max(0, s.newIndex - s.oldIndex);
+                                                                        const total = usage * (s.price || 0);
+                                                                        return (
+                                                                            <div className="flex flex-col items-end">
+                                                                                <span className="font-bold text-emerald-600 font-mono text-sm">{total.toLocaleString()}</span>
+                                                                                <span className="text-[10px] text-gray-400 font-mono">
+                                                                                    {usage.toLocaleString()} x {s.price?.toLocaleString()}
+                                                                                </span>
+                                                                            </div>
+                                                                        );
+                                                                    }}
+                                                                </Form.Item>
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                );
+                                            });
+                                        })}
+                                        
+                                        {fields.length === 0 && (
+                                            <tr>
+                                                <td colSpan={7} className="p-12 text-center text-gray-400 italic bg-gray-50/50">
+                                                    {modalSelectedBuilding ? 'Không có phòng nào đang thuê.' : 'Vui lòng chọn tòa nhà để bắt đầu.'}
+                                                </td>
+                                            </tr>
+                                        )}
+                                    </tbody>
+                                </table>
+                            </div>
+                        )}
+                    </Form.List>
+
+                    {/* Footer */}
+                    <div className="p-6 border-t border-gray-100 bg-gray-50/50 flex justify-end gap-3 sticky bottom-0 z-10 mt-0 rounded-b-xl">
+                        <button 
+                            onClick={() => setIsModalOpen(false)}
+                            className="h-10 px-6 font-semibold border border-gray-300 rounded-lg text-gray-700 hover:bg-white hover:border-gray-400 transition-all shadow-sm"
+                        >
+                            Hủy bỏ
+                        </button>
+                        <Form.Item shouldUpdate className="mb-0">
+                            {({ getFieldValue }) => {
+                                const bulkReadings = getFieldValue('bulkReadings') || [];
+                                const grandTotal = bulkReadings.reduce((totalSum: number, room: any) => {
+                                    const roomTotal = room.services.reduce((sum: number, s: any) => {
+                                        if (s.newIndex === undefined || s.newIndex === null) return sum;
+                                        const usage = s.isMeterReset ? s.newIndex : Math.max(0, s.newIndex - s.oldIndex);
+                                        return sum + (usage * (s.price || 0));
+                                    }, 0);
+                                    return totalSum + roomTotal;
+                                }, 0);
+
+                                return (
+                                    <button 
+                                        onClick={() => form.submit()}
+                                        disabled={modalLoading}
+                                        className={`h-10 px-6 font-semibold rounded-lg bg-black text-white hover:bg-gray-800 transition-all shadow-sm flex items-center gap-2 ${modalLoading ? 'opacity-70 cursor-not-allowed' : ''}`}
+                                    >
+                                        <span>{modalLoading ? 'Đang lưu...' : 'Lưu tất cả'}</span>
+                                        {grandTotal > 0 && (
+                                            <span className="bg-white/20 px-2 py-0.5 rounded text-xs font-mono">
+                                                {grandTotal.toLocaleString()} đ
+                                            </span>
+                                        )}
+                                    </button>
+                                );
+                            }}
+                        </Form.Item>
+                    </div>
+                </Form>
             </div>
-        </Form>
+        </div>
       </Modal>
     </div>
   );

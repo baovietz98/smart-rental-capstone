@@ -28,7 +28,7 @@ export interface PrepareReadingResponse {
 
 @Injectable()
 export class ReadingsService {
-  constructor(private prisma: PrismaService) { }
+  constructor(private prisma: PrismaService) {}
 
   /**
    * API QUAN TRỌNG: Chuẩn bị dữ liệu cho form chốt số
@@ -151,6 +151,162 @@ export class ReadingsService {
   }
 
   /**
+   * API QUAN TRỌNG: Chuẩn bị dữ liệu chốt số hàng loạt (Spreadsheet)
+   * Logic:
+   * 1. Lấy tất cả phòng đang thuê (RENTED) trong tòa nhà
+   * 2. Với mỗi phòng, lấy các dịch vụ loại INDEX (Điện, Nước)
+   * 3. Tính chỉ số cũ (Old Index) dựa trên tháng trước hoặc HĐ
+   */
+  async prepareBulk(buildingId: number, month: string) {
+    // 1. Validate format tháng
+    if (!/^\d{2}-\d{4}$/.test(month)) {
+      throw new BadRequestException('Format tháng không hợp lệ (MM-YYYY)');
+    }
+
+    // 2. Lấy danh sách phòng đang thuê trong tòa nhà
+    const rooms = await this.prisma.room.findMany({
+      where: {
+        buildingId,
+        status: 'RENTED', // Chỉ lấy phòng đang thuê
+      },
+      include: {
+        contracts: {
+          where: { isActive: true }, // Lấy HĐ đang active
+          take: 1,
+        },
+      },
+      orderBy: { name: 'asc' },
+    });
+
+    // 3. Lấy danh sách dịch vụ loại INDEX của tòa nhà (thường là Điện, Nước)
+    // Lưu ý: Service không gắn trực tiếp với Building trong schema hiện tại,
+    // nhưng thường là chung. Ở đây ta lấy tất cả service loại INDEX.
+    // Nếu service có buildingId thì filter thêm. Schema hiện tại Service ko có buildingId?
+    // Check schema: Service model không có buildingId?
+    // Wait, schema provided earlier showed:
+    // model Service { ... } - No buildingId shown in the snippet provided in context?
+    // Let's check schema again.
+    // Ah, user prompt said: "model Service { ... buildingId Int }"
+    // But let's check the actual schema file content I read earlier.
+    // File `prisma/schema.prisma` lines 63-72:
+    // model Service { id, name, price, unit, type, isActive, calculationType, readings }
+    // NO buildingId in the actual schema file I read!
+    // So services are global? Or I missed something?
+    // Let's assume services are global for now or I should check if there is a relation.
+    // Actually, usually services are per building or global.
+    // If global, I just take all active INDEX services.
+
+    const indexServices = await this.prisma.service.findMany({
+      where: {
+        type: 'INDEX',
+        isActive: true,
+      },
+    });
+
+    const result: {
+      roomId: number;
+      roomName: string;
+      contractId: number;
+      services: {
+        serviceId: number;
+        serviceName: string;
+        price: number;
+        oldIndex: number;
+        newIndex: number | null;
+        isBilled: boolean;
+      }[];
+    }[] = [];
+
+    // 4. Loop từng phòng để tính toán
+    for (const room of rooms) {
+      if (room.contracts.length === 0) continue; // Should not happen if status is RENTED but safety check
+      const contract = room.contracts[0];
+
+      const roomData = {
+        roomId: room.id,
+        roomName: room.name,
+        contractId: contract.id,
+        services: [] as any[],
+      };
+
+      for (const service of indexServices) {
+        // Tính toán chỉ số cũ cho service này
+        // Logic tương tự prepareReading nhưng tối ưu hơn cho loop
+
+        // Check xem tháng này đã chốt chưa?
+        const existingReading = await this.prisma.serviceReading.findUnique({
+          where: {
+            contractId_serviceId_month: {
+              contractId: contract.id,
+              serviceId: service.id,
+              month,
+            },
+          },
+        });
+
+        let oldIndex = 0;
+        let newIndex: number | null = null; // Để null cho FE nhập
+        let isBilled = false;
+
+        if (existingReading) {
+          oldIndex = existingReading.oldIndex;
+          newIndex = existingReading.newIndex;
+          isBilled = existingReading.isBilled;
+        } else {
+          // Chưa chốt -> Tìm số cũ (Auto-fill)
+          // Tìm tháng trước: Logic giảm tháng
+          const [m, y] = month.split('-').map(Number);
+          let prevMonth = m - 1;
+          let prevYear = y;
+          if (prevMonth === 0) {
+            prevMonth = 12;
+            prevYear = y - 1;
+          }
+          const prevMonthStr = `${prevMonth.toString().padStart(2, '0')}-${prevYear}`;
+
+          // Tìm reading tháng trước
+          const prevReading = await this.prisma.serviceReading.findUnique({
+            where: {
+              contractId_serviceId_month: {
+                contractId: contract.id,
+                serviceId: service.id,
+                month: prevMonthStr,
+              },
+            },
+          });
+
+          if (prevReading) {
+            oldIndex = prevReading.newIndex;
+          } else {
+            // Không có tháng trước -> Lấy từ HĐ (Initial Index)
+            const initialIndexes = contract.initialIndexes as Record<
+              string,
+              number
+            > | null;
+            if (initialIndexes && initialIndexes[service.id.toString()]) {
+              oldIndex = initialIndexes[service.id.toString()];
+            } else {
+              oldIndex = 0; // Fallback
+            }
+          }
+        }
+
+        roomData.services.push({
+          serviceId: service.id,
+          serviceName: service.name,
+          price: service.price,
+          oldIndex,
+          newIndex,
+          isBilled,
+        });
+      }
+      result.push(roomData);
+    }
+
+    return result;
+  }
+
+  /**
    * Tạo bản ghi chốt số mới
    * Hỗ trợ: Thay đồng hồ mới (isMeterReset)
    */
@@ -176,18 +332,16 @@ export class ReadingsService {
     let usage: number;
     let note: string | null = null;
 
-    if (dto.isMeterReset && dto.newIndex < oldIndex) {
-      // Đồng hồ được thay mới, tính theo công thức đặc biệt:
-      // usage = (maxMeter - oldIndex) + newIndex
-      const maxMeterValue = dto.maxMeterValue ?? 9999; // Mặc định đồng hồ 4 số
-      usage = maxMeterValue - oldIndex + dto.newIndex;
-      note = `Thay đồng hồ mới. Đồng hồ cũ: ${oldIndex}/${maxMeterValue}, đồng hồ mới: 0->${dto.newIndex}`;
+    if (dto.isMeterReset) {
+      // Đồng hồ được thay mới hoặc quay vòng, tính theo yêu cầu: Tiêu thụ = Số mới (coi như bắt đầu từ 0)
+      usage = dto.newIndex;
+      note = `Thay đồng hồ/Quay vòng. Đồng hồ cũ: ${oldIndex}, đồng hồ mới: ${dto.newIndex}`;
     } else {
       // Trường hợp bình thường
       if (dto.newIndex < oldIndex) {
         throw new BadRequestException(
           `Chỉ số mới (${dto.newIndex}) phải >= chỉ số cũ (${oldIndex}). ` +
-          `Nếu đã thay đồng hồ mới, vui lòng đánh dấu isMeterReset=true`,
+            `Nếu đã thay đồng hồ mới, vui lòng đánh dấu isMeterReset=true`,
         );
       }
       usage = dto.newIndex - oldIndex;
@@ -304,7 +458,7 @@ export class ReadingsService {
     if (hasLaterMonth) {
       throw new BadRequestException(
         `Không thể sửa tháng ${existing.month} vì đã có tháng sau được chốt. ` +
-        `Vui lòng xóa các tháng sau trước khi sửa tháng này.`,
+          `Vui lòng xóa các tháng sau trước khi sửa tháng này.`,
       );
     }
 
@@ -362,7 +516,7 @@ export class ReadingsService {
     if (hasLaterMonth) {
       throw new BadRequestException(
         `Không thể xóa tháng ${existing.month} vì đã có tháng sau được chốt. ` +
-        `Vui lòng xóa các tháng sau trước.`,
+          `Vui lòng xóa các tháng sau trước.`,
       );
     }
 
@@ -376,7 +530,13 @@ export class ReadingsService {
    * VD: Chốt cả Điện + Nước cùng lúc
    */
   async bulkCreate(
-    readings: { contractId: number; serviceId: number; newIndex: number }[],
+    readings: {
+      contractId: number;
+      serviceId: number;
+      newIndex: number;
+      oldIndex?: number;
+      isMeterReset?: boolean;
+    }[],
     month: string,
   ): Promise<
     Array<
@@ -396,6 +556,8 @@ export class ReadingsService {
           serviceId: reading.serviceId,
           month,
           newIndex: reading.newIndex,
+          oldIndex: reading.oldIndex,
+          isMeterReset: reading.isMeterReset,
         });
         results.push({ success: true, data: result });
       } catch (error) {
@@ -493,7 +655,7 @@ export class ReadingsService {
     return this.prisma.serviceReading.findMany({
       where: {
         month: month || undefined,
-        serviceId: serviceId || undefined,
+        serviceId: serviceId ? parseInt(serviceId.toString(), 10) : undefined,
       },
       include: {
         service: true,

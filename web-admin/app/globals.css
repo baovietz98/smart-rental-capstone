@@ -1,8 +1,11 @@
 @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Merriweather:wght@300;400;700;900&family=Inter:wght@300;400;500;600&display=swap');
 @import "tailwindcss";
 
 @theme {
   --font-sans: 'Space Grotesk', sans-serif;
+  --font-claude-serif: 'Merriweather', serif;
+  --font-claude-sans: 'Inter', sans-serif;
 }
 
 :root {
@@ -110,14 +113,110 @@ h6 {
     border-radius: 0 !important;
   }
 
-  .neobrutalism-modal .ant-modal-header {
-    background-color: transparent !important;
-    border-bottom: 0 !important;
-  }
-
   .neobrutalism-modal .ant-modal-title {
     font-weight: 900 !important;
     text-transform: uppercase !important;
     font-size: 1.5rem !important;
+  }
+
+  /* Claude.ai / Premium Neo-Brutalism Theme Utilities */
+  .claude-page {
+    background-color: #F9F9F7;
+    /* Warm Paper */
+    color: #3F3F3E;
+    font-family: 'Inter', sans-serif;
+    min-height: 100vh;
+  }
+
+  .claude-header {
+    font-family: 'Merriweather', serif;
+    color: #2D2D2C;
+    font-weight: 900;
+  }
+
+  .claude-card {
+    background-color: #FFFFFF;
+    border: 2px solid #2D2D2C;
+    border-radius: 12px;
+    box-shadow: 4px 4px 0px rgba(45, 45, 44, 0.15);
+    transition: all 0.2s cubic-bezier(0.25, 0.8, 0.25, 1);
+  }
+
+  .claude-card:hover {
+    box-shadow: 6px 6px 0px #D97757;
+    /* Pop of orange on hover */
+    transform: translate(-2px, -2px);
+    border-color: #2D2D2C;
+  }
+
+  .claude-btn-primary {
+    background-color: #D97757;
+    color: white;
+    font-family: 'Inter', sans-serif;
+    font-weight: 600;
+    padding: 0.6rem 1.2rem;
+    border-radius: 8px;
+    border: 2px solid #2D2D2C;
+    box-shadow: 2px 2px 0px #2D2D2C;
+    transition: all 0.15s ease;
+  }
+
+  .claude-btn-primary:active {
+    transform: translate(2px, 2px);
+    box-shadow: 0px 0px 0px #2D2D2C;
+  }
+
+  .claude-btn-primary:hover {
+    background-color: #C06040;
+    transform: translate(-1px, -1px);
+    box-shadow: 4px 4px 0px #2D2D2C;
+  }
+
+  .claude-btn-secondary {
+    background-color: #FFFFFF;
+    color: #2D2D2C;
+    border: 2px solid #2D2D2C;
+    padding: 0.6rem 1.2rem;
+    border-radius: 8px;
+    font-weight: 600;
+    box-shadow: 2px 2px 0px #E5E5E0;
+    transition: all 0.15s ease;
+  }
+
+  .claude-btn-secondary:hover {
+    background-color: #F9F9F7;
+    box-shadow: 4px 4px 0px #D97757;
+    transform: translate(-1px, -1px);
+  }
+
+  .claude-btn-secondary:active {
+    transform: translate(2px, 2px);
+    box-shadow: 0px 0px 0px #D97757;
+  }
+
+  .claude-badge {
+    padding: 0.25rem 0.75rem;
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    border: 1px solid #2D2D2C;
+    box-shadow: 1px 1px 0px #2D2D2C;
+  }
+
+  .claude-badge-green {
+    background-color: #D4EDDA;
+    color: #155724;
+  }
+
+  .claude-badge-red {
+    background-color: #F8D7DA;
+    color: #721C24;
+  }
+
+  .claude-badge-orange {
+    background-color: #FFF3CD;
+    color: #856404;
   }
 }

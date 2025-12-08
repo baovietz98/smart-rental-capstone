@@ -7,4 +7,31 @@ const axiosClient = axios.create({
     },
 });
 
+axiosClient.interceptors.request.use((config) => {
+    if (typeof window !== 'undefined') {
+        const token = localStorage.getItem('token');
+        if (token) {
+            config.headers.Authorization = `Bearer ${token}`;
+        }
+    }
+    return config;
+}, (error) => {
+    return Promise.reject(error);
+});
+
+axiosClient.interceptors.response.use((response) => {
+    return response;
+}, (error) => {
+    // Handle 401 Unauthorized globally
+    if (error.response && error.response.status === 401) {
+        if (typeof window !== 'undefined') {
+            // Optional: Clear token and redirect if needed, or let component handle it
+            // localStorage.removeItem('token');
+            // document.cookie = "token=; path=/; max-age=0";
+            // window.location.href = '/login';
+        }
+    }
+    return Promise.reject(error);
+});
+
 export default axiosClient;

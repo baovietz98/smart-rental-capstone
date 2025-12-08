@@ -9,7 +9,7 @@ import { CreateContractDto, UpdateContractDto } from './dto';
 
 @Injectable()
 export class ContractsService {
-  constructor(private readonly prisma: PrismaService) { }
+  constructor(private readonly prisma: PrismaService) {}
 
   /**
    * Tạo hợp đồng mới
@@ -71,6 +71,7 @@ export class ContractsService {
           roomId,
           tenantId,
           isActive: true,
+          paidDeposit: rest.paidDeposit || 0,
         },
         include: {
           room: {
@@ -79,6 +80,19 @@ export class ContractsService {
           tenant: true,
         },
       });
+
+      // 5b. Tạo Transaction nếu có đóng cọc
+      if (rest.paidDeposit && rest.paidDeposit > 0) {
+        await tx.transaction.create({
+          data: {
+            code: `PT-${Date.now()}`, // Simple code generation
+            amount: rest.paidDeposit,
+            type: 'DEPOSIT',
+            contractId: newContract.id,
+            note: 'Thu tiền cọc lúc ký hợp đồng',
+          },
+        });
+      }
 
       // Cập nhật trạng thái phòng sang RENTED
       await tx.room.update({

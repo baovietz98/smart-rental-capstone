@@ -18,14 +18,18 @@ import {
   ApiParam,
   ApiBody,
   ApiQuery,
+  ApiBearerAuth,
 } from '@nestjs/swagger';
 import { TenantsService } from './tenants.service';
 import { CreateTenantDto, UpdateTenantDto } from './dto';
+import { Roles } from '../auth/decorators/roles.decorator';
 
 @ApiTags('Tenants')
+@ApiBearerAuth()
+@Roles('ADMIN')
 @Controller('tenants')
 export class TenantsController {
-  constructor(private readonly tenantsService: TenantsService) {}
+  constructor(private readonly tenantsService: TenantsService) { }
 
   @Post()
   @ApiOperation({

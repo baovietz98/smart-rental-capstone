@@ -9,26 +9,39 @@ import {
   Query,
   ParseIntPipe,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiQuery, ApiParam } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiQuery, ApiParam, ApiBearerAuth } from '@nestjs/swagger';
 import { InvoiceStatus } from '@prisma/client';
 import { InvoicesService } from './invoices.service';
-import {
-  GenerateInvoiceDto,
-  UpdateInvoiceDto,
-  RecordPaymentDto,
-} from './dto';
+import { GenerateInvoiceDto, UpdateInvoiceDto, RecordPaymentDto } from './dto';
+import { Roles } from '../auth/decorators/roles.decorator';
+import { Public } from '../auth/decorators/public.decorator';
 
 @ApiTags('Invoices - Hóa đơn')
+@ApiBearerAuth()
+@Roles('ADMIN')
 @Controller('invoices')
 export class InvoicesController {
-  constructor(private readonly invoicesService: InvoicesService) {}
+  constructor(private readonly invoicesService: InvoicesService) { }
 
   /**
-   * BƯỚC 1: Tạo hóa đơn nháp
+   * BƯỚC 1: Xem trước hóa đơn (Preview)
+   * Tính toán nhưng KHÔNG lưu vào DB
+   */
+  @Post('preview')
+  @ApiOperation({
+    summary: 'Xem trước hóa đơn (Tính toán & Kiểm tra chốt điện nước)',
+  })
+  preview(@Body() dto: GenerateInvoiceDto) {
+    return this.invoicesService.preview(dto);
+  }
+
+  /**
+   * BƯỚC 2: Tạo hóa đơn nháp (Generate Draft)
+   * Lưu snapshot từ bước Preview vào DB
    */
   @Post('generate')
   @ApiOperation({
-    summary: 'Tạo hóa đơn nháp (tự động tính toán tiền phòng, điện, nước...)',
+    summary: 'Tạo hóa đơn nháp (Lưu snapshot)',
   })
   generateDraft(@Body() dto: GenerateInvoiceDto) {
     return this.invoicesService.generateDraft(dto);
@@ -110,9 +123,21 @@ export class InvoicesController {
    */
   @Get()
   @ApiOperation({ summary: 'Lấy danh sách hóa đơn (có filter)' })
-  @ApiQuery({ name: 'status', required: false, description: 'Lọc theo trạng thái' })
-  @ApiQuery({ name: 'month', required: false, description: 'Lọc theo tháng (MM-YYYY)' })
-  @ApiQuery({ name: 'buildingId', required: false, description: 'Lọc theo tòa nhà' })
+  @ApiQuery({
+    name: 'status',
+    required: false,
+    description: 'Lọc theo trạng thái',
+  })
+  @ApiQuery({
+    name: 'month',
+    required: false,
+    description: 'Lọc theo tháng (MM-YYYY)',
+  })
+  @ApiQuery({
+    name: 'buildingId',
+    required: false,
+    description: 'Lọc theo tòa nhà',
+  })
   findAll(
     @Query('status') status?: InvoiceStatus,
     @Query('month') month?: string,
@@ -161,6 +186,17 @@ export class InvoicesController {
   @ApiOperation({ summary: 'Lấy chi tiết hóa đơn' })
   findOne(@Param('id', ParseIntPipe) id: number) {
     return this.invoicesService.findOne(id);
+  }
+
+  /**
+   * Lấy chi tiết hóa đơn (Public - Tenant xem không cần đăng nhập)
+   */
+  @Public()
+  @Get('public/:code')
+  @ApiOperation({ summary: 'Lấy chi tiết hóa đơn (Public - Không cần đăng nhập)' })
+  @ApiParam({ name: 'code', example: 'uuid-code', description: 'Mã truy cập hóa đơn (accessCode)' })
+  findByAccessCode(@Param('code') code: string) {
+    return this.invoicesService.findByAccessCode(code);
   }
 
   /**

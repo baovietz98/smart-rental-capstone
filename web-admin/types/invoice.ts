@@ -61,6 +61,7 @@ export interface Invoice {
             phone: string;
         };
     };
+    accessCode?: string;
 }
 
 export interface GenerateInvoiceDto {
@@ -78,6 +79,7 @@ export interface ExtraChargeDto {
 
 export interface UpdateInvoiceDto {
     extraCharges?: ExtraChargeDto[];
+    lineItems?: InvoiceLineItem[];
     discount?: number;
     dueDate?: string;
     note?: string;

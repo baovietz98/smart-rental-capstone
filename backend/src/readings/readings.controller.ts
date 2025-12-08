@@ -9,11 +9,14 @@ import {
   Query,
   ParseIntPipe,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiQuery, ApiParam } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiQuery, ApiParam, ApiBearerAuth } from '@nestjs/swagger';
 import { ReadingsService } from './readings.service';
 import { CreateReadingDto, UpdateReadingDto } from './dto';
+import { Roles } from '../auth/decorators/roles.decorator';
 
 @ApiTags('Readings - Chốt số điện nước')
+@ApiBearerAuth()
+@Roles('ADMIN')
 @Controller('readings')
 export class ReadingsController {
   constructor(private readonly readingsService: ReadingsService) { }
@@ -30,6 +33,25 @@ export class ReadingsController {
       month,
       serviceId ? parseInt(serviceId, 10) : undefined,
     );
+  }
+
+  @Get('prepare-bulk')
+  @ApiOperation({
+    summary:
+      'Chuẩn bị dữ liệu chốt số hàng loạt cho cả tòa nhà (Spreadsheet UI)',
+  })
+  @ApiQuery({ name: 'buildingId', type: Number, description: 'ID tòa nhà' })
+  @ApiQuery({
+    name: 'month',
+    type: String,
+    description: 'Tháng chốt (MM-YYYY)',
+    example: '11-2025',
+  })
+  prepareBulk(
+    @Query('buildingId', ParseIntPipe) buildingId: number,
+    @Query('month') month: string,
+  ) {
+    return this.readingsService.prepareBulk(buildingId, month);
   }
 
   /**
@@ -73,7 +95,13 @@ export class ReadingsController {
   bulkCreate(
     @Query('month') month: string,
     @Body()
-    readings: { contractId: number; serviceId: number; newIndex: number }[],
+    readings: {
+      contractId: number;
+      serviceId: number;
+      newIndex: number;
+      oldIndex?: number;
+      isMeterReset?: boolean;
+    }[],
   ) {
     return this.readingsService.bulkCreate(readings, month);
   }
@@ -111,8 +139,6 @@ export class ReadingsController {
   getMonthlyStats(@Param('month') month: string) {
     return this.readingsService.getMonthlyStats(month);
   }
-
-
 
   @Get(':id')
   @ApiOperation({ summary: 'Lấy chi tiết 1 bản ghi chốt số' })

@@ -1,7 +1,9 @@
 'use client';
 import { useState, useEffect, useMemo } from 'react';
-import { FileText, Plus, Calendar, User, Home, CheckCircle, Loader2, X, Search, MoreHorizontal, ArrowRight, Trash2, Clock } from 'lucide-react';
+import { FileText, Plus, Calendar, User, Home, CheckCircle, Loader2, X, Search, MoreHorizontal, ArrowRight, Trash2, Clock, Zap, Droplets } from 'lucide-react';
 import axios from '@/lib/axios-client';
+import { servicesApi } from '@/lib/api/services';
+import { Service } from '@/types/service';
 import { message, Steps, Form, Input, DatePicker, Select, InputNumber, Modal, Table, Tag, Dropdown, Button } from 'antd';
 import dayjs from 'dayjs';
 import LiquidationModal from '@/components/contracts/LiquidationModal';
@@ -81,6 +83,7 @@ export default function ContractsPage() {
   const [buildings, setBuildings] = useState<any[]>([]);
   const [rooms, setRooms] = useState<any[]>([]);
   const [tenants, setTenants] = useState<any[]>([]);
+  const [services, setServices] = useState<Service[]>([]);
   const [selectedBuilding, setSelectedBuilding] = useState<number | null>(null);
   const [selectedRoom, setSelectedRoom] = useState<any | null>(null);
   const [selectedTenant, setSelectedTenant] = useState<any | null>(null);
@@ -111,9 +114,19 @@ export default function ContractsPage() {
       }
   };
 
+  const fetchServices = async () => {
+      try {
+          const res = await servicesApi.getAll();
+          setServices(res);
+      } catch (error) {
+          console.error(error);
+      }
+  };
+
   useEffect(() => {
     fetchContracts();
     fetchBuildings();
+    fetchServices();
   }, []);
 
   // --- FILTER LOGIC ---
@@ -319,9 +332,35 @@ export default function ContractsPage() {
           render: (text: any, record: any) => (
               <div className="font-mono text-right">
                   <div className="font-bold">{record.price?.toLocaleString()} ₫</div>
-                  <div className="text-xs text-gray-500">Cọc: {record.deposit?.toLocaleString()} ₫</div>
+                  <div className="text-xs text-gray-500">
+                      Cọc: {record.deposit?.toLocaleString()} ₫
+                      {record.paidDeposit > 0 && (
+                          <span className={record.paidDeposit < record.deposit ? "text-red-500 font-bold ml-1" : "text-green-600 font-bold ml-1"}>
+                              (Đã đóng: {record.paidDeposit?.toLocaleString()})
+                          </span>
+                      )}
+                  </div>
               </div>
           ),
+      },
+      {
+          title: 'BÀN GIAO',
+          key: 'initialIndexes',
+          render: (text: any, record: any) => {
+              if (!record.initialIndexes) return <span className="text-gray-400 text-xs">-</span>;
+              return (
+                  <div className="text-xs">
+                      {Object.entries(record.initialIndexes).map(([serviceId, value]: [string, any]) => {
+                          const serviceName = services.find(s => s.id === Number(serviceId))?.name || `Svc #${serviceId}`;
+                          return (
+                              <div key={serviceId} className="whitespace-nowrap">
+                                  <span className="font-bold text-gray-500">{serviceName}:</span> {value}
+                              </div>
+                          );
+                      })}
+                  </div>
+              );
+          }
       },
       {
           title: 'TRẠNG THÁI',
@@ -450,6 +489,7 @@ export default function ContractsPage() {
           open={detailModalOpen}
           onCancel={() => setDetailModalOpen(false)}
           contract={selectedContract}
+          services={services}
       />
 
       <LiquidationModal 
@@ -632,6 +672,36 @@ export default function ContractsPage() {
                   <Form.Item name="deposit" label="Tiền cọc (VNĐ)" rules={[{ required: true }]}>
                     <InputNumber className="w-full h-10 border-2 border-black pt-1" formatter={value => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')} parser={value => value!.replace(/\$\s?|(,*)/g, '')} />
                   </Form.Item>
+                  <Form.Item name="paidDeposit" label="Tiền cọc thực đóng (VNĐ)" tooltip="Số tiền khách đã đưa. Nếu ít hơn tiền cọc, hệ thống sẽ tự động truy thu vào hóa đơn tháng đầu.">
+                    <InputNumber className="w-full h-10 border-2 border-black pt-1 bg-green-50" placeholder="VD: 500,000" formatter={value => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')} parser={value => value!.replace(/\$\s?|(,*)/g, '')} />
+                  </Form.Item>
+                </div>
+
+                {/* INITIAL INDEXES */}
+                <div className="mt-6 border-2 border-black p-4 bg-[#fff59d] shadow-[4px_4px_0px_0px_black]">
+                    <h3 className="font-black uppercase text-sm mb-3 flex items-center gap-2">
+                        <Zap size={16} /> Chỉ số bàn giao (Ghi theo đồng hồ)
+                    </h3>
+                    
+                    <div className="grid grid-cols-2 gap-4">
+                        {services.filter(s => s.type === 'INDEX').map(service => (
+                            <Form.Item 
+                                key={service.id}
+                                label={`Số ${service.name} hiện tại`} 
+                                name={['initialIndexes', service.id.toString()]} 
+                                rules={[{ required: true, message: `Bắt buộc nhập số ${service.name}!` }]}
+                            >
+                                <InputNumber 
+                                    className="w-full border-2 border-black rounded-none" 
+                                    placeholder={`VD: ${service.name === 'Điện' ? '1200' : '50'}`} 
+                                />
+                            </Form.Item>
+                        ))}
+                    </div>
+                    
+                    <p className="text-[10px] text-gray-500 italic mt-2">
+                        * Chỉ số này sẽ được dùng làm "Số cũ" cho hóa đơn tháng đầu tiên.
+                    </p>
                 </div>
                 
                 <div className="mt-6 p-4 bg-gray-100 border-2 border-black border-dashed">

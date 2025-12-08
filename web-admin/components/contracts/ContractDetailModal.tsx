@@ -1,15 +1,23 @@
 import { Modal } from 'antd';
 import dayjs from 'dayjs';
 import { User, Home, Calendar } from 'lucide-react';
+import { Service } from '@/types/service';
 
 interface ContractDetailModalProps {
     open: boolean;
     onCancel: () => void;
     contract: any;
+    services: Service[];
 }
 
-export default function ContractDetailModal({ open, onCancel, contract }: ContractDetailModalProps) {
+export default function ContractDetailModal({ open, onCancel, contract, services }: ContractDetailModalProps) {
     if (!contract) return null;
+
+    // Helper to get service name
+    const getServiceName = (id: string) => {
+        const service = services.find(s => s.id === Number(id));
+        return service ? service.name : `Service #${id}`;
+    };
 
     return (
         <Modal
@@ -144,16 +152,43 @@ export default function ContractDetailModal({ open, onCancel, contract }: Contra
                                 </div>
                                 
                                 <div className="col-span-2 mt-2 pt-2 border-t-2 border-dashed border-gray-300">
-                                    <div className="flex justify-between items-center">
-                                        <span className="font-bold uppercase text-gray-600">Tiền cọc đang giữ</span>
-                                        <span className="font-mono font-black text-2xl text-[#00E054]">
+                                    <div className="flex justify-between items-center mb-2">
+                                        <span className="font-bold uppercase text-gray-600">Tiền cọc cam kết</span>
+                                        <span className="font-mono font-black text-xl">
                                             {contract.deposit?.toLocaleString()} đ
+                                        </span>
+                                    </div>
+                                    <div className="flex justify-between items-center">
+                                        <span className="font-bold uppercase text-gray-600">Đã đóng thực tế</span>
+                                        <span className={`font-mono font-black text-xl ${contract.paidDeposit < contract.deposit ? 'text-red-500' : 'text-green-600'}`}>
+                                            {contract.paidDeposit?.toLocaleString()} đ
                                         </span>
                                     </div>
                                 </div>
                             </div>
                         </div>
                     </div>
+
+                    {/* 4. INITIAL INDEXES */}
+                    {contract.initialIndexes && Object.keys(contract.initialIndexes).length > 0 && (
+                        <div className="mt-8">
+                            <div className="inline-block bg-[#fff59d] border-2 border-black px-3 py-1 mb-4 shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] transform -rotate-1">
+                                <span className="font-black text-sm uppercase text-black tracking-wide flex items-center gap-2">
+                                    ⚡ CHỈ SỐ BÀN GIAO
+                                </span>
+                            </div>
+                            <div className="bg-white border-2 border-black p-4 shadow-[4px_4px_0px_0px_rgba(0,0,0,0.1)]">
+                                <div className="grid grid-cols-2 gap-4">
+                                    {Object.entries(contract.initialIndexes).map(([key, value]: [string, any]) => (
+                                        <div key={key} className="border-2 border-black p-2 bg-gray-50 text-center">
+                                            <div className="text-xs font-bold text-gray-500 uppercase mb-1">{getServiceName(key)}</div>
+                                            <div className="font-mono font-black text-xl">{value}</div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+                    )}
                 </div>
             </div>
         </Modal>

@@ -27,7 +27,7 @@ export default function LiquidationModal({ open, onCancel, onConfirm, contract, 
     }, [open, contract, form]);
 
     const handleValuesChange = (_: any, allValues: any) => {
-        const deposit = contract?.deposit || 0;
+        const deposit = contract?.paidDeposit || 0;
         const deductions = allValues.deductions || 0;
         setRefundAmount(deposit - deductions);
     };
@@ -76,9 +76,9 @@ export default function LiquidationModal({ open, onCancel, onConfirm, contract, 
                             <Form.Item name="returnDate" label={<span className="font-bold uppercase">Ngày trả phòng</span>} rules={[{ required: true }]}>
                                 <DatePicker className="w-full h-10 border-2 border-black rounded-none shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]" format="DD/MM/YYYY" />
                             </Form.Item>
-                            <Form.Item label={<span className="font-bold uppercase">Tiền cọc ban đầu</span>}>
+                            <Form.Item label={<span className="font-bold uppercase">Tiền cọc thực đóng</span>}>
                                 <div className="h-10 flex items-center px-3 bg-gray-100 border-2 border-black font-mono font-bold text-lg">
-                                    {contract.deposit?.toLocaleString()} đ
+                                    {contract.paidDeposit?.toLocaleString()} đ
                                 </div>
                             </Form.Item>
                         </div>

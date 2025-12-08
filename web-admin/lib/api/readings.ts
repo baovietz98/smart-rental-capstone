@@ -3,9 +3,19 @@ import { CreateReadingDto, ReadingStats, ServiceReading, UpdateReadingDto } from
 
 export const readingsApi = {
     prepare: async (contractId: number, serviceId: number, month: string) => {
-        const response = await axiosClient.get<{ oldIndex: number }>('/readings/prepare', {
+        const response = await axiosClient.get<{
+            oldIndex: number;
+            servicePrice: number;
+            serviceUnit: string;
+            serviceName: string;
+        }>('/readings/prepare', {
             params: { contractId, serviceId, month },
         });
+        return response.data;
+    },
+
+    prepareBulk: async (params: { buildingId: number; month: string }) => {
+        const response = await axiosClient.get('/readings/prepare-bulk', { params });
         return response.data;
     },
 
@@ -14,7 +24,13 @@ export const readingsApi = {
         return response.data;
     },
 
-    bulkCreate: async (month: string, readings: { contractId: number; serviceId: number; newIndex: number }[]) => {
+    bulkCreate: async (month: string, readings: {
+        contractId: number;
+        serviceId: number;
+        newIndex: number;
+        oldIndex?: number;
+        isMeterReset?: boolean;
+    }[]) => {
         const response = await axiosClient.post('/readings/bulk', readings, {
             params: { month },
         });

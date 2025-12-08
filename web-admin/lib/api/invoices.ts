@@ -28,6 +28,11 @@ export const invoicesApi = {
         return response.data;
     },
 
+    preview: async (data: GenerateInvoiceDto) => {
+        const response = await axiosClient.post<{ lineItems: InvoiceLineItem[], totalAmount: number }>('/invoices/preview', data);
+        return response.data;
+    },
+
     generateBulk: async (month: string) => {
         const response = await axiosClient.post('/invoices/generate-bulk', null, {
             params: { month },

@@ -85,11 +85,7 @@ export default function InvoiceDetailModal({ isOpen, onCancel, invoice, onUpdate
     }
   };
 
-  const handleCopyLink = () => {
-    const text = `Hóa đơn phòng ${invoice.contract?.room.name} tháng ${invoice.month}. Tổng tiền: ${invoice.totalAmount.toLocaleString()}đ. Chi tiết: ...`;
-    navigator.clipboard.writeText(text);
-    message.success('Đã sao chép nội dung gửi Zalo! 📋');
-  };
+
 
   const columns = [
     {
@@ -269,7 +265,40 @@ export default function InvoiceDetailModal({ isOpen, onCancel, invoice, onUpdate
           <div className="flex justify-between items-center border-t-2 border-black pt-6 print:hidden">
             <div className="flex gap-2">
               <Button icon={<Printer size={16} />} className="gumroad-btn-secondary" onClick={() => window.print()}>In hóa đơn</Button>
-              <Button icon={<Share2 size={16} />} className="gumroad-btn-secondary" onClick={handleCopyLink}>Gửi Zalo</Button>
+              
+              {/* COPY LINK */}
+              <Button 
+                icon={<Share2 size={16} />} 
+                className="gumroad-btn-secondary" 
+                onClick={() => {
+                   if (!invoice.accessCode) {
+                     message.error('Hóa đơn này chưa có mã truy cập (cũ).');
+                     return;
+                   }
+                   const link = `${window.location.origin}/bill/${invoice.accessCode}`;
+                   navigator.clipboard.writeText(link);
+                   message.success('Đã copy link hóa đơn! 📋');
+                }}
+              >
+                Copy Link
+              </Button>
+
+              {/* ZALO SHARE */}
+              <Button 
+                icon={<Send size={16} />} 
+                className="bg-blue-500 text-white border-2 border-black font-bold hover:bg-blue-600 hover:text-white"
+                onClick={() => {
+                   if (!invoice.accessCode) {
+                     message.error('Hóa đơn này chưa có mã truy cập (cũ).');
+                     return;
+                   }
+                   const link = `${window.location.origin}/bill/${invoice.accessCode}`;
+                   const zaloLink = `https://zalo.me/share?text=${encodeURIComponent(link)}`;
+                   window.open(zaloLink, '_blank');
+                }}
+              >
+                Gửi Zalo
+              </Button>
             </div>
 
             <div className="flex gap-2">

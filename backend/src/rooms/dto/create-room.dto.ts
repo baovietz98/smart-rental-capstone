@@ -41,6 +41,16 @@ export class CreateRoomDto {
   price: number;
 
   @ApiPropertyOptional({
+    description: 'Tiền cọc (VNĐ)',
+    example: 3000000,
+    minimum: 0,
+  })
+  @IsNumber({}, { message: 'Tiền cọc phải là số' })
+  @IsOptional()
+  @Min(0, { message: 'Tiền cọc không được âm' })
+  depositPrice?: number;
+
+  @ApiPropertyOptional({
     description: 'Tầng',
     example: 1,
     default: 1,

@@ -19,10 +19,12 @@ export class InvoicesService {
   constructor(private prisma: PrismaService) {}
 
   /**
-   * BƯỚC 1: Tạo hóa đơn nháp (Draft Invoice)
-   * Tự động tính toán tất cả các khoản
+   * BƯỚC 1: Xem trước hóa đơn (Preview)
+   * - Kiểm tra readings
+   * - Tính toán
+   * - Trả về JSON lineItems
    */
-  async generateDraft(dto: GenerateInvoiceDto) {
+  async preview(dto: GenerateInvoiceDto) {
     // 1. Validate format tháng
     if (!/^\d{2}-\d{4}$/.test(dto.month)) {
       throw new BadRequestException(
@@ -30,21 +32,7 @@ export class InvoicesService {
       );
     }
 
-    // 2. Kiểm tra đã có hóa đơn tháng này chưa
-    const existing = await this.prisma.invoice.findFirst({
-      where: {
-        contractId: dto.contractId,
-        month: dto.month,
-      },
-    });
-
-    if (existing) {
-      throw new ConflictException(
-        `Đã có hóa đơn tháng ${dto.month}. Vui lòng sử dụng API update hoặc xóa hóa đơn cũ.`,
-      );
-    }
-
-    // 3. Lấy thông tin hợp đồng
+    // 2. Lấy thông tin hợp đồng
     const contract = await this.prisma.contract.findUnique({
       where: { id: dto.contractId },
       include: {
@@ -65,7 +53,7 @@ export class InvoicesService {
       );
     }
 
-    // 4. Khởi tạo line items
+    // 3. Khởi tạo line items
     const lineItems: InvoiceLineItem[] = [];
 
     // ===== TÍNH TIỀN PHÒNG (RENT) =====
@@ -99,6 +87,7 @@ export class InvoicesService {
     });
 
     // ===== TÍNH DỊCH VỤ BIẾN ĐỔI (ĐIỆN/NƯỚC) =====
+    // Check readings exist?
     const readings = await this.prisma.serviceReading.findMany({
       where: {
         contractId: dto.contractId,
@@ -107,6 +96,35 @@ export class InvoicesService {
       },
       include: { service: true },
     });
+
+    // Nếu không có readings nào cho tháng này -> Cảnh báo hoặc Lỗi
+    // Tuy nhiên có thể tháng này không dùng điện nước? (Hiếm)
+    // Lozido yêu cầu "Chốt số" trước.
+    // Ta sẽ check xem có service nào type=INDEX mà chưa có reading không.
+    const indexServices = await this.prisma.service.findMany({
+      where: { type: 'INDEX', isActive: true },
+    });
+
+    // Logic đơn giản: Nếu có service INDEX mà không tìm thấy reading tương ứng -> Báo lỗi
+    // (Cần tối ưu hơn: chỉ check service nào contract đang dùng, nhưng hiện tại contract chưa link service cụ thể, mặc định dùng all active services)
+
+    if (indexServices.length > 0 && readings.length === 0) {
+      // Có thể chưa chốt
+      // Nhưng cũng có thể đã chốt nhưng isBilled = true (đã tạo hóa đơn khác?)
+      // Check kỹ hơn
+      const existingReadings = await this.prisma.serviceReading.findMany({
+        where: {
+          contractId: dto.contractId,
+          month: dto.month,
+        },
+      });
+
+      if (existingReadings.length === 0) {
+        throw new BadRequestException(
+          `Chưa chốt điện/nước tháng ${dto.month}. Vui lòng chốt số trước khi lập hóa đơn.`,
+        );
+      }
+    }
 
     let serviceCharge = 0;
 
@@ -176,8 +194,102 @@ export class InvoicesService {
       });
     }
 
-    // ===== TÍNH TỔNG =====
-    const totalAmount = roomCharge + serviceCharge + previousDebt;
+    // ===== TÍNH TIỀN CỌC CÒN THIẾU (MISSING DEPOSIT) - AUTO COLLECT =====
+    // Logic: Nếu cọc đóng chưa đủ -> Truy thu
+    const paidDeposit = (contract as any).paidDeposit || 0;
+    const missingDeposit = contract.deposit - paidDeposit;
+
+    // Chỉ truy thu nếu > 0 và chưa được truy thu trong các hóa đơn trước (Optional check)
+    // Ở đây ta cứ hiện ra, nếu user thấy đã thu rồi thì xóa dòng này đi (Flexible)
+    // Hoặc check kỹ hơn:
+    // Tuy nhiên, logic Lozido là "Tự động chèn".
+    if (missingDeposit > 0) {
+      lineItems.push({
+        type: 'DEBT', // Hoặc type mới DEPOSIT_COLLECTION nếu FE hỗ trợ
+        name: 'Truy thu tiền cọc còn thiếu',
+        quantity: 1,
+        unit: 'lần',
+        unitPrice: missingDeposit,
+        amount: missingDeposit,
+        note: `Cọc cam kết: ${contract.deposit.toLocaleString()} - Đã đóng: ${paidDeposit.toLocaleString()}`,
+      });
+    }
+
+    return {
+      contract,
+      lineItems,
+      totalAmount: lineItems.reduce((sum, item) => sum + item.amount, 0),
+    };
+  }
+
+  /**
+   * BƯỚC 2: Tạo hóa đơn nháp (Draft Invoice)
+   * - Nếu có dto.lineItems (Snapshot) -> Dùng luôn
+   * - Nếu không -> Tự tính (như cũ)
+   */
+  async generateDraft(dto: GenerateInvoiceDto) {
+    // 1. Validate format tháng
+    if (!/^\d{2}-\d{4}$/.test(dto.month)) {
+      throw new BadRequestException(
+        'Format tháng không hợp lệ. Phải là MM-YYYY',
+      );
+    }
+
+    // 2. Kiểm tra đã có hóa đơn tháng này chưa
+    const existing = await this.prisma.invoice.findFirst({
+      where: {
+        contractId: dto.contractId,
+        month: dto.month,
+      },
+    });
+
+    if (existing) {
+      throw new ConflictException(
+        `Đã có hóa đơn tháng ${dto.month}. Vui lòng sử dụng API update hoặc xóa hóa đơn cũ.`,
+      );
+    }
+
+    let lineItems: InvoiceLineItem[] = [];
+    let roomCharge = 0;
+    let serviceCharge = 0;
+    let previousDebt = 0;
+    let totalAmount = 0;
+
+    // CASE A: Dùng Snapshot (Recommended)
+    if (dto.lineItems && dto.lineItems.length > 0) {
+      lineItems = dto.lineItems as unknown as InvoiceLineItem[];
+
+      // Tính toán lại các charge fields từ snapshot để lưu DB
+      for (const item of lineItems) {
+        if (item.type === 'RENT') roomCharge += item.amount;
+        else if (
+          item.type === 'ELECTRIC' ||
+          item.type === 'WATER' ||
+          item.type === 'FIXED'
+        )
+          serviceCharge += item.amount;
+        else if (item.type === 'DEBT') previousDebt += item.amount;
+      }
+      totalAmount = lineItems.reduce((sum, item) => sum + item.amount, 0);
+    }
+    // CASE B: Tự tính (Fallback / Bulk)
+    else {
+      const previewData = await this.preview(dto);
+      lineItems = previewData.lineItems;
+      totalAmount = previewData.totalAmount;
+
+      // Recalculate charges
+      for (const item of lineItems) {
+        if (item.type === 'RENT') roomCharge += item.amount;
+        else if (
+          item.type === 'ELECTRIC' ||
+          item.type === 'WATER' ||
+          item.type === 'FIXED'
+        )
+          serviceCharge += item.amount;
+        else if (item.type === 'DEBT') previousDebt += item.amount;
+      }
+    }
 
     // 5. Tạo hóa đơn nháp
     const invoice = await this.prisma.invoice.create({
@@ -252,6 +364,7 @@ export class InvoicesService {
 
   /**
    * BƯỚC 2: Thêm khoản phát sinh / giảm giá vào hóa đơn (draft)
+   * HOẶC: Cập nhật toàn bộ lineItems (Flexible Editing)
    */
   async updateDraft(id: number, dto: UpdateInvoiceDto) {
     const invoice = await this.findOne(id);
@@ -262,59 +375,96 @@ export class InvoicesService {
       );
     }
 
-    const lineItems = invoice.lineItems as unknown as InvoiceLineItem[];
+    let lineItems = invoice.lineItems as unknown as InvoiceLineItem[];
+    let roomCharge = invoice.roomCharge;
+    let serviceCharge = invoice.serviceCharge;
+    let extraCharge = invoice.extraCharge;
+    let discount = dto.discount ?? invoice.discount;
+    let previousDebt = invoice.previousDebt;
 
-    // Xóa các khoản EXTRA và DISCOUNT cũ
-    const filteredItems = lineItems.filter(
-      (item) => item.type !== 'EXTRA' && item.type !== 'DISCOUNT',
-    );
+    // CASE 1: Flexible Editing (Gửi toàn bộ lineItems mới)
+    if (dto.lineItems) {
+      lineItems = dto.lineItems as unknown as InvoiceLineItem[];
 
-    // Thêm các khoản phát sinh mới
-    let extraCharge = 0;
-    if (dto.extraCharges && dto.extraCharges.length > 0) {
-      for (const extra of dto.extraCharges) {
-        extraCharge += extra.amount;
+      // Recalculate charges based on types
+      roomCharge = 0;
+      serviceCharge = 0;
+      extraCharge = 0;
+      previousDebt = 0;
+      discount = 0; // Reset discount, will be calculated from items if type is DISCOUNT
+
+      for (const item of lineItems) {
+        if (item.type === 'RENT') roomCharge += item.amount;
+        else if (
+          item.type === 'ELECTRIC' ||
+          item.type === 'WATER' ||
+          item.type === 'FIXED'
+        )
+          serviceCharge += item.amount;
+        else if (item.type === 'EXTRA') extraCharge += item.amount;
+        else if (item.type === 'DEBT') previousDebt += item.amount;
+        else if (item.type === 'DISCOUNT') discount += Math.abs(item.amount); // Discount item usually has negative amount or positive? Let's assume negative in amount, but we store positive in DB field
+      }
+
+      // Note: If DISCOUNT item exists, its amount should be negative in lineItems to reduce total.
+      // But in DB field `discount`, we usually store positive value.
+      // Let's ensure consistency.
+    }
+    // CASE 2: Legacy (Chỉ thêm extraCharges hoặc update discount)
+    else {
+      // Xóa các khoản EXTRA và DISCOUNT cũ nếu update theo kiểu cũ
+      // (Logic cũ giữ nguyên hoặc merge? Ở đây ta giữ logic cũ là replace extraCharges)
+
+      const filteredItems = lineItems.filter(
+        (item) => item.type !== 'EXTRA' && item.type !== 'DISCOUNT',
+      );
+
+      // Thêm các khoản phát sinh mới
+      extraCharge = 0;
+      if (dto.extraCharges && dto.extraCharges.length > 0) {
+        for (const extra of dto.extraCharges) {
+          extraCharge += extra.amount;
+          filteredItems.push({
+            type: 'EXTRA',
+            name: extra.name,
+            quantity: 1,
+            unitPrice: extra.amount,
+            amount: extra.amount,
+            note: extra.note,
+          });
+        }
+      }
+
+      // Thêm giảm giá nếu có
+      if (discount > 0) {
         filteredItems.push({
-          type: 'EXTRA',
-          name: extra.name,
+          type: 'DISCOUNT',
+          name: 'Giảm giá',
           quantity: 1,
-          unitPrice: extra.amount,
-          amount: extra.amount,
-          note: extra.note,
+          unitPrice: -discount,
+          amount: -discount,
         });
       }
-    }
 
-    // Thêm giảm giá nếu có
-    const discount = dto.discount ?? invoice.discount;
-    if (discount > 0) {
-      filteredItems.push({
-        type: 'DISCOUNT',
-        name: 'Giảm giá',
-        quantity: 1,
-        unitPrice: -discount,
-        amount: -discount,
-      });
+      lineItems = filteredItems;
     }
 
     // Tính lại tổng
-    const totalAmount =
-      invoice.roomCharge +
-      invoice.serviceCharge +
-      extraCharge +
-      invoice.previousDebt -
-      discount;
-
+    // Total = Sum of all line items
+    const totalAmount = lineItems.reduce((sum, item) => sum + item.amount, 0);
     const debtAmount = totalAmount - invoice.paidAmount;
 
     return this.prisma.invoice.update({
       where: { id },
       data: {
+        roomCharge,
+        serviceCharge,
         extraCharge,
+        previousDebt,
         discount,
         totalAmount,
         debtAmount,
-        lineItems: filteredItems as unknown as Prisma.JsonArray,
+        lineItems: lineItems as unknown as Prisma.JsonArray,
         dueDate: dto.dueDate ? new Date(dto.dueDate) : invoice.dueDate,
         note: dto.note ?? invoice.note,
       },
@@ -447,22 +597,62 @@ export class InvoicesService {
       receivedBy: dto.receivedBy,
     });
 
-    return this.prisma.invoice.update({
-      where: { id },
-      data: {
-        paidAmount: newPaidAmount,
-        debtAmount: Math.max(0, newDebtAmount),
-        status: newStatus,
-        paymentHistory: paymentHistory as unknown as Prisma.JsonArray,
-      },
-      include: {
-        contract: {
-          include: {
-            room: { include: { building: true } },
-            tenant: true,
+    // Transaction: Tạo phiếu thu + Cập nhật Invoice
+    return this.prisma.$transaction(async (tx) => {
+      // 1. Tạo Transaction
+      await tx.transaction.create({
+        data: {
+          code: `PT-${Date.now()}`,
+          amount: dto.amount,
+          type: 'INVOICE_PAYMENT',
+          contractId: invoice.contractId,
+          invoiceId: invoice.id,
+          note: dto.note || `Thanh toán hóa đơn tháng ${invoice.month}`,
+          date: dto.paymentDate ? new Date(dto.paymentDate) : new Date(),
+        },
+      });
+
+      // 2. Update Invoice
+      const updatedInvoice = await tx.invoice.update({
+        where: { id },
+        data: {
+          paidAmount: newPaidAmount,
+          debtAmount: Math.max(0, newDebtAmount),
+          status: newStatus,
+          paymentHistory: paymentHistory as unknown as Prisma.JsonArray,
+        },
+        include: {
+          contract: {
+            include: {
+              room: { include: { building: true } },
+              tenant: true,
+            },
           },
         },
-      },
+      });
+
+      // 3. Update Contract Paid Deposit if this was a Deposit Collection invoice
+      // Only if fully paid to avoid complexity with partial payments for now
+      if (newStatus === InvoiceStatus.PAID) {
+        const lineItems = invoice.lineItems as unknown as any[];
+        const depositItem = lineItems.find(
+          (item) =>
+            item.name === 'Truy thu tiền cọc còn thiếu' || item.type === 'DEBT',
+        );
+
+        if (depositItem) {
+          await tx.contract.update({
+            where: { id: invoice.contractId },
+            data: {
+              paidDeposit: {
+                increment: depositItem.amount,
+              },
+            },
+          });
+        }
+      }
+
+      return updatedInvoice;
     });
   }
 
@@ -521,6 +711,29 @@ export class InvoicesService {
 
     if (!invoice) {
       throw new NotFoundException(`Không tìm thấy hóa đơn ID: ${id}`);
+    }
+
+    return invoice;
+  }
+
+  /**
+   * Lấy hóa đơn theo access code (Public)
+   */
+  async findByAccessCode(code: string) {
+    const invoice = await this.prisma.invoice.findUnique({
+      where: { accessCode: code },
+      include: {
+        contract: {
+          include: {
+            room: { include: { building: true } },
+            tenant: true,
+          },
+        },
+      },
+    });
+
+    if (!invoice) {
+      throw new NotFoundException(`Không tìm thấy hóa đơn với mã: ${code}`);
     }
 
     return invoice;

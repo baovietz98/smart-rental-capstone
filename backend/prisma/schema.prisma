@@ -16,20 +16,20 @@ model Building {
 }
 
 model Room {
-  id         Int        @id @default(autoincrement())
-  name       String
-  floor      Int        @default(1) // Added floor
-  area       Float?
-  price      Float
-  depositPrice Float?     // Added deposit price
-  maxTenants Int        @default(2)
-  status     RoomStatus @default(AVAILABLE)
-  gender     Gender     @default(ALL) // Added gender restriction
-  buildingId Int
-  assets     Json?
-  contracts  Contract[]
-  issues     Issue[]
-  building   Building   @relation(fields: [buildingId], references: [id])
+  id           Int        @id @default(autoincrement())
+  name         String
+  floor        Int        @default(1)
+  area         Float?
+  price        Float
+  depositPrice Float?
+  maxTenants   Int        @default(2)
+  status       RoomStatus @default(AVAILABLE)
+  gender       Gender     @default(ALL)
+  buildingId   Int
+  assets       Json?
+  contracts    Contract[]
+  issues       Issue[]
+  building     Building   @relation(fields: [buildingId], references: [id])
 }
 
 model Tenant {
@@ -47,16 +47,18 @@ model Contract {
   endDate        DateTime?
   deposit        Float
   price          Float
-  paymentDay     Int              @default(5) // Added paymentDay
+  paymentDay     Int              @default(5)
   isActive       Boolean          @default(true)
   roomId         Int
   tenantId       Int
   initialIndexes Json?
   numTenants     Int              @default(1)
+  paidDeposit    Float            @default(0)
   room           Room             @relation(fields: [roomId], references: [id])
   tenant         Tenant           @relation(fields: [tenantId], references: [id])
   invoices       Invoice[]
   readings       ServiceReading[]
+  transactions   Transaction[]
 }
 
 model Service {
@@ -113,9 +115,26 @@ model Invoice {
   serviceCharge  Float
   totalAmount    Float
   updatedAt      DateTime      @updatedAt
+  accessCode     String        @unique @default(uuid())
   contract       Contract      @relation(fields: [contractId], references: [id])
+  transactions   Transaction[]
 
   @@unique([contractId, month])
+}
+
+model Transaction {
+  id         Int             @id @default(autoincrement())
+  code       String          @unique
+  amount     Float
+  type       TransactionType
+  date       DateTime        @default(now())
+  note       String?
+  contractId Int
+  invoiceId  Int?
+  createdAt  DateTime        @default(now())
+  updatedAt  DateTime        @updatedAt
+  contract   Contract        @relation(fields: [contractId], references: [id])
+  invoice    Invoice?        @relation(fields: [invoiceId], references: [id])
 }
 
 model Issue {
@@ -126,6 +145,20 @@ model Issue {
   roomId      Int
   createdAt   DateTime @default(now())
   room        Room     @relation(fields: [roomId], references: [id])
+}
+
+model User {
+  id            Int       @id @default(autoincrement())
+  email         String    @unique
+  password      String
+  name          String
+  role          UserRole  @default(ADMIN)
+  isActive      Boolean   @default(true)
+  refreshToken  String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  resetToken    String?
+  resetTokenExp DateTime?
 }
 
 enum RoomStatus {
@@ -158,4 +191,15 @@ enum Gender {
   ALL
   MALE
   FEMALE
+}
+
+enum TransactionType {
+  DEPOSIT
+  INVOICE_PAYMENT
+  OTHER
+}
+
+enum UserRole {
+  ADMIN
+  TENANT
 }

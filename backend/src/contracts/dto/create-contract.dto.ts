@@ -34,7 +34,18 @@ export class CreateContractDto {
   })
   @IsNumber({}, { message: 'Tiền cọc phải là số' })
   @Min(0, { message: 'Tiền cọc không được âm' })
+  @Min(0, { message: 'Tiền cọc không được âm' })
   deposit: number;
+
+  @ApiPropertyOptional({
+    description: 'Tiền cọc thực đóng (VNĐ)',
+    example: 500000,
+    minimum: 0,
+  })
+  @IsNumber({}, { message: 'Tiền cọc thực đóng phải là số' })
+  @Min(0, { message: 'Tiền cọc thực đóng không được âm' })
+  @IsOptional()
+  paidDeposit?: number;
 
   @ApiProperty({
     description: 'Giá thuê chốt tại thời điểm ký (VNĐ/tháng)',

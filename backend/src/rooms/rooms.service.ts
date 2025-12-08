@@ -9,7 +9,7 @@ import { CreateRoomDto, UpdateRoomDto } from './dto';
 
 @Injectable()
 export class RoomsService {
-  constructor(private readonly prisma: PrismaService) { }
+  constructor(private readonly prisma: PrismaService) {}
 
   /**
    * Tạo phòng mới

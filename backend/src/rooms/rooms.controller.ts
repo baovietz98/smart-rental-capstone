@@ -18,14 +18,18 @@ import {
   ApiParam,
   ApiBody,
   ApiQuery,
+  ApiBearerAuth,
 } from '@nestjs/swagger';
 import { RoomsService } from './rooms.service';
 import { CreateRoomDto, UpdateRoomDto, RoomStatus } from './dto';
+import { Roles } from '../auth/decorators/roles.decorator';
 
 @ApiTags('Rooms')
+@ApiBearerAuth()
+@Roles('ADMIN')
 @Controller('rooms')
 export class RoomsController {
-  constructor(private readonly roomsService: RoomsService) {}
+  constructor(private readonly roomsService: RoomsService) { }
 
   @Post()
   @ApiOperation({

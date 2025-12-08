@@ -119,7 +119,7 @@ export default function BuildingsPage() {
                 <div className="p-5 border-b-2 border-black/5 flex justify-between items-start">
                   <div>
                     <h3 className="text-xl font-black uppercase tracking-tight leading-none mb-2">
-                      <Link href={`/buildings/${item.id}/rooms`} className="hover:underline decoration-2 underline-offset-2">
+                      <Link href={`/rooms?buildingId=${item.id}`} className="hover:underline decoration-2 underline-offset-2">
                         {item.name}
                       </Link>
                     </h3>

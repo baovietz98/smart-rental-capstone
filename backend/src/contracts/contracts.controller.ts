@@ -18,14 +18,18 @@ import {
   ApiParam,
   ApiBody,
   ApiQuery,
+  ApiBearerAuth,
 } from '@nestjs/swagger';
 import { ContractsService } from './contracts.service';
 import { CreateContractDto, UpdateContractDto } from './dto';
+import { Roles } from '../auth/decorators/roles.decorator';
 
 @ApiTags('Contracts')
+@ApiBearerAuth()
+@Roles('ADMIN')
 @Controller('contracts')
 export class ContractsController {
-  constructor(private readonly contractsService: ContractsService) {}
+  constructor(private readonly contractsService: ContractsService) { }
 
   @Post()
   @ApiOperation({

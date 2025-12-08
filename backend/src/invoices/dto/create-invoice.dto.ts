@@ -15,6 +15,55 @@ import { Type } from 'class-transformer';
  * DTO để tạo hóa đơn (generate draft)
  * Chỉ cần contractId và month, hệ thống tự tính toán
  */
+/**
+ * DTO cho từng dòng hóa đơn (khi update full hoặc snapshot)
+ */
+export class LineItemDto {
+  @ApiProperty({ example: 'RENT', description: 'Loại khoản thu' })
+  @IsString()
+  type: string;
+
+  @ApiProperty({ example: 'Tiền phòng', description: 'Tên khoản thu' })
+  @IsString()
+  name: string;
+
+  @ApiProperty({ example: 1, description: 'Số lượng' })
+  @IsNumber()
+  quantity: number;
+
+  @ApiPropertyOptional({ example: 'tháng', description: 'Đơn vị' })
+  @IsOptional()
+  @IsString()
+  unit?: string;
+
+  @ApiProperty({ example: 3000000, description: 'Đơn giá' })
+  @IsNumber()
+  unitPrice: number;
+
+  @ApiProperty({ example: 3000000, description: 'Thành tiền' })
+  @IsNumber()
+  amount: number;
+
+  @ApiPropertyOptional({ example: 'Ghi chú', description: 'Ghi chú' })
+  @IsOptional()
+  @IsString()
+  note?: string;
+
+  @ApiPropertyOptional({ example: 1, description: 'ID chỉ số điện/nước' })
+  @IsOptional()
+  @IsNumber()
+  readingId?: number;
+
+  @ApiPropertyOptional({ example: 1, description: 'ID dịch vụ' })
+  @IsOptional()
+  @IsNumber()
+  serviceId?: number;
+}
+
+/**
+ * DTO để tạo hóa đơn (generate draft)
+ * Chỉ cần contractId và month, hệ thống tự tính toán
+ */
 export class GenerateInvoiceDto {
   @ApiProperty({ example: 1, description: 'ID hợp đồng' })
   @IsNumber()
@@ -34,19 +83,33 @@ export class GenerateInvoiceDto {
 
   @ApiPropertyOptional({
     example: 15,
-    description: 'Ngày bắt đầu tính (nếu prorated). Mặc định lấy từ startDate của hợp đồng',
+    description:
+      'Ngày bắt đầu tính (nếu prorated). Mặc định lấy từ startDate của hợp đồng',
   })
   @IsOptional()
   @IsNumber()
   @Min(1)
   startDay?: number;
+
+  @ApiPropertyOptional({
+    type: [LineItemDto],
+    description: 'Danh sách chi tiết hóa đơn (Snapshot từ Preview)',
+  })
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => LineItemDto)
+  lineItems?: LineItemDto[];
 }
 
 /**
  * DTO để thêm khoản phát sinh (extra charge)
  */
 export class ExtraChargeDto {
-  @ApiProperty({ example: 'Sửa vòi nước', description: 'Mô tả khoản phát sinh' })
+  @ApiProperty({
+    example: 'Sửa vòi nước',
+    description: 'Mô tả khoản phát sinh',
+  })
   @IsString()
   name: string;
 
@@ -67,13 +130,23 @@ export class ExtraChargeDto {
 export class UpdateInvoiceDto {
   @ApiPropertyOptional({
     type: [ExtraChargeDto],
-    description: 'Danh sách khoản phát sinh',
+    description: 'Danh sách khoản phát sinh (Legacy: dùng khi chỉ thêm extra)',
   })
   @IsOptional()
   @IsArray()
   @ValidateNested({ each: true })
   @Type(() => ExtraChargeDto)
   extraCharges?: ExtraChargeDto[];
+
+  @ApiPropertyOptional({
+    type: [LineItemDto],
+    description: 'Danh sách chi tiết hóa đơn (Dùng khi sửa linh hoạt)',
+  })
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => LineItemDto)
+  lineItems?: LineItemDto[];
 
   @ApiPropertyOptional({ example: 0, description: 'Giảm giá' })
   @IsOptional()

@@ -76,7 +76,27 @@ export default function Sidebar() {
 
       {/* Footer / User Profile */}
       <div className="p-4 border-t-2 border-black bg-gray-50">
-        <button className="flex items-center gap-3 w-full px-4 py-3 font-bold text-sm border-2 border-black bg-white hover:bg-red-100 transition-colors shadow-[2px_2px_0px_0px_black]">
+        <button 
+          onClick={async () => {
+            try {
+              // 1. Call API to invalidate token (optional)
+              // await axiosClient.post('/auth/logout'); 
+            } catch (error) {
+              console.error('Logout error', error);
+            } finally {
+              // 2. Clear Local Storage
+              localStorage.removeItem('token');
+              localStorage.removeItem('user');
+              
+              // 3. Clear Cookie
+              document.cookie = 'token=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT;';
+              
+              // 4. Redirect
+              window.location.href = '/login';
+            }
+          }}
+          className="flex items-center gap-3 w-full px-4 py-3 font-bold text-sm border-2 border-black bg-white hover:bg-red-100 transition-colors shadow-[2px_2px_0px_0px_black]"
+        >
           <LogOut size={20} />
           Đăng xuất
         </button>
