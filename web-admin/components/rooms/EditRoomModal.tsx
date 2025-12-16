@@ -43,7 +43,7 @@ export default function EditRoomModal({ open, onCancel, onConfirm, loading, room
     return (
         <Modal
             open={open}
-            destroyOnClose={true}
+            destroyOnHidden={true}
             onCancel={onCancel}
             footer={null}
             title={null}

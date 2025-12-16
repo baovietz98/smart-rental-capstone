@@ -245,12 +245,12 @@ export default function ReadingsPage() {
             placeholder="Dịch vụ"
             allowClear
             className="w-40"
-            onChange={(val) => setSelectedService(val)}
-            bordered={false}
+            value={selectedService}
+            onChange={(val) => setSelectedService(val ?? null)}
+            variant="borderless"
             style={{ border: '1px solid #e5e7eb', borderRadius: '6px' }}
-            defaultValue={null}
             >
-                <Select.Option value={null}>Tất cả</Select.Option>
+                {/* <Select.Option value={null}>Tất cả</Select.Option> Remove null option, use allowClear */}
                 {services.map(s => (
                     <Select.Option key={s.id} value={s.id}>{s.name}</Select.Option>
                 ))}

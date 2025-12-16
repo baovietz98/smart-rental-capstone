@@ -5,7 +5,7 @@ import {
 } from '@nestjs/common';
 import { RoomStatus } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
-import { CreateRoomDto, UpdateRoomDto } from './dto';
+import { CreateRoomDto, UpdateRoomDto, BulkUpdatePriceDto, BulkCreateIssueDto, BulkNotifyDto, PriceUpdateType } from './dto';
 
 @Injectable()
 export class RoomsService {
@@ -162,8 +162,24 @@ export class RoomsService {
    * Cập nhật trạng thái phòng
    */
   async updateStatus(id: number, status: RoomStatus) {
-    await this.findOne(id);
+    const room = await this.findOne(id);
+    
+    // Strict Validation Logic (Lozido Style)
+    // 1. Prevent manual switch to RENTED (Must create contract)
+    if (status === RoomStatus.RENTED && room.status !== RoomStatus.RENTED) {
+       throw new BadRequestException('Không thể chuyển thủ công sang ĐANG Ở. Vui lòng tạo Hợp Đồng mới.');
+    }
 
+    // 2. Prevent switch to AVAILABLE if Active Contract exists
+    if (status === RoomStatus.AVAILABLE && room.status === RoomStatus.RENTED) {
+       const activeContracts = room.contracts.filter(c => c.isActive);
+       if (activeContracts.length > 0) {
+          throw new BadRequestException('Phòng đang có hợp đồng hiệu lực. Vui lòng thanh lý hợp đồng trước khi chuyển sang TRỐNG.');
+       }
+    }
+
+    // 3. Warning for MAINTENANCE (Allowed but careful) - Frontend handles warning, Backend allows.
+    
     return this.prisma.room.update({
       where: { id },
       data: { status },
@@ -207,5 +223,86 @@ export class RoomsService {
       },
       { AVAILABLE: 0, RENTED: 0, MAINTENANCE: 0 },
     );
+  }
+  /**
+   * Cập nhật giá đồng loạt
+   */
+  async bulkUpdatePrice(dto: BulkUpdatePriceDto) {
+    const { roomIds, type, value } = dto;
+    
+    // Validate rooms exist
+    const rooms = await this.prisma.room.findMany({
+      where: { id: { in: roomIds } },
+    });
+
+    if (rooms.length !== roomIds.length) {
+       throw new BadRequestException('Một số phòng không tồn tại');
+    }
+
+    const updates = rooms.map((room) => {
+      let newPrice = room.price;
+      if (type === PriceUpdateType.PERCENTAGE) {
+        newPrice = Math.round(room.price * (1 + value / 100));
+      } else if (type === PriceUpdateType.FIXED_ADD) {
+        newPrice = room.price + value;
+      } else if (type === PriceUpdateType.FIXED_SET) {
+        newPrice = value;
+      }
+      
+      return this.prisma.room.update({
+        where: { id: room.id },
+        data: { price: newPrice },
+      });
+    });
+
+    return await this.prisma.$transaction(updates);
+  }
+
+  /**
+   * Tạo sự cố đồng loạt
+   */
+  async bulkCreateIssues(dto: BulkCreateIssueDto) {
+      const { roomIds, title, description } = dto;
+
+      const creations = roomIds.map(roomId => 
+          this.prisma.issue.create({
+              data: {
+                  title,
+                  description: description || 'Báo cáo hàng loạt',
+                  status: 'OPEN',
+                  roomId
+              }
+          })
+      );
+
+      return await this.prisma.$transaction(creations);
+  }
+
+  /**
+   * Gửi thông báo đồng loạt (Mô phỏng)
+   */
+  async bulkNotify(dto: BulkNotifyDto) {
+    const { roomIds, message } = dto;
+    
+    // Simulate finding tenants involved
+    const contracts = await this.prisma.contract.findMany({
+        where: { 
+            roomId: { in: roomIds },
+            isActive: true
+        },
+        include: { tenant: true }
+    });
+    
+    // Log to console to simulate sending
+    console.log(`[ZALO MOCK] Sending message to ${contracts.length} tenants: "${message}"`);
+    contracts.forEach(c => {
+        console.log(` -> To: ${c.tenant.fullName} (${c.tenant.phone})`);
+    });
+
+    return { 
+        success: true, 
+        sentCount: contracts.length, 
+        message: 'Đã gửi thông báo thành công (Mô phỏng)' 
+    };
   }
 }

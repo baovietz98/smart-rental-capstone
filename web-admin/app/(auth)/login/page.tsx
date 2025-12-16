@@ -10,6 +10,7 @@ import axiosClient from '@/lib/axios-client';
 export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const router = useRouter();
+  const [messageApi, contextHolder] = message.useMessage();
 
   const onFinish = async (values: any) => {
     try {
@@ -29,7 +30,7 @@ export default function LoginPage() {
       
       document.cookie = `token=${accessToken}; path=/; max-age=${maxAge}; SameSite=Lax`; 
 
-      message.success('Đăng nhập thành công!');
+      messageApi.success('Đăng nhập thành công!');
       
       // Redirect to Dashboard
       router.push('/');
@@ -37,7 +38,7 @@ export default function LoginPage() {
     } catch (error: any) {
       console.error('Login failed:', error);
       const msg = error.response?.data?.message || 'Đăng nhập thất bại. Vui lòng kiểm tra lại.';
-      message.error(msg);
+      messageApi.error(msg);
     } finally {
       setLoading(false);
     }
@@ -46,6 +47,7 @@ export default function LoginPage() {
   return (
     <div className="claude-card p-8 md:p-10 bg-white">
        <h2 className="text-2xl font-bold text-[#2D2D2C] mb-6 font-serif">Welcome Back</h2>
+       {contextHolder}
        
        <Form
           name="login_form"

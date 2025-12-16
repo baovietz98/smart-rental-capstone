@@ -21,7 +21,7 @@ import {
   ApiBearerAuth,
 } from '@nestjs/swagger';
 import { RoomsService } from './rooms.service';
-import { CreateRoomDto, UpdateRoomDto, RoomStatus } from './dto';
+import { CreateRoomDto, UpdateRoomDto, RoomStatus, BulkUpdatePriceDto, BulkCreateIssueDto, BulkNotifyDto } from './dto';
 import { Roles } from '../auth/decorators/roles.decorator';
 
 @ApiTags('Rooms')
@@ -203,5 +203,25 @@ export class RoomsController {
   })
   remove(@Param('id', ParseIntPipe) id: number) {
     return this.roomsService.remove(id);
+  }
+  @Post('bulk/price')
+  @ApiOperation({ summary: 'Cập nhật giá đồng loạt' })
+  @ApiBody({ type: BulkUpdatePriceDto })
+  bulkUpdatePrice(@Body() dto: BulkUpdatePriceDto) {
+      return this.roomsService.bulkUpdatePrice(dto);
+  }
+
+  @Post('bulk/issues')
+  @ApiOperation({ summary: 'Tạo sự cố đồng loạt' })
+  @ApiBody({ type: BulkCreateIssueDto })
+  bulkCreateIssues(@Body() dto: BulkCreateIssueDto) {
+      return this.roomsService.bulkCreateIssues(dto);
+  }
+
+  @Post('bulk/notify')
+  @ApiOperation({ summary: 'Gửi thông báo đồng loạt (Zalo)' })
+  @ApiBody({ type: BulkNotifyDto })
+  bulkNotify(@Body() dto: BulkNotifyDto) {
+      return this.roomsService.bulkNotify(dto);
   }
 }

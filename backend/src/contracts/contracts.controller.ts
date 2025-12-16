@@ -21,8 +21,9 @@ import {
   ApiBearerAuth,
 } from '@nestjs/swagger';
 import { ContractsService } from './contracts.service';
-import { CreateContractDto, UpdateContractDto } from './dto';
+import { CreateContractDto, UpdateContractDto, MoveContractDto } from './dto';
 import { Roles } from '../auth/decorators/roles.decorator';
+import { GetUser } from '../auth/decorators/get-user.decorator';
 
 @ApiTags('Contracts')
 @ApiBearerAuth()
@@ -43,6 +44,14 @@ export class ContractsController {
   @ApiResponse({ status: 409, description: 'Phòng đang có hợp đồng active' })
   create(@Body() createContractDto: CreateContractDto) {
     return this.contractsService.create(createContractDto);
+  }
+
+  @Post('move')
+  @ApiOperation({ summary: 'Chuyển phòng cho hợp đồng' })
+  @ApiResponse({ status: 200, description: 'Chuyển phòng thành công' })
+  @ApiResponse({ status: 400, description: 'Lỗi validation (Phòng mới không trống, Hợp đồng đã kết thúc...)' })
+  move(@Body() moveContractDto: MoveContractDto) {
+    return this.contractsService.moveContract(moveContractDto);
   }
 
   @Get()
