@@ -26,9 +26,9 @@ axiosClient.interceptors.response.use((response) => {
     if (error.response && error.response.status === 401) {
         if (typeof window !== 'undefined') {
             // Optional: Clear token and redirect if needed, or let component handle it
-            // localStorage.removeItem('token');
-            // document.cookie = "token=; path=/; max-age=0";
-            // window.location.href = '/login';
+            localStorage.removeItem('token');
+            document.cookie = "token=; path=/; max-age=0";
+            window.location.href = '/login';
         }
     }
     return Promise.reject(error);

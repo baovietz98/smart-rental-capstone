@@ -82,8 +82,11 @@ export class IssuesController {
         summary: 'Thống kê sự cố',
         description: 'Trả về số lượng sự cố theo từng trạng thái',
     })
-    getStats() {
-        return this.issuesService.getStats();
+    @ApiQuery({ name: 'buildingId', required: false, type: Number })
+    getStats(@Query('buildingId') buildingId?: string) {
+        return this.issuesService.getStats(
+            buildingId ? parseInt(buildingId, 10) : undefined,
+        );
     }
 
     @Get('room/:roomId')

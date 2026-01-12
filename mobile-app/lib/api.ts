@@ -1,12 +1,13 @@
 import axios from 'axios';
 import * as SecureStore from 'expo-secure-store';
-import { Platform } from 'react-native';
+import { } from 'react-native';
 
-// 192.168.20.185 is your computer's LAN IP found in Expo logs
-const DEV_API_URL = 'http://192.168.20.185:4000';
+// 192.168.1.14 is your computer's current LAN IP
+const DEV_API_URL = 'http://192.168.1.14:4000';
 
 export const api = axios.create({
   baseURL: DEV_API_URL,
+  timeout: 10000, // 10 seconds timeout to prevent "freezing" UI
   headers: {
     'Content-Type': 'application/json',
   },

@@ -173,10 +173,17 @@ export class InvoicesController {
    * Thống kê hóa đơn theo tháng
    */
   @Get('stats/:month')
-  @ApiOperation({ summary: 'Thống kê hóa đơn theo tháng' })
+  @ApiOperation({ summary: 'Thống kê hóa đơn theo tháng (có lọc building)' })
   @ApiParam({ name: 'month', example: '11-2025' })
-  getMonthlyStats(@Param('month') month: string) {
-    return this.invoicesService.getMonthlyStats(month);
+  @ApiQuery({ name: 'buildingId', required: false, type: Number })
+  getMonthlyStats(
+    @Param('month') month: string,
+    @Query('buildingId') buildingId?: string,
+  ) {
+    return this.invoicesService.getMonthlyStats(
+      month,
+      buildingId ? parseInt(buildingId, 10) : undefined,
+    );
   }
 
   /**

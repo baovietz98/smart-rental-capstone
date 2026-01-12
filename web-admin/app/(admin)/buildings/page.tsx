@@ -1,36 +1,68 @@
-'use client';
-import { useState, useEffect } from 'react';
-import Link from 'next/link';
-import GumroadFilter, { FilterItem } from '@/components/GumroadFilter';
-import { Building2, Home, Hotel, Warehouse, LayoutGrid, Loader2, Edit, Trash2, Plus } from 'lucide-react';
-import axios from '@/lib/axios-client';
-import { message, Form, Input } from 'antd';
+"use client";
+import { useState, useEffect } from "react";
+import Link from "next/link";
+import {
+  Building2,
+  Home,
+  Hotel,
+  Warehouse,
+  LayoutGrid,
+  Loader2,
+  Edit,
+  Trash2,
+  Plus,
+  MapPin,
+} from "lucide-react";
+import axios from "@/lib/axios-client";
+import { message, Form, Input } from "antd";
 
 // Filter definitions
-const buildingFilters: FilterItem[] = [
-  { id: 'all', label: 'Tất cả', icon: <LayoutGrid size={18} /> },
-  { id: 'apartment', label: 'Chung cư Mini', icon: <Building2 size={18} /> },
-  { id: 'house', label: 'Nhà trọ', icon: <Home size={18} /> },
-  { id: 'homestay', label: 'Homestay', icon: <Hotel size={18} /> },
-  { id: 'dorm', label: 'Ký túc xá', icon: <Warehouse size={18} /> },
+const buildingFilters = [
+  { id: "all", label: "Tất cả", icon: <LayoutGrid size={18} /> },
+  { id: "apartment", label: "Chung cư Mini", icon: <Building2 size={18} /> },
+  { id: "house", label: "Nhà trọ", icon: <Home size={18} /> },
+  { id: "homestay", label: "Homestay", icon: <Hotel size={18} /> },
+  { id: "dorm", label: "Ký túc xá", icon: <Warehouse size={18} /> },
 ];
 
+interface Building {
+  id: number;
+  name: string;
+  address: string;
+  totalRooms: number;
+  availableRooms: number;
+  rentedRooms: number;
+  maintenanceRooms: number;
+}
+
 export default function BuildingsPage() {
-  const [buildings, setBuildings] = useState<any[]>([]);
+  const [buildings, setBuildings] = useState<Building[]>([]);
   const [loading, setLoading] = useState(true);
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // Modal States
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [editingBuilding, setEditingBuilding] = useState<Building | null>(null);
   const [deleteId, setDeleteId] = useState<number | null>(null);
+
+  const [activeFilter, setActiveFilter] = useState("all");
   const [form] = Form.useForm();
+  const [editForm] = Form.useForm();
 
   // 1. Fetch Buildings
   const fetchBuildings = async () => {
     setLoading(true);
+    setError(null);
     try {
-      const res = await axios.get('/buildings');
+      const res = await axios.get("/buildings");
+      console.log("Buildings response:", res.data);
       setBuildings(Array.isArray(res.data) ? res.data : []);
-    } catch (error) {
-      console.error(error);
-      message.error('Không thể tải danh sách nhà!');
+    } catch (error: any) {
+      console.error("Fetch error:", error);
+      const msg =
+        error.response?.data?.message || "Không thể tải danh sách nhà!";
+      setError(msg);
+      message.error(msg);
     } finally {
       setLoading(false);
     }
@@ -43,29 +75,51 @@ export default function BuildingsPage() {
   // 2. Create Building
   const handleCreateBuilding = async (values: any) => {
     try {
-      await axios.post('/buildings', values);
-      message.success('Thêm nhà thành công! 🏡');
-      setIsModalOpen(false);
+      await axios.post("/buildings", values);
+      message.success("Thêm nhà thành công!");
+      setIsCreateModalOpen(false);
       form.resetFields();
       fetchBuildings();
     } catch (error) {
       console.error(error);
-      message.error('Lỗi khi thêm nhà');
+      message.error("Lỗi khi thêm nhà");
     }
   };
 
-  // 3. Delete Building
+  // 3. Edit Building
+  const openEditModal = (building: Building) => {
+    setEditingBuilding(building);
+    editForm.setFieldsValue({
+      name: building.name,
+      address: building.address,
+    });
+  };
+
+  const handleUpdateBuilding = async (values: any) => {
+    if (!editingBuilding) return;
+    try {
+      await axios.patch(`/buildings/${editingBuilding.id}`, values);
+      message.success("Cập nhật thành công!");
+      setEditingBuilding(null);
+      fetchBuildings();
+    } catch (error) {
+      console.error(error);
+      message.error("Lỗi khi cập nhật nhà");
+    }
+  };
+
+  // 4. Delete Building
   const confirmDelete = async () => {
     if (deleteId) {
       try {
         await axios.delete(`/buildings/${deleteId}`);
-        message.success('Đã xóa nhà thành công! 🗑️');
+        message.success("Đã xóa nhà thành công!");
         fetchBuildings();
       } catch (error: any) {
         if (error.response?.status === 404) {
-             message.error('Không thể xóa: Nhà này đang có phòng!');
+          message.error("Không thể xóa: Nhà này đang có phòng!");
         } else {
-             message.error('Lỗi khi xóa nhà');
+          message.error("Lỗi khi xóa nhà");
         }
       } finally {
         setDeleteId(null);
@@ -74,183 +128,360 @@ export default function BuildingsPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[var(--bg-page)] text-black font-sans p-8">
-      {/* HEADER */}
-      <div className="flex justify-between items-center mb-8 border-b-2 border-black pb-4">
-        <div>
-          <h1 className="text-4xl font-black tracking-tight mb-1">Buildings</h1>
-          <p className="text-gray-500 font-medium">Quản lý danh sách tòa nhà & khu trọ.</p>
-        </div>
-        
-        <button 
-          onClick={() => setIsModalOpen(true)}
-          className="claude-btn-primary flex items-center gap-2 group bg-black text-white px-6 py-3 rounded-xl font-bold hover:shadow-lg transition-all"
-        >
-          <Plus size={20} className="group-hover:rotate-90 transition-transform" /> 
-          <span>Thêm tòa nhà</span>
-        </button>
-      </div>
+    <div className="claude-page p-6 md:p-12">
+      <div className="max-w-7xl mx-auto">
+        {/* HEADER */}
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
+          <div>
+            <h1 className="text-3xl md:text-4xl claude-header mb-2">
+              Buildings
+            </h1>
+            <p className="text-gray-500 font-sans text-lg">
+              Quản lý danh sách tòa nhà & khu trọ.
+            </p>
+          </div>
 
-      {/* FILTERS */}
-      <div className="mb-6">
-        <GumroadFilter items={buildingFilters} />
-      </div>
-
-      {/* GRID VIEW (KANBAN STYLE) */}
-      {loading ? (
-        <div className="flex justify-center items-center h-64">
-          <Loader2 className="animate-spin w-10 h-10 text-gray-400" />
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {Array.isArray(buildings) && buildings.map((item, index) => {
-            // Assign random accent color based on index
-            const colors = ['border-t-[#FF4D4D]', 'border-t-[#FFC900]', 'border-t-[#4DA2FF]', 'border-t-black'];
-            const accentColor = colors[index % colors.length];
-            const badgeColor = index % colors.length === 0 ? 'bg-[#FF4D4D] text-white' : 
-                               index % colors.length === 1 ? 'bg-[#FFC900] text-black' : 
-                               index % colors.length === 2 ? 'bg-[#4DA2FF] text-white' : 'bg-black text-white';
-
-            return (
-              <div 
-                key={item.id} 
-                className={`bg-white border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,0.1)] hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,0.2)] hover:-translate-y-1 transition-all flex flex-col ${accentColor} border-t-[8px]`}
-              >
-                {/* Card Header */}
-                <div className="p-5 border-b-2 border-black/5 flex justify-between items-start">
-                  <div>
-                    <h3 className="text-xl font-black uppercase tracking-tight leading-none mb-2">
-                      <Link href={`/rooms?buildingId=${item.id}`} className="hover:underline decoration-2 underline-offset-2">
-                        {item.name}
-                      </Link>
-                    </h3>
-                    <p className="text-sm font-medium text-gray-500 flex items-center gap-1">
-                      <LayoutGrid size={14} /> {item.address}
-                    </p>
-                  </div>
-                  <div className={`text-xs font-bold px-2 py-1 uppercase tracking-wider ${badgeColor}`}>
-                    {index % 2 === 0 ? 'Active' : 'Full'}
-                  </div>
-                </div>
-
-                {/* Card Body (Stats) */}
-                <div className="p-5 flex-1">
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="bg-gray-50 p-2 border border-black/10 text-center">
-                      <span className="block text-xs font-bold text-gray-400 uppercase">Phòng</span>
-                      <span className="text-xl font-black">{item.totalRooms}</span>
-                    </div>
-                    <div className="bg-green-50 p-2 border border-green-100 text-center">
-                      <span className="block text-xs font-bold text-green-600 uppercase">Trống</span>
-                      <span className="text-xl font-black text-green-600">{item.availableRooms}</span>
-                    </div>
-                    <div className="bg-blue-50 p-2 border border-blue-100 text-center">
-                      <span className="block text-xs font-bold text-blue-600 uppercase">Đang ở</span>
-                      <span className="text-xl font-black text-blue-600">{item.rentedRooms}</span>
-                    </div>
-                    <div className="bg-orange-50 p-2 border border-orange-100 text-center">
-                      <span className="block text-xs font-bold text-orange-600 uppercase">Bảo trì</span>
-                      <span className="text-xl font-black text-orange-600">{item.maintenanceRooms}</span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Card Footer (Actions) */}
-                <div className="p-4 border-t-2 border-black/5 bg-gray-50 flex justify-between items-center">
-                  <span className="text-xs font-bold text-gray-400 uppercase">ID: #{item.id}</span>
-                  <div className="flex gap-2">
-                    <button className="p-2 hover:bg-white border border-transparent hover:border-black transition-all rounded-none">
-                      <Edit size={16} />
-                    </button>
-                    <button 
-                      onClick={() => setDeleteId(item.id)}
-                      className="p-2 hover:bg-[#FF4D4D] hover:text-white border border-transparent hover:border-black transition-all rounded-none"
-                    >
-                      <Trash2 size={16} />
-                    </button>
-                  </div>
-                </div>
-              </div>
-            );
-          })}
-          
-          {/* Add New Card Placeholder */}
-          <button 
-            onClick={() => setIsModalOpen(true)}
-            className="border-2 border-dashed border-black/20 hover:border-black hover:bg-gray-50 min-h-[250px] flex flex-col items-center justify-center gap-4 transition-all group"
+          <button
+            onClick={() => setIsCreateModalOpen(true)}
+            className="claude-btn-primary flex items-center gap-2"
           >
-            <div className="w-16 h-16 rounded-full bg-gray-100 group-hover:bg-[#FFC900] group-hover:text-black flex items-center justify-center transition-colors">
-              <Plus size={32} className="text-gray-400 group-hover:text-black" />
-            </div>
-            <span className="font-bold text-gray-400 group-hover:text-black uppercase tracking-wider">Thêm tòa nhà mới</span>
+            <Plus size={20} />
+            <span>Thêm tòa nhà</span>
           </button>
         </div>
-      )}
 
-      {/* ADD MODAL */}
-      {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setIsModalOpen(false)}></div>
-          <div className="relative w-full max-w-md bg-white border-2 border-black shadow-[8px_8px_0px_#000] p-8 animate-in fade-in zoom-in duration-200">
-            <button onClick={() => setIsModalOpen(false)} className="absolute top-4 right-4 w-8 h-8 flex items-center justify-center border-2 border-black hover:bg-black hover:text-white transition-colors font-bold">✕</button>
-            <h2 className="text-3xl font-bold mb-6 uppercase">Thêm tòa nhà mới</h2>
-            
-            <Form form={form} onFinish={handleCreateBuilding} layout="vertical" className="font-mono">
-              <div className="mb-6">
-                  <h3 className="text-lg font-bold uppercase mb-4 bg-[#FFD700] inline-block px-2 border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] transform -rotate-1">
-                      1. Thông tin tòa nhà
-                  </h3>
-                  <div className="grid gap-4">
-                      <Form.Item label={<span className="font-bold text-lg">Tên tòa nhà</span>} name="name" rules={[{ required: true, message: 'Nhập tên tòa nhà!' }]}>
-                        <Input className="gumroad-input" placeholder="VD: Nhà trọ Xanh" autoFocus />
-                      </Form.Item>
-                      
-                      <Form.Item label={<span className="font-bold text-lg">Địa chỉ</span>} name="address" rules={[{ required: true, message: 'Nhập địa chỉ!' }]}>
-                        <Input className="gumroad-input" placeholder="VD: 123 Đường Láng" />
-                      </Form.Item>
+        {/* FILTERS */}
+        <div className="flex flex-wrap gap-2 mb-8">
+          {buildingFilters.map((filter) => (
+            <button
+              key={filter.id}
+              onClick={() => setActiveFilter(filter.id)}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all duration-200 ${
+                activeFilter === filter.id
+                  ? "bg-[#D97757] text-white shadow-md"
+                  : "bg-white text-gray-600 border border-[#E5E5E0] hover:bg-[#F9F9F7] hover:border-[#D97757]/30"
+              }`}
+            >
+              {filter.icon}
+              <span>{filter.label}</span>
+            </button>
+          ))}
+        </div>
+
+        {/* GRID VIEW */}
+        {error && (
+          <div className="bg-red-50 text-red-600 p-4 rounded-lg mb-6 border border-red-200">
+            <strong>Lỗi:</strong> {error}. Vui lòng thử tải lại hoặc đăng nhập
+            lại.
+          </div>
+        )}
+
+        {loading ? (
+          <div className="flex justify-center items-center h-64">
+            <Loader2 className="animate-spin w-10 h-10 text-[#D97757]" />
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {Array.isArray(buildings) &&
+              buildings.map((item) => {
+                // Badge Logic
+                const isEmpty = item.totalRooms === 0;
+                const isFull = !isEmpty && item.availableRooms === 0;
+
+                return (
+                  <div
+                    key={item.id}
+                    className="claude-card p-6 hover:-translate-y-1 transition-all duration-300 group"
+                  >
+                    {/* Card Header */}
+                    <div className="flex justify-between items-start mb-4">
+                      <div>
+                        <h3 className="text-xl claude-header leading-tight mb-2">
+                          <Link
+                            href={`/rooms?buildingId=${item.id}`}
+                            className="hover:text-[#D97757] transition-colors"
+                          >
+                            {item.name}
+                          </Link>
+                        </h3>
+                        <p className="text-sm text-gray-500 flex items-center gap-1.5 line-clamp-1">
+                          <MapPin size={14} className="text-[#D97757]" />{" "}
+                          {item.address}
+                        </p>
+                      </div>
+
+                      {isEmpty ? (
+                        <span className="claude-badge bg-gray-100 text-gray-600 border border-gray-200">
+                          Empty
+                        </span>
+                      ) : isFull ? (
+                        <span className="claude-badge claude-badge-orange">
+                          Full
+                        </span>
+                      ) : (
+                        <span className="claude-badge claude-badge-green">
+                          Active
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Card Body (Stats) */}
+                    <div className="grid grid-cols-2 gap-4 py-6 border-y border-[#F0F0F0] mb-4">
+                      <div className="text-center p-2 rounded-lg hover:bg-[#F9F9F7] transition-colors">
+                        <span className="block text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">
+                          Phòng
+                        </span>
+                        <span className="text-2xl font-bold text-[#2D2D2C]">
+                          {item.totalRooms}
+                        </span>
+                      </div>
+                      <div className="text-center p-2 rounded-lg hover:bg-[#F9F9F7] transition-colors">
+                        <span className="block text-xs font-semibold text-green-600 uppercase tracking-wide mb-1">
+                          Trống
+                        </span>
+                        <span className="text-2xl font-bold text-green-600">
+                          {item.availableRooms}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Card Footer (Actions) */}
+                    <div className="flex justify-between items-center text-sm">
+                      <span className="text-gray-400 font-mono">
+                        ID: #{item.id}
+                      </span>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => openEditModal(item)}
+                          className="flex items-center gap-1 px-3 py-1.5 text-gray-600 bg-white border border-gray-200 rounded-md hover:border-[#D97757] hover:text-[#D97757] transition-all shadow-sm"
+                        >
+                          <Edit size={14} />{" "}
+                          <span className="font-semibold">Sửa</span>
+                        </button>
+                        <button
+                          onClick={() => setDeleteId(item.id)}
+                          className="flex items-center gap-1 px-3 py-1.5 text-red-600 bg-white border border-gray-200 rounded-md hover:border-red-500 hover:bg-red-50 transition-all shadow-sm"
+                        >
+                          <Trash2 size={14} />{" "}
+                          <span className="font-semibold">Xóa</span>
+                        </button>
+                      </div>
+                    </div>
                   </div>
+                );
+              })}
+
+            {/* Add New Card Placeholder */}
+            <button
+              onClick={() => setIsCreateModalOpen(true)}
+              className="border-2 border-dashed border-[#E5E5E0] rounded-xl hover:border-[#D97757] hover:bg-[#F9F9F7] min-h-[250px] flex flex-col items-center justify-center gap-4 transition-all group"
+            >
+              <div className="w-16 h-16 rounded-full bg-white border border-[#E5E5E0] group-hover:border-[#D97757] flex items-center justify-center transition-colors shadow-sm">
+                <Plus
+                  size={24}
+                  className="text-gray-400 group-hover:text-[#D97757]"
+                />
+              </div>
+              <span className="font-semibold text-gray-400 group-hover:text-[#D97757]">
+                Thêm tòa nhà mới
+              </span>
+            </button>
+          </div>
+        )}
+
+        {/* CREATE MODAL */}
+        {isCreateModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <div
+              className="absolute inset-0 bg-black/20 backdrop-blur-sm transition-opacity"
+              onClick={() => setIsCreateModalOpen(false)}
+            ></div>
+            <div className="relative w-full max-w-lg bg-white rounded-2xl shadow-xl p-8 animate-in fade-in zoom-in duration-200">
+              <button
+                onClick={() => setIsCreateModalOpen(false)}
+                className="absolute top-6 right-6 text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                ✕
+              </button>
+
+              <div className="mb-6">
+                <h2 className="text-2xl claude-header mb-2">
+                  Thêm tòa nhà mới
+                </h2>
+                <p className="text-gray-500">
+                  Nhập thông tin cơ bản cho tòa nhà mới của bạn.
+                </p>
               </div>
 
-              <div className="flex justify-end gap-4 mt-8 pt-4 border-t-2 border-black border-dashed">
-                <button type="button" onClick={() => setIsModalOpen(false)} className="gumroad-btn-secondary py-2 px-4 text-base">Hủy</button>
-                <button type="submit" className="gumroad-btn-primary py-2 px-4 text-base bg-[#FF90E8] hover:bg-[#FFC900]">Lưu tòa nhà</button>
+              <Form
+                form={form}
+                onFinish={handleCreateBuilding}
+                layout="vertical"
+              >
+                <div className="space-y-4">
+                  <Form.Item
+                    label={
+                      <span className="font-medium text-gray-700">
+                        Tên tòa nhà
+                      </span>
+                    }
+                    name="name"
+                    rules={[{ required: true, message: "Nhập tên tòa nhà!" }]}
+                  >
+                    <Input
+                      className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:border-[#D97757] focus:ring-1 focus:ring-[#D97757] outline-none transition-all"
+                      placeholder="VD: Nhà trọ Xanh"
+                      autoFocus
+                    />
+                  </Form.Item>
+
+                  <Form.Item
+                    label={
+                      <span className="font-medium text-gray-700">Địa chỉ</span>
+                    }
+                    name="address"
+                    rules={[{ required: true, message: "Nhập địa chỉ!" }]}
+                  >
+                    <Input
+                      className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:border-[#D97757] focus:ring-1 focus:ring-[#D97757] outline-none transition-all"
+                      placeholder="VD: 123 Đường Láng"
+                    />
+                  </Form.Item>
+                </div>
+
+                <div className="flex justify-end gap-3 mt-8 pt-6 border-t border-gray-100">
+                  <button
+                    type="button"
+                    onClick={() => setIsCreateModalOpen(false)}
+                    className="claude-btn-secondary"
+                  >
+                    Hủy bỏ
+                  </button>
+                  <button type="submit" className="claude-btn-primary">
+                    Tạo tòa nhà
+                  </button>
+                </div>
+              </Form>
+            </div>
+          </div>
+        )}
+
+        {/* EDIT MODAL */}
+        {editingBuilding && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <div
+              className="absolute inset-0 bg-black/20 backdrop-blur-sm transition-opacity"
+              onClick={() => setEditingBuilding(null)}
+            ></div>
+            <div className="relative w-full max-w-lg bg-white rounded-2xl shadow-xl p-8 animate-in fade-in zoom-in duration-200">
+              <button
+                onClick={() => setEditingBuilding(null)}
+                className="absolute top-6 right-6 text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                ✕
+              </button>
+
+              <div className="mb-6">
+                <h2 className="text-2xl claude-header mb-2">
+                  Chỉnh sửa tòa nhà
+                </h2>
+                <p className="text-gray-500">
+                  Cập nhật thông tin cho {editingBuilding.name}.
+                </p>
               </div>
-            </Form>
-          </div>
-        </div>
-      )}
 
-      {/* DELETE CONFIRMATION MODAL */}
-      {deleteId && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setDeleteId(null)}></div>
-          <div className="relative w-full max-w-md bg-white border-2 border-black shadow-[8px_8px_0px_#000] p-8 animate-in fade-in zoom-in duration-200">
-            <div className="flex items-center gap-4 mb-6">
-              <div className="w-12 h-12 bg-[#FF4D4D] border-2 border-black flex items-center justify-center text-2xl font-bold text-white shadow-[4px_4px_0px_0px_black]">!</div>
-              <h2 className="text-3xl font-bold uppercase">Xóa tòa nhà này?</h2>
-            </div>
-            
-            <p className="text-lg font-medium mb-8 border-l-4 border-[#FF4D4D] pl-4">
-              Hành động này không thể hoàn tác. Bạn chỉ có thể xóa khi tòa nhà KHÔNG CÒN PHÒNG nào.
-            </p>
+              <Form
+                form={editForm}
+                onFinish={handleUpdateBuilding}
+                layout="vertical"
+              >
+                <div className="space-y-4">
+                  <Form.Item
+                    label={
+                      <span className="font-medium text-gray-700">
+                        Tên tòa nhà
+                      </span>
+                    }
+                    name="name"
+                    rules={[{ required: true, message: "Nhập tên tòa nhà!" }]}
+                  >
+                    <Input
+                      className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:border-[#D97757] focus:ring-1 focus:ring-[#D97757] outline-none transition-all"
+                      autoFocus
+                    />
+                  </Form.Item>
 
-            <div className="flex justify-end gap-4">
-              <button 
-                onClick={() => setDeleteId(null)}
-                className="gumroad-btn-secondary py-2 px-4 text-base"
-              >
-                HỦY
-              </button>
-              <button 
-                onClick={confirmDelete}
-                className="bg-[#FF4D4D] text-white border-2 border-black px-6 py-2 font-bold shadow-[4px_4px_0px_0px_black] hover:translate-y-[2px] hover:translate-x-[2px] hover:shadow-none transition-all uppercase"
-              >
-                XÓA NGAY
-              </button>
+                  <Form.Item
+                    label={
+                      <span className="font-medium text-gray-700">Địa chỉ</span>
+                    }
+                    name="address"
+                    rules={[{ required: true, message: "Nhập địa chỉ!" }]}
+                  >
+                    <Input className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:border-[#D97757] focus:ring-1 focus:ring-[#D97757] outline-none transition-all" />
+                  </Form.Item>
+                </div>
+
+                <div className="flex justify-end gap-3 mt-8 pt-6 border-t border-gray-100">
+                  <button
+                    type="button"
+                    onClick={() => setEditingBuilding(null)}
+                    className="claude-btn-secondary"
+                  >
+                    Hủy bỏ
+                  </button>
+                  <button type="submit" className="claude-btn-primary">
+                    Lưu thay đổi
+                  </button>
+                </div>
+              </Form>
             </div>
           </div>
-        </div>
-      )}
+        )}
+
+        {/* DELETE CONFIRMATION MODAL */}
+        {deleteId && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <div
+              className="absolute inset-0 bg-black/20 backdrop-blur-sm transition-opacity"
+              onClick={() => setDeleteId(null)}
+            ></div>
+            <div className="relative w-full max-w-md bg-white rounded-2xl shadow-xl p-8 animate-in fade-in zoom-in duration-200">
+              <div className="flex flex-col items-center text-center mb-6">
+                <div className="w-12 h-12 bg-red-100 text-red-600 rounded-full flex items-center justify-center mb-4">
+                  <Trash2 size={24} />
+                </div>
+                <h2 className="text-2xl claude-header mb-2">
+                  Xóa tòa nhà này?
+                </h2>
+                <p className="text-gray-500">
+                  Hành động này không thể hoàn tác. Bạn chỉ có thể xóa khi tòa
+                  nhà{" "}
+                  <span className="font-bold text-gray-800">
+                    KHÔNG CÒN PHÒNG
+                  </span>{" "}
+                  nào.
+                </p>
+              </div>
+
+              <div className="flex justify-center gap-3">
+                <button
+                  onClick={() => setDeleteId(null)}
+                  className="claude-btn-secondary w-full"
+                >
+                  Hủy bỏ
+                </button>
+                <button
+                  onClick={confirmDelete}
+                  className="bg-red-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-red-700 transition-colors w-full shadow-sm"
+                >
+                  Xóa ngay
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

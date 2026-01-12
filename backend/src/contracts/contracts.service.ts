@@ -6,7 +6,7 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateContractDto, UpdateContractDto, MoveContractDto } from './dto';
-import { RoomStatus } from '@prisma/client';
+import { RoomStatus, Prisma } from '@prisma/client';
 
 @Injectable()
 export class ContractsService {
@@ -310,14 +310,38 @@ export class ContractsService {
   /**
    * Thống kê hợp đồng
    */
-  async getStats() {
-    const [total, active, expired] = await Promise.all([
-      this.prisma.contract.count(),
-      this.prisma.contract.count({ where: { isActive: true } }),
-      this.prisma.contract.count({ where: { isActive: false } }),
+  async getStats(buildingId?: number) {
+    const now = new Date();
+    const next30Days = new Date();
+    next30Days.setDate(now.getDate() + 30);
+
+    const where: Prisma.ContractWhereInput = {};
+    if (buildingId) {
+      where.room = { buildingId };
+    }
+
+    const [total, active, expired, expiring, totalRooms] = await Promise.all([
+      this.prisma.contract.count({ where }),
+      this.prisma.contract.count({ where: { ...where, isActive: true } }),
+      this.prisma.contract.count({ where: { ...where, isActive: false } }),
+      this.prisma.contract.count({
+        where: {
+          ...where,
+          isActive: true,
+          endDate: {
+            lte: next30Days,
+            gte: now,
+          },
+        },
+      }),
+      this.prisma.room.count({
+        where: buildingId ? { buildingId } : {},
+      }),
     ]);
 
-    return { total, active, expired };
+    const vacant = totalRooms - active;
+
+    return { total, active, expired, expiring, vacant, totalRooms };
   }
 
   /**

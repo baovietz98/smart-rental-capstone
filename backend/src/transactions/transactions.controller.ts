@@ -136,6 +136,25 @@ export class TransactionsController {
         return this.transactionsService.findByCode(code);
     }
 
+    @Get('activity')
+    @ApiOperation({ summary: 'Lấy hoạt động gần đây (Thanh toán & Sự cố)' })
+    @ApiQuery({ name: 'buildingId', required: false, type: Number })
+    @ApiQuery({ name: 'limit', required: false, type: Number })
+    getRecentActivity(
+        @Query('buildingId') buildingId?: string,
+        @Query('limit') limit?: string,
+    ) {
+        const parsedLimit = limit ? parseInt(limit, 10) : 10;
+        const parsedBuildingId = (buildingId && buildingId !== 'undefined' && buildingId !== 'null') 
+            ? parseInt(buildingId, 10) 
+            : undefined;
+
+        return this.transactionsService.getRecentActivity(
+            isNaN(parsedLimit) ? 10 : parsedLimit,
+            (parsedBuildingId && !isNaN(parsedBuildingId)) ? parsedBuildingId : undefined,
+        );
+    }
+
     @Get(':id')
     @ApiOperation({
         summary: 'Lấy chi tiết giao dịch',
@@ -173,4 +192,6 @@ export class TransactionsController {
     remove(@Param('id', ParseIntPipe) id: number) {
         return this.transactionsService.remove(id);
     }
+
+
 }

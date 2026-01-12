@@ -143,15 +143,17 @@ export class IssuesService {
         });
     }
 
-    async getStats() {
+    async getStats(buildingId?: number) {
+        const where: any = buildingId ? { room: { buildingId } } : {};
         const [total, open, processing, done] = await Promise.all([
-            this.prisma.issue.count(),
-            this.prisma.issue.count({ where: { status: 'OPEN' } }),
-            this.prisma.issue.count({ where: { status: 'PROCESSING' } }),
-            this.prisma.issue.count({ where: { status: 'DONE' } }),
+            this.prisma.issue.count({ where }),
+            this.prisma.issue.count({ where: { ...where, status: 'OPEN' } }),
+            this.prisma.issue.count({ where: { ...where, status: 'PROCESSING' } }),
+            this.prisma.issue.count({ where: { ...where, status: 'DONE' } }),
         ]);
 
-        return { total, open, processing, done };
+        const stats: any = { total, OPEN: open, PROCESSING: processing, DONE: done };
+        return stats;
     }
 
     async findByRoom(roomId: number) {

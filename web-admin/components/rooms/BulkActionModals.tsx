@@ -1,6 +1,11 @@
 import React, { useState } from "react";
-import { Modal, Form, Input, InputNumber, Radio, message } from "antd";
-import { DollarOutlined, ToolOutlined, SendOutlined } from "@ant-design/icons";
+import { Modal, Form, Input, InputNumber, Radio } from "antd";
+import {
+  DollarOutlined,
+  ToolOutlined,
+  SendOutlined,
+  CloseOutlined,
+} from "@ant-design/icons";
 
 export type BulkActionType = "PRICE" | "ISSUE" | "NOTIFY" | null;
 
@@ -39,37 +44,51 @@ const BulkActionModals: React.FC<BulkActionModalsProps> = ({
   let title = "";
   let icon = null;
   let content = null;
+  let accentColor = "#2D2D2C"; // Default black
 
   switch (type) {
     case "PRICE":
-      title = `Tăng giá đồng loạt (${selectedCount} phòng)`;
-      icon = <DollarOutlined className="text-green-500 mr-2" />;
+      title = "Tăng giá đồng loạt";
+      icon = <DollarOutlined className="text-emerald-500 text-xl" />;
+      accentColor = "#10B981";
       content = (
         <>
           <Form.Item
             name="type"
-            label="Hình thức tăng giá"
+            label={
+              <span className="font-semibold text-gray-700">
+                Hình thức tăng giá
+              </span>
+            }
             initialValue="PERCENTAGE"
           >
             <Radio.Group
               onChange={(e) => setPriceType(e.target.value)}
-              className="flex flex-col gap-2"
+              className="flex flex-col gap-3"
             >
-              <Radio value="PERCENTAGE">Tăng theo phần trăm (%)</Radio>
-              <Radio value="FIXED_ADD">Cộng thêm số tiền cố định (VNĐ)</Radio>
-              <Radio value="FIXED_SET">Thiết lập giá mới đồng loạt (VNĐ)</Radio>
+              <Radio value="PERCENTAGE" className="font-medium text-gray-600">
+                Tăng theo phần trăm (%)
+              </Radio>
+              <Radio value="FIXED_ADD" className="font-medium text-gray-600">
+                Cộng thêm số tiền cố định (VNĐ)
+              </Radio>
+              <Radio value="FIXED_SET" className="font-medium text-gray-600">
+                Thiết lập giá mới đồng loạt (VNĐ)
+              </Radio>
             </Radio.Group>
           </Form.Item>
 
           <Form.Item
             name="value"
             label={
-              priceType === "PERCENTAGE" ? "Nhập số % tăng" : "Nhập số tiền"
+              <span className="font-semibold text-gray-700">
+                {priceType === "PERCENTAGE" ? "Nhập số % tăng" : "Nhập số tiền"}
+              </span>
             }
             rules={[{ required: true, message: "Vui lòng nhập giá trị" }]}
           >
             <InputNumber
-              style={{ width: "100%" }}
+              className="w-full h-11 rounded-lg pt-1 border-gray-200"
               formatter={(value) =>
                 priceType !== "PERCENTAGE"
                   ? `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")
@@ -80,54 +99,83 @@ const BulkActionModals: React.FC<BulkActionModalsProps> = ({
               min={0}
             />
           </Form.Item>
-          <div className="bg-yellow-50 p-3 rounded text-xs text-yellow-700 border border-yellow-200">
-            Lưu ý: Giá phòng sẽ được cập nhật ngay lập tức cho {selectedCount}{" "}
-            phòng đã chọn.
+          <div className="bg-yellow-50 p-4 rounded-xl text-sm text-yellow-700 border border-yellow-100 flex items-start gap-2">
+            <span className="text-lg">💡</span>
+            <span className="mt-0.5">
+              Giá phòng sẽ được cập nhật ngay lập tức cho{" "}
+              <strong>{selectedCount}</strong> phòng đã chọn.
+            </span>
           </div>
         </>
       );
       break;
 
     case "ISSUE":
-      title = `Báo bảo trì đồng loạt (${selectedCount} phòng)`;
-      icon = <ToolOutlined className="text-orange-500 mr-2" />;
+      title = "Báo bảo trì đồng loạt";
+      icon = <ToolOutlined className="text-orange-500 text-xl" />;
+      accentColor = "#F97316";
       content = (
         <>
           <Form.Item
             name="title"
-            label="Tiêu đề sự cố"
+            label={
+              <span className="font-semibold text-gray-700">Tiêu đề sự cố</span>
+            }
             rules={[{ required: true, message: "Vui lòng nhập tiêu đề" }]}
           >
-            <Input placeholder="VD: Kiểm tra máy lạnh định kỳ" />
+            <Input
+              className="h-11 rounded-lg border-gray-200"
+              placeholder="VD: Kiểm tra máy lạnh định kỳ"
+            />
           </Form.Item>
 
-          <Form.Item name="description" label="Mô tả chi tiết">
-            <Input.TextArea rows={4} placeholder="Mô tả chi tiết..." />
+          <Form.Item
+            name="description"
+            label={
+              <span className="font-semibold text-gray-700">
+                Mô tả chi tiết
+              </span>
+            }
+          >
+            <Input.TextArea
+              rows={4}
+              className="rounded-lg border-gray-200"
+              placeholder="Mô tả chi tiết..."
+            />
           </Form.Item>
         </>
       );
       break;
 
     case "NOTIFY":
-      title = `Gửi thông báo Zalo (${selectedCount} phòng)`;
-      icon = <SendOutlined className="text-blue-500 mr-2" />;
+      title = "Gửi thông báo Zalo";
+      icon = <SendOutlined className="text-blue-500 text-xl" />;
+      accentColor = "#3B82F6";
       content = (
         <>
           <Form.Item
             name="message"
-            label="Nội dung thông báo"
+            label={
+              <span className="font-semibold text-gray-700">
+                Nội dung thông báo
+              </span>
+            }
             rules={[{ required: true, message: "Vui lòng nhập nội dung" }]}
           >
             <Input.TextArea
               rows={4}
+              className="rounded-lg border-gray-200"
               placeholder="VD: Thông báo lịch cúp điện vào ngày mai..."
               showCount
               maxLength={500}
             />
           </Form.Item>
-          <div className="bg-blue-50 p-3 rounded text-xs text-blue-700 border border-blue-200">
-            Hệ thống sẽ gửi tin nhắn Zalo đến tất cả khách thuê đang ở trong các
-            phòng đã chọn.
+          <div className="bg-blue-50 p-4 rounded-xl text-sm text-blue-700 border border-blue-100 flex items-start gap-2">
+            <span className="text-lg">ℹ️</span>
+            <span className="mt-0.5">
+              Hệ thống sẽ gửi tin nhắn Zalo đến tất cả khách thuê đang ở trong{" "}
+              <strong>{selectedCount}</strong> phòng đã chọn.
+            </span>
           </div>
         </>
       );
@@ -148,21 +196,72 @@ const BulkActionModals: React.FC<BulkActionModalsProps> = ({
   return (
     <Modal
       open={open}
-      title={
-        <div className="flex items-center text-lg">
-          {icon} {title}
-        </div>
-      }
       onCancel={onCancel}
-      onOk={handleOk}
-      confirmLoading={loading}
-      destroyOnHidden
-      okText={type === "NOTIFY" ? "Gửi ngay" : "Xác nhận"}
-      okButtonProps={{ className: "bg-black" }}
+      footer={null}
+      title={null}
+      width={520}
+      closeIcon={null}
+      centered
+      className="claude-modal"
+      styles={
+        {
+          content: {
+            padding: 0,
+            borderRadius: "16px",
+            overflow: "hidden",
+            boxShadow: "0 20px 50px rgba(0,0,0,0.1)",
+          },
+        } as any
+      }
     >
-      <Form form={form} layout="vertical">
-        {content}
-      </Form>
+      <div className="bg-white">
+        {/* HEADER */}
+        <div className="px-6 py-5 border-b border-gray-100 flex items-center justify-between bg-[#FAFAFA]">
+          <div className="flex items-center gap-3">
+            {icon}
+            <div className="flex flex-col">
+              <h2 className="text-lg font-bold text-[#2D2D2C] m-0 leading-tight">
+                {title}
+              </h2>
+              <span className="text-xs text-gray-500 font-medium">
+                Áp dụng cho {selectedCount} phòng
+              </span>
+            </div>
+          </div>
+          <button
+            onClick={onCancel}
+            className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-200 text-gray-400 transition-colors"
+          >
+            <CloseOutlined />
+          </button>
+        </div>
+
+        <div className="p-6">
+          <Form form={form} layout="vertical" className="flex flex-col gap-2">
+            {content}
+
+            <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-gray-100">
+              <button
+                type="button"
+                onClick={onCancel}
+                className="px-5 py-2.5 rounded-xl font-semibold text-gray-600 hover:bg-gray-100 transition-all text-sm"
+              >
+                Hủy bỏ
+              </button>
+              <button
+                type="button"
+                onClick={handleOk}
+                disabled={loading}
+                className="px-6 py-2.5 rounded-xl font-bold text-white shadow-lg hover:shadow-xl hover:-translate-y-0.5 transition-all text-sm flex items-center gap-2"
+                style={{ backgroundColor: accentColor }}
+              >
+                {loading && <span className="animate-spin">⏳</span>}
+                {type === "NOTIFY" ? "Gửi ngay" : "Xác nhận"}
+              </button>
+            </div>
+          </Form>
+        </div>
+      </div>
     </Modal>
   );
 };

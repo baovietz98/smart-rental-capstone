@@ -1,101 +1,188 @@
-import { View, Text, FlatList, TouchableOpacity } from "react-native";
+import {
+  View,
+  Text,
+  FlatList,
+  TouchableOpacity,
+  RefreshControl,
+  ActivityIndicator,
+} from "react-native";
 import { useRouter } from "expo-router";
-import { FontAwesome5 } from "@expo/vector-icons";
-
-const INVOICES = [
-  {
-    id: "BIO-101-12",
-    room: "101",
-    amount: 3500000,
-    status: "UNPAID",
-    dueDate: "2023-12-05",
-  },
-  {
-    id: "BIO-102-12",
-    room: "102",
-    amount: 4200000,
-    status: "OVERDUE",
-    dueDate: "2023-12-01",
-  },
-  {
-    id: "BIO-201-12",
-    room: "201",
-    amount: 3100000,
-    status: "PAID",
-    dueDate: "2023-12-05",
-  },
-];
+import { FontAwesome5, MaterialCommunityIcons } from "@expo/vector-icons";
+import { useQuery } from "@tanstack/react-query";
+import { api } from "@/lib/api";
+import { useState } from "react";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function BillList() {
   const router = useRouter();
+  const [selectedMonth, setSelectedMonth] = useState(new Date());
 
-  const getStatusColor = (status: string) => {
+  const currentMonthStr = `${String(selectedMonth.getMonth() + 1).padStart(
+    2,
+    "0"
+  )}-${selectedMonth.getFullYear()}`;
+
+  const {
+    data: bills,
+    isLoading,
+    refetch,
+  } = useQuery({
+    queryKey: ["bills", currentMonthStr],
+    queryFn: async () => {
+      const res = await api.get("/invoices", {
+        params: { month: currentMonthStr },
+      });
+      return res.data;
+    },
+  });
+
+  const getStatusInfo = (status: string) => {
     switch (status) {
       case "PAID":
-        return "bg-green-100 text-green-700";
+        return {
+          label: "Đã thanh toán",
+          bg: "bg-green-50",
+          text: "text-green-600",
+          icon: "check-circle",
+        };
       case "OVERDUE":
-        return "bg-red-100 text-red-700";
+        return {
+          label: "Quá hạn",
+          bg: "bg-red-50",
+          text: "text-red-600",
+          icon: "alert-circle",
+        };
+      case "DRAFT":
+        return {
+          label: "Bản nháp",
+          bg: "bg-gray-50",
+          text: "text-gray-600",
+          icon: "file-edit",
+        };
       default:
-        return "bg-yellow-100 text-yellow-700";
+        return {
+          label: "Chưa thanh toán",
+          bg: "bg-orange-50",
+          text: "text-orange-600",
+          icon: "clock-outline",
+        };
     }
   };
 
   const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat("vi-VN", {
-      style: "currency",
-      currency: "VND",
-    }).format(amount);
+    return new Intl.NumberFormat("vi-VN").format(amount || 0) + " đ";
+  };
+
+  const changeMonth = (delta: number) => {
+    const next = new Date(selectedMonth);
+    next.setMonth(next.getMonth() + delta);
+    setSelectedMonth(next);
   };
 
   return (
-    <View className="flex-1 bg-claude-bg p-4">
-      <FlatList
-        data={INVOICES}
-        keyExtractor={(item) => item.id}
-        renderItem={({ item }) => (
-          <TouchableOpacity
-            className="bg-white p-5 mb-4 rounded-2xl shadow-sm border border-claude-border flex-row justify-between items-center"
-            onPress={() =>
-              router.push({
-                pathname: "/(admin)/bills/[id]",
-                params: { id: item.id },
-              })
-            }
-          >
-            <View>
-              <View className="flex-row items-center mb-2">
-                <Text className="text-claude-text font-serif text-xl mr-3">
-                  Room {item.room}
-                </Text>
-                <View
-                  className={`px-2 py-1 rounded-md ${
-                    getStatusColor(item.status).split(" ")[0]
-                  }`}
-                >
-                  <Text
-                    className={`text-xs font-bold ${
-                      getStatusColor(item.status).split(" ")[1]
-                    }`}
-                  >
-                    {item.status}
-                  </Text>
-                </View>
-              </View>
-              <Text className="text-gray-400 font-sans text-sm">
-                Due: {item.dueDate}
-              </Text>
-            </View>
-            <View>
-              <Text className="text-claude-text font-serif text-lg text-right">
-                {formatCurrency(item.amount)}
-              </Text>
-              <Text className="text-claude-accent font-sans text-xs text-right mt-1">
-                Tap to details
-              </Text>
-            </View>
+    <SafeAreaView className="flex-1 bg-[#F9FAFB]" edges={["top"]}>
+      {/* Header */}
+      <View className="px-6 py-4 bg-white border-b border-gray-100 flex-row justify-between items-center">
+        <View>
+          <Text className="text-2xl font-bold text-gray-900 font-serif">
+            Hóa đơn
+          </Text>
+          <Text className="text-[10px] text-gray-400 font-black uppercase tracking-widest mt-0.5">
+            Quản lý phiếu thu
+          </Text>
+        </View>
+
+        <View className="flex-row items-center bg-gray-50 px-3 py-2 rounded-2xl border border-gray-100">
+          <TouchableOpacity onPress={() => changeMonth(-1)} className="p-1">
+            <FontAwesome5 name="chevron-left" size={10} color="#374151" />
           </TouchableOpacity>
+          <Text className="mx-3 text-xs font-bold text-gray-700">
+            {currentMonthStr}
+          </Text>
+          <TouchableOpacity onPress={() => changeMonth(1)} className="p-1">
+            <FontAwesome5 name="chevron-right" size={10} color="#374151" />
+          </TouchableOpacity>
+        </View>
+      </View>
+
+      <View className="flex-1">
+        {isLoading ? (
+          <View className="flex-1 items-center justify-center">
+            <ActivityIndicator color="#DA7756" />
+          </View>
+        ) : (
+          <FlatList
+            data={bills}
+            keyExtractor={(item) => item.id.toString()}
+            contentContainerStyle={{ padding: 20 }}
+            refreshControl={
+              <RefreshControl
+                refreshing={isLoading}
+                onRefresh={refetch}
+                tintColor="#DA7756"
+              />
+            }
+            ListEmptyComponent={
+              <View className="items-center py-20">
+                <MaterialCommunityIcons
+                  name="file-search-outline"
+                  size={64}
+                  color="#E5E7EB"
+                />
+                <Text className="text-gray-400 mt-4 font-bold text-sm">
+                  Không tìm thấy hóa đơn nào
+                </Text>
+                <Text className="text-gray-300 text-xs mt-1">
+                  Vui lòng chọn tháng khác hoặc tạo mới
+                </Text>
+              </View>
+            }
+            renderItem={({ item }) => {
+              const status = getStatusInfo(item.status);
+              return (
+                <TouchableOpacity
+                  className="bg-white p-5 mb-4 rounded-[24px] shadow-sm border border-gray-100 flex-row justify-between items-center"
+                  onPress={() => router.push(`/(admin)/bills/${item.id}`)}
+                >
+                  <View className="flex-1 mr-4">
+                    <View className="flex-row items-center mb-2">
+                      <Text className="text-gray-900 font-serif text-lg font-bold mr-3">
+                        Phòng {item.contract?.room?.name}
+                      </Text>
+                      <View
+                        className={`${status.bg} px-2 py-0.5 rounded-md flex-row items-center`}
+                      >
+                        <MaterialCommunityIcons
+                          name={status.icon as any}
+                          size={10}
+                          color={status.text.replace("text-", "")}
+                          className="mr-1"
+                        />
+                        <Text
+                          className={`${status.text} text-[10px] font-black uppercase`}
+                        >
+                          {status.label}
+                        </Text>
+                      </View>
+                    </View>
+                    <Text className="text-gray-400 text-xs font-medium">
+                      Mã: {item.code || `INV-${item.id}`}
+                    </Text>
+                  </View>
+                  <View className="items-end">
+                    <Text className="text-gray-900 font-bold text-lg">
+                      {formatCurrency(item.totalAmount)}
+                    </Text>
+                    <Text className="text-gray-400 text-[10px] uppercase font-black tracking-tighter mt-1">
+                      Chi tiết →
+                    </Text>
+                  </View>
+                </TouchableOpacity>
+              );
+            }}
+          />
         )}
-      />
-    </View>
+      </View>
+    </SafeAreaView>
   );
 }

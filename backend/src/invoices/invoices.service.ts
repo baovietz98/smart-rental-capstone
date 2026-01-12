@@ -760,9 +760,15 @@ export class InvoicesService {
   /**
    * Lấy hóa đơn theo tháng (tất cả hợp đồng)
    */
-  async findByMonth(month: string) {
+  async findByMonth(month: string, buildingId?: number) {
+    const where: Prisma.InvoiceWhereInput = { month };
+    if (buildingId) {
+      where.contract = {
+        room: { buildingId },
+      };
+    }
     return this.prisma.invoice.findMany({
-      where: { month },
+      where,
       orderBy: { createdAt: 'desc' },
       include: {
         contract: {
@@ -836,8 +842,8 @@ export class InvoicesService {
   /**
    * Thống kê hóa đơn theo tháng
    */
-  async getMonthlyStats(month: string) {
-    const invoices = await this.findByMonth(month);
+  async getMonthlyStats(month: string, buildingId?: number) {
+    const invoices = await this.findByMonth(month, buildingId);
 
     const stats = {
       month,

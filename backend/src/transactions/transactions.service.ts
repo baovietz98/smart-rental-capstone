@@ -344,4 +344,59 @@ export class TransactionsService {
             orderBy: { date: 'desc' },
         });
     }
+
+    async getRecentActivity(limit = 10, buildingId?: number) {
+        const where: any = {};
+        if (buildingId && !isNaN(buildingId)) {
+            where.contract = {
+                room: { buildingId }
+            };
+        }
+
+        const [transactions, issues] = await Promise.all([
+            this.prisma.transaction.findMany({
+                where,
+                take: limit,
+                orderBy: { createdAt: 'desc' },
+                include: {
+                    contract: {
+                        include: {
+                            room: true,
+                            tenant: true,
+                        }
+                    }
+                }
+            }),
+            this.prisma.issue.findMany({
+                where: buildingId ? { room: { buildingId } } : {},
+                take: limit,
+                orderBy: { createdAt: 'desc' },
+                include: {
+                    room: true
+                }
+            })
+        ]);
+
+        const activities = [
+            ...transactions.map(t => ({
+                id: `t-${t.id}`,
+                type: 'PAYMENT',
+                title: `Phòng ${t.contract.room.name} thanh toán`,
+                amount: t.amount,
+                date: t.createdAt,
+                roomName: t.contract.room.name,
+                unit: 'đ'
+            })),
+            ...issues.map(i => ({
+                id: `i-${i.id}`,
+                type: 'ISSUE',
+                title: `P.${i.room.name}: ${i.title}`,
+                date: i.createdAt,
+                roomName: i.room.name,
+                status: i.status
+            }))
+        ];
+
+        return activities.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).slice(0, limit);
+    }
 }

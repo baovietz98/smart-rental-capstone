@@ -73,11 +73,14 @@ export class ContractsController {
 
   @Get('stats')
   @ApiOperation({
-    summary: 'Thống kê hợp đồng',
-    description: 'Trả về tổng số, đang hoạt động, đã kết thúc',
+    summary: 'Thống kê hợp đồng (có lọc building)',
+    description: 'Trả về tổng số, đang hoạt động, sắp hết hạn',
   })
-  getStats() {
-    return this.contractsService.getStats();
+  @ApiQuery({ name: 'buildingId', required: false, type: Number })
+  getStats(@Query('buildingId') buildingId?: string) {
+    return this.contractsService.getStats(
+      buildingId ? parseInt(buildingId, 10) : undefined,
+    );
   }
 
   @Get('room/:roomId')

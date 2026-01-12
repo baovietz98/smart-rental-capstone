@@ -102,11 +102,6 @@ export default function AllRoomsPage() {
 
   // 2. FILTER & SEARCH LOGIC
   const filteredRooms = useMemo(() => {
-    const roomsInBuilding =
-      activeBuildingFilter === "ALL"
-        ? rooms
-        : rooms.filter((r) => r.buildingId === activeBuildingFilter);
-
     return rooms.filter((room) => {
       // 1. Filter by Status
       const statusMatch =
@@ -278,11 +273,11 @@ export default function AllRoomsPage() {
   };
 
   return (
-    <div className="claude-page min-h-screen bg-[var(--bg-page)] text-gray-900 font-sans p-6 md:p-12 transition-all">
+    <div className="claude-page min-h-screen bg-[#F9F9F7] text-[#2D2D2C] font-sans p-6 md:p-12 transition-all">
       {/* HEADER SECTION */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6 mb-12">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6 mb-10">
         <div>
-          <h1 className="text-3xl md:text-4xl claude-header mb-3">
+          <h1 className="text-3xl md:text-4xl claude-header mb-2 text-[#2D2D2C]">
             Tất cả phòng
           </h1>
           <p className="text-gray-500 font-sans text-lg">
@@ -294,19 +289,20 @@ export default function AllRoomsPage() {
         <div className="flex items-center gap-4">
           <button
             onClick={() => setIsModalOpen(true)}
-            className="claude-btn-primary flex items-center gap-2 group bg-black text-white px-6 py-3 rounded-xl font-bold hover:shadow-lg transition-all"
+            className="claude-btn-primary flex items-center gap-2 px-6 py-2.5 rounded-xl font-semibold shadow-md hover:shadow-lg transition-all"
           >
-            <PlusOutlined className="group-hover:rotate-90 transition-transform" />
+            <PlusOutlined />
             <span>Thêm phòng</span>
           </button>
+
           {/* VIEW MODE TOGGLE */}
-          <div className="flex bg-white border-2 border-black p-1 gap-1 shadow-[4px_4px_0px_0px_black]">
+          <div className="flex bg-white p-1 gap-1 rounded-xl border border-gray-200 shadow-sm">
             <button
               onClick={() => setViewMode("GRID")}
-              className={`p-2 transition-all ${
+              className={`p-2 rounded-lg transition-all duration-200 ${
                 viewMode === "GRID"
-                  ? "bg-black text-white"
-                  : "hover:bg-gray-100"
+                  ? "bg-[#F2F2F0] text-[#D97757] shadow-sm"
+                  : "text-gray-400 hover:text-gray-600 hover:bg-gray-50"
               }`}
               title="Xem lưới"
             >
@@ -314,10 +310,10 @@ export default function AllRoomsPage() {
             </button>
             <button
               onClick={() => setViewMode("LIST")}
-              className={`p-2 transition-all ${
+              className={`p-2 rounded-lg transition-all duration-200 ${
                 viewMode === "LIST"
-                  ? "bg-black text-white"
-                  : "hover:bg-gray-100"
+                  ? "bg-[#F2F2F0] text-[#D97757] shadow-sm"
+                  : "text-gray-400 hover:text-gray-600 hover:bg-gray-50"
               }`}
               title="Xem danh sách"
             >
@@ -325,66 +321,73 @@ export default function AllRoomsPage() {
             </button>
           </div>
 
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-bold uppercase text-gray-500 hidden md:inline">
-              Chế độ chọn:
+          <div className="flex items-center gap-3 bg-white px-3 py-1.5 rounded-xl border border-gray-200 shadow-sm">
+            <span className="text-xs font-bold uppercase text-gray-400 hidden md:inline tracking-wider">
+              Chọn:
             </span>
             <button
               onClick={() => {
                 setIsSelectionMode(!isSelectionMode);
                 setSelectedRooms([]);
               }}
-              className={`px-3 py-1 border-2 border-black font-bold text-xs uppercase transition-all ${
-                isSelectionMode
-                  ? "bg-black text-white"
-                  : "bg-white hover:bg-gray-100"
-              }`}
+              className={`
+                relative w-10 h-6 rounded-full transition-colors duration-300 focus:outline-none
+                ${isSelectionMode ? "bg-[#D97757]" : "bg-gray-200"}
+              `}
             >
-              {isSelectionMode ? "Đang Bật" : "Đang Tắt"}
+              <span
+                className={`
+                  absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition-transform duration-300 shadow-sm
+                  ${isSelectionMode ? "translate-x-4" : "translate-x-0"}
+                `}
+              />
             </button>
           </div>
         </div>
       </div>
 
-      {/* FILTER BAR (NEOBRUTALISM STYLE) */}
-      <div className="bg-white border-2 border-[var(--border-strong)] p-4 mb-8 shadow-sm flex flex-col md:flex-row gap-4 justify-between items-center rounded-lg">
-        {/* LEFT: STATUS FILTERS */}
-        <div className="flex flex-wrap gap-2 w-full md:w-auto">
-          <button
-            onClick={() => setActiveStatusFilter("ALL")}
-            className={`px-4 py-2 rounded-lg font-semibold text-sm transition-all ${
-              activeStatusFilter === "ALL"
-                ? "bg-[var(--text-primary)] text-white shadow-md"
-                : "bg-white text-[var(--text-secondary)] hover:bg-gray-100 border border-gray-200"
-            }`}
-          >
-            TẤT CẢ ({stats.all})
-          </button>
-          <button
-            onClick={() => setActiveStatusFilter("AVAILABLE")}
-            className={`px-4 py-2 rounded-lg font-semibold text-sm transition-all ${
-              activeStatusFilter === "AVAILABLE"
-                ? "bg-[#00E054] text-black shadow-md border border-[#00E054]"
-                : "bg-white text-[var(--text-secondary)] hover:bg-green-50 border border-gray-200"
-            }`}
-          >
-            TRỐNG ({stats.available})
-          </button>
-          <button
-            onClick={() => setActiveStatusFilter("RENTED")}
-            className={`px-4 py-2 rounded-lg font-semibold text-sm transition-all ${
-              activeStatusFilter === "RENTED"
-                ? "bg-[#ffcdfa] text-black shadow-md border border-[#ffcdfa]"
-                : "bg-white text-[var(--text-secondary)] hover:bg-pink-50 border border-gray-200"
-            }`}
-          >
-            ĐANG Ở ({stats.rented})
-          </button>
+      {/* FILTER BAR (PREMIUM STYLE) */}
+      <div className="flex flex-col xl:flex-row gap-6 justify-between items-center mb-8">
+        {/* LEFT: STATUS FILTERS (Pills) */}
+        <div className="bg-white p-1.5 rounded-xl border border-gray-200 shadow-sm flex flex-wrap gap-1 w-full xl:w-auto">
+          {[
+            { id: "ALL", label: "Tất cả", count: stats.all },
+            { id: "AVAILABLE", label: "Trống", count: stats.available },
+            { id: "RENTED", label: "Đang ở", count: stats.rented },
+            { id: "MAINTENANCE", label: "Bảo trì", count: stats.maintenance },
+          ].map((status) => (
+            <button
+              key={status.id}
+              onClick={() => setActiveStatusFilter(status.id)}
+              className={`
+                px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200 flex items-center gap-2
+                ${
+                  activeStatusFilter === status.id
+                    ? "bg-[#2D2D2C] text-white shadow-md"
+                    : "text-gray-500 hover:bg-[#F2F2F0] hover:text-[#2D2D2C]"
+                }
+              `}
+            >
+              {status.label}
+              <span
+                className={`
+                  px-1.5 py-0.5 rounded text-[10px] 
+                  ${
+                    activeStatusFilter === status.id
+                      ? "bg-white/20 text-white"
+                      : "bg-gray-100 text-gray-500"
+                  }
+                `}
+              >
+                {status.count}
+              </span>
+            </button>
+          ))}
         </div>
 
         {/* RIGHT: BUILDING FILTER & SEARCH */}
-        <div className="flex flex-col md:flex-row gap-3 w-full md:w-auto">
-          <div className="relative group">
+        <div className="flex flex-col md:flex-row gap-3 w-full xl:w-auto">
+          <div className="relative group min-w-[200px]">
             <select
               value={activeBuildingFilter}
               onChange={(e) =>
@@ -392,7 +395,7 @@ export default function AllRoomsPage() {
                   e.target.value === "ALL" ? "ALL" : Number(e.target.value)
                 )
               }
-              className="appearance-none w-full md:w-48 px-4 py-2.5 bg-white border border-gray-300 rounded-lg font-medium cursor-pointer hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
+              className="appearance-none w-full px-4 py-2.5 bg-white border border-gray-200 rounded-xl font-medium cursor-pointer hover:border-[#D97757] focus:outline-none focus:ring-2 focus:ring-[#D97757]/20 transition-all text-gray-700 shadow-sm"
             >
               <option value="ALL">Tất cả tòa nhà</option>
               {buildings.map((b) => (
@@ -401,18 +404,20 @@ export default function AllRoomsPage() {
                 </option>
               ))}
             </select>
-            <HomeOutlined className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400" />
+            <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400 bg-white pl-2">
+              <HomeOutlined />
+            </div>
           </div>
 
-          <div className="relative">
+          <div className="relative min-w-[280px]">
             <input
               type="text"
               placeholder="Tìm theo tên phòng..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full md:w-64 pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg font-medium focus:outline-none focus:ring-2 focus:ring-[var(--primary)] placeholder:text-gray-400"
+              className="w-full pl-10 pr-4 py-2.5 bg-white border border-gray-200 rounded-xl font-medium focus:outline-none focus:ring-2 focus:ring-[#D97757]/20 focus:border-[#D97757] transition-all placeholder:text-gray-400 text-gray-700 shadow-sm"
             />
-            <SearchOutlined className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
+            <SearchOutlined className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
           </div>
         </div>
       </div>
@@ -422,54 +427,55 @@ export default function AllRoomsPage() {
         <div className="h-64 flex items-center justify-center">
           <Spin
             indicator={
-              <LoadingOutlined style={{ fontSize: 48, color: "black" }} spin />
+              <LoadingOutlined
+                style={{ fontSize: 48, color: "#D97757" }}
+                spin
+              />
             }
           />
         </div>
       ) : (
         <>
           {viewMode === "LIST" ? (
-            <div className="bg-white border-2 border-black shadow-[4px_4px_0px_0px_black] overflow-hidden">
-              {/* Reuse RoomListView or implement simplified table for All Rooms */}
-              {/* NOTE: RoomListView expects basic room prop structure. The data structure from /rooms might differ slightly (include building relation?) */}
-              {/* Checking API: findAll returns room list. Assuming relation 'building' is included. */}
+            <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
               <table className="w-full text-left border-collapse">
                 <thead>
-                  <tr className="bg-black text-white uppercase text-xs font-bold tracking-wider">
-                    <th className="p-4">Phòng</th>
+                  <tr className="bg-[#F9F9F7] text-gray-500 uppercase text-xs font-bold tracking-wider border-b border-gray-200">
+                    <th className="p-4 pl-6">Phòng</th>
                     <th className="p-4">Tòa nhà</th>
                     <th className="p-4">Vị trí</th>
                     <th className="p-4">Diện tích</th>
                     <th className="p-4">Giá</th>
                     <th className="p-4">Số người</th>
                     <th className="p-4">Trạng thái</th>
-                    <th className="p-4 text-right">Thao tác</th>
+                    <th className="p-4 pr-6 text-right">Thao tác</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-black font-medium">
+                <tbody className="divide-y divide-gray-100 font-medium text-gray-700">
                   {filteredRooms.map((room) => {
                     const isSelected = selectedRooms.includes(room.id);
                     return (
                       <tr
                         key={room.id}
                         className={`transition-colors ${
-                          isSelected ? "bg-red-50" : "hover:bg-yellow-50"
+                          isSelected ? "bg-[#FFF5F1]" : "hover:bg-[#F9F9F7]"
                         } cursor-pointer`}
                         onClick={() =>
                           isSelectionMode && toggleSelection(room.id)
                         }
                       >
-                        <td className="p-4 font-black">
-                          <div className="flex items-center gap-2 font-mono text-lg">
+                        <td className="p-4 pl-6 font-bold text-[#2D2D2C]">
+                          <div className="flex items-center gap-3 text-lg">
                             {(isSelectionMode || isSelected) && (
-                              <Checkbox checked={isSelected} />
+                              <Checkbox
+                                checked={isSelected}
+                                className="accent-[#D97757]"
+                              />
                             )}
                             {room.name}
                             {(() => {
                               if (!room.issues) return null;
 
-                              // Only show OPEN and PROCESSING issues
-                              // Only show OPEN and PROCESSING issues
                               const activeIssues = room.issues.filter(
                                 (i: any) =>
                                   i.status === "OPEN" ||
@@ -511,12 +517,12 @@ export default function AllRoomsPage() {
                                 >
                                   <div className="flex gap-1 ml-2">
                                     {openIssues.length > 0 && (
-                                      <span className="px-2 py-0.5 text-[10px] bg-red-600 text-white rounded-md flex items-center gap-1 shadow-sm font-bold animate-pulse">
+                                      <span className="px-1.5 py-0.5 text-[10px] bg-red-100 text-red-600 rounded flex items-center gap-1 shadow-sm font-bold animate-pulse">
                                         <WarningOutlined /> {openIssues.length}
                                       </span>
                                     )}
                                     {processingIssues.length > 0 && (
-                                      <span className="px-2 py-0.5 text-[10px] bg-yellow-500 text-black rounded-md flex items-center gap-1 shadow-sm font-bold">
+                                      <span className="px-1.5 py-0.5 text-[10px] bg-yellow-100 text-yellow-700 rounded flex items-center gap-1 shadow-sm font-bold">
                                         <ToolOutlined />{" "}
                                         {processingIssues.length}
                                       </span>
@@ -527,7 +533,7 @@ export default function AllRoomsPage() {
                             })()}
                           </div>
                         </td>
-                        <td className="p-4 text-gray-600">
+                        <td className="p-4 text-gray-500">
                           {room.building?.name ||
                             buildings.find((b) => b.id === room.buildingId)
                               ?.name ||
@@ -537,23 +543,22 @@ export default function AllRoomsPage() {
                         <td className="p-4">
                           {room.area ? `${room.area} m²` : "-"}
                         </td>
-                        <td className="p-4 font-mono font-bold text-[var(--primary)]">
+                        <td className="p-4 font-mono font-bold text-[#D97757]">
                           {formatCurrency(room.price)}
                         </td>
                         <td className="p-4">
-                          {/* Show simple tenant count if available or max tenants */}
-                          <span className="text-gray-500">
+                          <span className="text-gray-500 text-sm bg-gray-100 px-2 py-1 rounded-lg">
                             {room._count?.contracts || 0} / {room.maxTenants}
                           </span>
                         </td>
                         <td className="p-4">
                           <span
-                            className={`px-2 py-1 text-xs font-bold border border-black ${
+                            className={`px-2.5 py-1 text-xs font-bold rounded-full ${
                               room.status === "RENTED"
-                                ? "bg-[#ffcdfa]"
+                                ? "bg-pink-100 text-pink-700"
                                 : room.status === "MAINTENANCE"
-                                ? "bg-[#fff59d]"
-                                : "bg-[#00E054]"
+                                ? "bg-yellow-100 text-yellow-700"
+                                : "bg-green-100 text-green-700"
                             }`}
                           >
                             {room.status === "RENTED"
@@ -563,20 +568,24 @@ export default function AllRoomsPage() {
                               : "TRỐNG"}
                           </span>
                         </td>
-                        <td className="p-4 text-right">
+                        <td className="p-4 pr-6 text-right">
                           <div className="flex justify-end gap-2">
                             <button
-                              onClick={() => {
+                              onClick={(e) => {
+                                e.stopPropagation();
                                 setEditingRoom(room);
                                 setIsEditModalOpen(true);
                               }}
-                              className="w-8 h-8 flex items-center justify-center border-2 border-black hover:bg-black hover:text-white transition-all"
+                              className="p-2 text-gray-400 hover:text-[#D97757] hover:bg-[#F2F2F0] rounded-lg transition-colors"
                             >
                               <EditOutlined />
                             </button>
                             <button
-                              onClick={() => handleDeleteRoom(room)}
-                              className="w-8 h-8 flex items-center justify-center border-2 border-black hover:bg-red-500 hover:text-white transition-all text-red-500"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDeleteRoom(room);
+                              }}
+                              className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                             >
                               <DeleteOutlined />
                             </button>
@@ -589,7 +598,7 @@ export default function AllRoomsPage() {
                     <tr>
                       <td
                         colSpan={8}
-                        className="p-8 text-center text-gray-500 italic"
+                        className="p-12 text-center text-gray-400 italic"
                       >
                         Không tìm thấy phòng nào phù hợp.
                       </td>
@@ -602,10 +611,11 @@ export default function AllRoomsPage() {
             /* GRID VIEW REIMPLEMENTATION */
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
               {filteredRooms.length === 0 && (
-                <div className="col-span-full py-10 flex justify-center">
+                <div className="col-span-full py-20 flex justify-center">
                   <Empty
+                    image={Empty.PRESENTED_IMAGE_SIMPLE}
                     description={
-                      <span className="font-mono font-bold text-lg text-gray-500">
+                      <span className="font-sans text-gray-400">
                         Không tìm thấy phòng nào.
                       </span>
                     }
@@ -622,7 +632,6 @@ export default function AllRoomsPage() {
                   <div
                     key={room.id}
                     onClick={(e) => {
-                      // Prevent triggering if clicking specific action buttons
                       if (
                         (e.target as HTMLElement).closest("button") ||
                         (e.target as HTMLElement).closest(
@@ -633,40 +642,45 @@ export default function AllRoomsPage() {
                       if (isSelectionMode) toggleSelection(room.id);
                     }}
                     className={`
-                             relative flex flex-col justify-between group bg-white transition-all cursor-pointer overflow-hidden rounded-xl
+                             relative flex flex-col justify-between transition-all cursor-pointer overflow-hidden rounded-2xl group
                              ${
                                selectedRooms.includes(room.id)
-                                 ? "ring-2 ring-[var(--primary)] bg-orange-50"
-                                 : "border border-gray-200 shadow-sm hover:shadow-lg hover:-translate-y-1"
+                                 ? "ring-2 ring-[#D97757] bg-[#FFF5F1]"
+                                 : `border border-gray-100 shadow-sm hover:shadow-lg hover:-translate-y-1 ${
+                                     room.status === "AVAILABLE"
+                                       ? "bg-[#F0FDF4]" /* Subtle Green for Available */
+                                       : room.status === "MAINTENANCE"
+                                       ? "bg-[#FEFCE8]" /* Subtle Yellow for Maintenance */
+                                       : "bg-white" /* White for Rented/Others */
+                                   }`
                              }
                          `}
-                    style={{ height: "360px" }}
+                    style={{ minHeight: "320px" }}
                   >
-                    {/* SELECTION CHECKBOX */}
+                    {/* SELECTION CHECKBOX (Custom) */}
                     {(isSelectionMode || selectedRooms.includes(room.id)) && (
-                      <div className="absolute top-2 left-2 z-20">
+                      <div className="absolute top-3 left-3 z-20">
                         <Checkbox
                           checked={selectedRooms.includes(room.id)}
-                          className="scale-125"
+                          className="scale-110 shadow-sm"
                         />
                       </div>
                     )}
 
                     {/* HEADER */}
-                    <div className="p-3 border-b border-gray-100 bg-gray-50/50 flex justify-between items-center">
+                    <div className="p-4 border-b border-gray-50 flex justify-between items-center bg-[#FAFAFA]">
                       <span
-                        className="text-xs font-bold uppercase truncate max-w-[120px] text-gray-500 tracking-wide"
+                        className="text-xs font-bold uppercase truncate max-w-[120px] text-gray-400 tracking-wide flex items-center gap-1"
                         title={buildingName}
                       >
-                        <HomeOutlined className="mr-1" /> {buildingName}
+                        <HomeOutlined /> {buildingName}
                       </span>
                       <Dropdown
                         menu={{
                           items: (() => {
                             const items = [];
-                            // Logic "Lozido":
+                            // Logic matches original exactly
                             if (room.status === "RENTED") {
-                              // RENTED cannot become AVAILABLE manually
                               items.push({
                                 key: "AVAILABLE_DISABLED",
                                 label: (
@@ -679,7 +693,6 @@ export default function AllRoomsPage() {
                                 ),
                                 disabled: true,
                               });
-                              // RENTED can become MAINTENANCE (Need warning -> Open Modal)
                               items.push({
                                 key: "MAINTENANCE",
                                 label: "Bảo trì",
@@ -689,7 +702,6 @@ export default function AllRoomsPage() {
                                 onClick: () => setMaintenanceRoom(room),
                               });
                             } else if (room.status === "AVAILABLE") {
-                              // AVAILABLE cannot become RENTED manually (Must Create Contract)
                               items.push({
                                 key: "RENTED_DISABLED",
                                 label: (
@@ -712,7 +724,6 @@ export default function AllRoomsPage() {
                                   handleUpdateStatus(room.id, "MAINTENANCE"),
                               });
                             } else if (room.status === "MAINTENANCE") {
-                              // MAINTENANCE can go back to AVAILABLE
                               items.push({
                                 key: "AVAILABLE",
                                 label: "Trống",
@@ -722,7 +733,6 @@ export default function AllRoomsPage() {
                                 onClick: () =>
                                   handleUpdateStatus(room.id, "AVAILABLE"),
                               });
-                              // Manual RENTED allowed specific cases or strict block? Let's allow but usually should be via contract
                               items.push({
                                 key: "RENTED",
                                 label: "Đang ở (Thủ công)",
@@ -739,46 +749,9 @@ export default function AllRoomsPage() {
                         }}
                         trigger={["click"]}
                       >
-                        <div className="flex gap-1">
-                          {(() => {
-                            if (!room.issues) return null;
-
-                            const activeIssues = room.issues.filter(
-                              (i: any) =>
-                                i.status === "OPEN" || i.status === "PROCESSING"
-                            );
-                            if (activeIssues.length === 0) return null;
-
-                            const openIssues = activeIssues.filter(
-                              (i: any) => i.status === "OPEN"
-                            );
-                            const processingIssues = activeIssues.filter(
-                              (i: any) => i.status === "PROCESSING"
-                            );
-
-                            return (
-                              <Tooltip
-                                title={`Sự cố: ${activeIssues
-                                  .map((i: any) => i.title)
-                                  .join(", ")}`}
-                              >
-                                <div className="flex gap-1">
-                                  {openIssues.length > 0 && (
-                                    <div className="px-2 py-0.5 text-[10px] font-bold rounded-md bg-red-600 text-white flex items-center gap-1 shadow-sm animate-pulse">
-                                      <WarningOutlined /> {openIssues.length}
-                                    </div>
-                                  )}
-                                  {processingIssues.length > 0 && (
-                                    <div className="px-2 py-0.5 text-[10px] font-bold rounded-md bg-yellow-500 text-black flex items-center gap-1 shadow-sm">
-                                      <ToolOutlined /> {processingIssues.length}
-                                    </div>
-                                  )}
-                                </div>
-                              </Tooltip>
-                            );
-                          })()}
+                        <div className="flex gap-2 items-center">
                           <div
-                            className={`px-2 py-0.5 text-[10px] font-bold rounded-md cursor-pointer hover:opacity-80 flex items-center gap-1 ${
+                            className={`px-2 py-0.5 text-[10px] font-bold rounded-full cursor-pointer hover:opacity-80 flex items-center gap-1 border border-transparent shadow-sm ${
                               room.status === "RENTED"
                                 ? "bg-pink-100 text-pink-700"
                                 : room.status === "MAINTENANCE"
@@ -791,7 +764,7 @@ export default function AllRoomsPage() {
                               : room.status === "MAINTENANCE"
                               ? "BẢO TRÌ"
                               : "TRỐNG"}{" "}
-                            <MoreOutlined />
+                            <MoreOutlined className="text-[10px]" />
                           </div>
                         </div>
                       </Dropdown>
@@ -808,6 +781,30 @@ export default function AllRoomsPage() {
                         <span>•</span>
                         <span>{room.area} m²</span>
                       </div>
+
+                      {/* ISSUE BANNER (Prominent) */}
+                      {(() => {
+                        if (!room.issues) return null;
+                        const activeIssues = room.issues.filter(
+                          (i: any) =>
+                            i.status === "OPEN" || i.status === "PROCESSING"
+                        );
+                        if (activeIssues.length === 0) return null;
+
+                        return (
+                          <div className="mb-4 px-3 py-2 bg-red-50 border border-red-100 rounded-lg flex items-start gap-2 text-red-600 text-xs font-bold animate-pulse">
+                            <WarningOutlined className="mt-0.5" />
+                            <div className="flex flex-col">
+                              <span>
+                                {activeIssues.length} Vấn đề cần xử lý
+                              </span>
+                              <span className="text-[10px] font-normal opacity-80">
+                                {activeIssues[0].title}
+                              </span>
+                            </div>
+                          </div>
+                        );
+                      })()}
 
                       <div className="font-mono font-bold text-xl text-[var(--primary)] mb-4">
                         {formatCurrency(room.price)}
@@ -915,13 +912,15 @@ export default function AllRoomsPage() {
         centered
         closeIcon={null}
         className="claude-delete-modal"
-        styles={{
-          content: {
-            padding: "24px",
-            borderRadius: "16px",
-            boxShadow: "0 10px 30px rgba(0,0,0,0.1)",
-          },
-        }}
+        styles={
+          {
+            content: {
+              padding: "24px",
+              borderRadius: "16px",
+              boxShadow: "0 10px 30px rgba(0,0,0,0.1)",
+            },
+          } as any
+        }
       >
         <div className="flex flex-col items-center text-center">
           <div className="w-12 h-12 rounded-full bg-orange-100 text-orange-500 flex items-center justify-center mb-4 text-xl">
@@ -1064,11 +1063,6 @@ export default function AllRoomsPage() {
           setMoveContractId(null);
         }}
         contractId={moveContractId || undefined}
-        currentRoomName={warningRoom?.name || "Hiện tại"}
-        currentRoomPrice={warningRoom?.price || 0}
-        currentDeposit={
-          warningRoom?.contracts?.[0]?.deposit || warningRoom?.depositPrice || 0
-        }
         // Filter AVAILABLE rooms only, exclude current room
         availableRooms={rooms.filter(
           (r) => r.status === "AVAILABLE" && r.id !== warningRoom?.id

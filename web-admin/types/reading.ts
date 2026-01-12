@@ -51,3 +51,27 @@ export interface ReadingStats {
         cost: number;
     }>;
 }
+
+export interface BulkServiceItem {
+    serviceId: number;
+    serviceName: string;
+    price: number;
+    oldIndex: number;
+    newIndex?: number | null;
+    isMeterReset: boolean;
+    isBilled: boolean;
+}
+
+export interface BulkRoomItem {
+    roomId: number;
+    roomName: string;
+    contractId: number;
+    services: BulkServiceItem[];
+}
+
+export interface BulkCreateResult {
+    success: boolean;
+    data?: ServiceReading;
+    serviceId?: number;
+    error?: string;
+}

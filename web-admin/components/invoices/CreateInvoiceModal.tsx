@@ -1,346 +1,483 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { Modal, Form, Select, DatePicker, Button, Table, InputNumber, Input, message, Popconfirm } from 'antd';
-import { PlusOutlined, DeleteOutlined, SaveOutlined, SendOutlined, CalculatorOutlined } from '@ant-design/icons';
-import dayjs from 'dayjs';
-import { buildingsApi, Building, Room } from '@/lib/api/buildings';
-import { invoicesApi } from '@/lib/api/invoices';
-import { Invoice, InvoiceLineItem, InvoiceStatus } from '@/types/invoice';
+import { useState, useEffect } from "react";
+import {
+  Modal,
+  Form,
+  Select,
+  DatePicker,
+  Button,
+  Table,
+  InputNumber,
+  Input,
+  message,
+  Popconfirm,
+} from "antd";
+import {
+  Plus,
+  Trash2,
+  Save,
+  Send,
+  Calculator,
+  ArrowLeft,
+  Loader2,
+} from "lucide-react";
+import dayjs from "dayjs";
+import { buildingsApi, Building, Room } from "@/lib/api/buildings";
+import { invoicesApi } from "@/lib/api/invoices";
+import { Invoice, InvoiceLineItem } from "@/types/invoice";
+import axiosClient from "@/lib/axios-client";
 
 interface Props {
-    isOpen: boolean;
-    onCancel: () => void;
-    onSuccess: () => void;
+  isOpen: boolean;
+  onCancel: () => void;
+  onSuccess: () => void;
 }
 
-export default function CreateInvoiceModal({ isOpen, onCancel, onSuccess }: Props) {
-    const [step, setStep] = useState<1 | 2>(1);
-    const [loading, setLoading] = useState(false);
-    const [buildings, setBuildings] = useState<Building[]>([]);
-    const [rooms, setRooms] = useState<Room[]>([]);
-    const [selectedBuilding, setSelectedBuilding] = useState<number | null>(null);
-    
-    // Draft Data
-    const [draftInvoice, setDraftInvoice] = useState<Invoice | null>(null);
-    const [lineItems, setLineItems] = useState<InvoiceLineItem[]>([]);
+export default function CreateInvoiceModal({
+  isOpen,
+  onCancel,
+  onSuccess,
+}: Props) {
+  const [step, setStep] = useState<1 | 2>(1);
+  const [loading, setLoading] = useState(false);
+  const [buildings, setBuildings] = useState<Building[]>([]);
+  const [rooms, setRooms] = useState<Room[]>([]);
+  const [selectedBuilding, setSelectedBuilding] = useState<number | null>(null);
 
-    const [form] = Form.useForm();
+  // Draft Data
+  const [draftInvoice, setDraftInvoice] = useState<Invoice | null>(null);
+  const [lineItems, setLineItems] = useState<InvoiceLineItem[]>([]);
 
-    useEffect(() => {
-        if (isOpen) {
-            fetchBuildings();
-            setStep(1);
-            form.resetFields();
-            form.setFieldValue('month', dayjs());
-            setDraftInvoice(null);
-            setLineItems([]);
-        }
-    }, [isOpen]);
+  const [form] = Form.useForm();
 
-    const fetchBuildings = async () => {
-        try {
-            const data = await buildingsApi.getAll();
-            setBuildings(data);
-        } catch (error) {
-            message.error('Lỗi tải danh sách tòa nhà');
-        }
-    };
+  useEffect(() => {
+    if (isOpen) {
+      fetchBuildings();
+      setStep(1);
+      form.resetFields();
+      form.setFieldValue("month", dayjs());
+      setDraftInvoice(null);
+      setLineItems([]);
+    }
+  }, [isOpen]);
 
-    const handleBuildingChange = async (buildingId: number) => {
-        setSelectedBuilding(buildingId);
-        form.setFieldValue('roomId', null);
-        try {
-            const data = await buildingsApi.getRooms(buildingId);
-            setRooms(data);
-        } catch (error) {
-            message.error('Lỗi tải danh sách phòng');
-        }
-    };
+  const fetchBuildings = async () => {
+    try {
+      const data = await buildingsApi.getAll();
+      setBuildings(data);
+    } catch (error) {
+      console.error(error);
+      message.error("Lỗi tải danh sách tòa nhà");
+    }
+  };
 
-    const handleGenerateDraft = async () => {
-        try {
-            const values = await form.validateFields();
-            setLoading(true);
+  const handleBuildingChange = async (buildingId: number) => {
+    setSelectedBuilding(buildingId);
+    form.setFieldValue("roomId", null);
+    try {
+      const data = await buildingsApi.getRooms(buildingId);
+      setRooms(data);
+    } catch (error) {
+      console.error(error);
+      message.error("Lỗi tải danh sách phòng");
+    }
+  };
 
-            // Fetch contract for room
-             const contractsRes = await axiosClient.get(`/contracts?roomId=${values.roomId}&isActive=true`);
-             if (contractsRes.data.length === 0) {
-                 message.error('Phòng này chưa có hợp đồng đang hoạt động!');
-                 setLoading(false);
-                 return;
-             }
-             const contractId = contractsRes.data[0].id;
-             
-             // 1. Call Preview API
-             const previewData = await invoicesApi.preview({
-                 contractId,
-                 month: values.month.format('MM-YYYY')
-             });
-             
-             // 2. Set data for review (Snapshot)
-             setLineItems(previewData.lineItems);
-             
-             // Store contractId for later use
-             setDraftInvoice({ 
-                 ...draftInvoice, 
-                 contractId, 
-                 month: values.month.format('MM-YYYY'),
-                 contract: { room: { name: rooms.find(r => r.id === values.roomId)?.name || '' } } 
-             } as any);
-             
-             setStep(2);
-        } catch (error: any) {
-            message.error(error.response?.data?.message || 'Lỗi tính toán hóa đơn');
-        } finally {
-            setLoading(false);
-        }
-    };
+  const handleGenerateDraft = async () => {
+    try {
+      const values = await form.validateFields();
+      setLoading(true);
 
-    const handleUpdateLineItem = (index: number, field: keyof InvoiceLineItem, value: any) => {
-        const newItems = [...lineItems];
-        newItems[index] = { ...newItems[index], [field]: value };
-        
-        // Recalculate amount if quantity or unitPrice changes
-        if (field === 'quantity' || field === 'unitPrice') {
-            newItems[index].amount = newItems[index].quantity * newItems[index].unitPrice;
-        }
-        
-        setLineItems(newItems);
-    };
+      // Fetch contract for room
+      const contractsRes = await axiosClient.get(
+        `/contracts?roomId=${values.roomId}&isActive=true`
+      );
+      if (contractsRes.data.length === 0) {
+        message.error("Phòng này chưa có hợp đồng đang hoạt động!");
+        setLoading(false);
+        return;
+      }
+      const contractId = contractsRes.data[0].id;
 
-    const handleDeleteLineItem = (index: number) => {
-        const newItems = [...lineItems];
-        newItems.splice(index, 1);
-        setLineItems(newItems);
-    };
+      // 1. Call Preview API
+      const previewData = await invoicesApi.preview({
+        contractId,
+        month: values.month.format("MM-YYYY"),
+      });
 
-    const handleAddLineItem = () => {
-        setLineItems([
-            ...lineItems,
-            {
-                type: 'EXTRA',
-                name: 'Chi phí khác',
-                quantity: 1,
-                unitPrice: 0,
-                amount: 0,
-                note: ''
-            }
-        ]);
-    };
+      // 2. Set data for review (Snapshot)
+      setLineItems(previewData.lineItems);
 
-    const calculateTotal = () => {
-        return lineItems.reduce((sum, item) => sum + item.amount, 0);
-    };
-
-    const handleSave = async (publish: boolean = false) => {
-        if (!draftInvoice?.contractId) return;
-        setLoading(true);
-        try {
-            // 3. Create Invoice with Snapshot (lineItems)
-            const invoice = await invoicesApi.generateDraft({
-                contractId: draftInvoice.contractId,
-                month: draftInvoice.month,
-                lineItems: lineItems // Send the snapshot!
-            });
-
-            // 4. Publish if requested
-            if (publish) {
-                await invoicesApi.publish(invoice.id);
-                message.success('Đã phát hành hóa đơn thành công!');
-            } else {
-                message.success('Đã tạo hóa đơn thành công!');
-            }
-            
-            onSuccess();
-        } catch (error: any) {
-            message.error(error.response?.data?.message || 'Lỗi khi lưu hóa đơn');
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const columns = [
-        {
-            title: 'Loại',
-            dataIndex: 'type',
-            width: 100,
-            render: (type: string) => (
-                <span className={`text-xs font-bold px-2 py-1 border border-black ${
-                    type === 'RENT' ? 'bg-blue-100' :
-                    type === 'ELECTRIC' ? 'bg-yellow-100' :
-                    type === 'WATER' ? 'bg-blue-50' :
-                    type === 'DEBT' ? 'bg-red-100' :
-                    'bg-gray-100'
-                }`}>
-                    {type}
-                </span>
-            )
+      // Store contractId for later use
+      setDraftInvoice({
+        ...draftInvoice,
+        contractId,
+        month: values.month.format("MM-YYYY"),
+        contract: {
+          room: { name: rooms.find((r) => r.id === values.roomId)?.name || "" },
         },
-        {
-            title: 'Tên khoản thu',
-            dataIndex: 'name',
-            render: (text: string, record: InvoiceLineItem, index: number) => (
-                <Input 
-                    value={text} 
-                    onChange={(e) => handleUpdateLineItem(index, 'name', e.target.value)}
-                    className="font-bold"
-                />
-            )
-        },
-        {
-            title: 'Số lượng',
-            dataIndex: 'quantity',
-            width: 100,
-            render: (val: number, record: InvoiceLineItem, index: number) => (
-                <InputNumber 
-                    value={val} 
-                    onChange={(val) => handleUpdateLineItem(index, 'quantity', val)}
-                    className="w-full"
-                />
-            )
-        },
-        {
-            title: 'Đơn giá',
-            dataIndex: 'unitPrice',
-            width: 150,
-            render: (val: number, record: InvoiceLineItem, index: number) => (
-                <InputNumber 
-                    value={val} 
-                    formatter={value => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
-                    parser={value => value!.replace(/\$\s?|(,*)/g, '')}
-                    onChange={(val) => handleUpdateLineItem(index, 'unitPrice', val)}
-                    className="w-full"
-                />
-            )
-        },
-        {
-            title: 'Thành tiền',
-            dataIndex: 'amount',
-            width: 150,
-            render: (val: number) => (
-                <span className="font-black">{val.toLocaleString()}</span>
-            )
-        },
-        {
-            title: '',
-            width: 50,
-            render: (_: any, __: any, index: number) => (
-                <Button 
-                    type="text" 
-                    danger 
-                    icon={<DeleteOutlined />} 
-                    onClick={() => handleDeleteLineItem(index)}
-                />
-            )
-        }
-    ];
+      } as any);
 
-    return (
-        <Modal
-            open={isOpen}
-            onCancel={onCancel}
-            title={<span className="text-xl font-black uppercase">Tạo hóa đơn mới</span>}
-            footer={null}
-            width={900}
-            className="neobrutalism-modal"
+      setStep(2);
+    } catch (error: any) {
+      message.error(error.response?.data?.message || "Lỗi tính toán hóa đơn");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleUpdateLineItem = (
+    index: number,
+    field: keyof InvoiceLineItem,
+    value: any
+  ) => {
+    const newItems = [...lineItems];
+    newItems[index] = { ...newItems[index], [field]: value };
+
+    // Recalculate amount if quantity or unitPrice changes
+    if (field === "quantity" || field === "unitPrice") {
+      newItems[index].amount =
+        newItems[index].quantity * newItems[index].unitPrice;
+    }
+
+    setLineItems(newItems);
+  };
+
+  const handleDeleteLineItem = (index: number) => {
+    const newItems = [...lineItems];
+    newItems.splice(index, 1);
+    setLineItems(newItems);
+  };
+
+  const handleAddLineItem = () => {
+    setLineItems([
+      ...lineItems,
+      {
+        type: "EXTRA",
+        name: "Chi phí khác",
+        quantity: 1,
+        unitPrice: 0,
+        amount: 0,
+        note: "",
+      },
+    ]);
+  };
+
+  const calculateTotal = () => {
+    return lineItems.reduce((sum, item) => sum + item.amount, 0);
+  };
+
+  const handleSave = async (publish: boolean = false) => {
+    if (!draftInvoice?.contractId) return;
+    setLoading(true);
+    try {
+      // 3. Create Invoice with Snapshot (lineItems)
+      const invoice = await invoicesApi.generateDraft({
+        contractId: draftInvoice.contractId,
+        month: draftInvoice.month,
+        lineItems: lineItems, // Send the snapshot!
+      });
+
+      // 4. Publish if requested
+      if (publish) {
+        await invoicesApi.publish(invoice.id);
+        message.success("Đã phát hành hóa đơn thành công!");
+      } else {
+        message.success("Đã tạo hóa đơn thành công!");
+      }
+
+      onSuccess();
+    } catch (error: any) {
+      message.error(error.response?.data?.message || "Lỗi khi lưu hóa đơn");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const columns = [
+    {
+      title: "Loại",
+      dataIndex: "type",
+      width: 100,
+      className:
+        "bg-gray-50 text-gray-500 uppercase text-[10px] tracking-wider font-semibold py-3",
+      render: (type: string) => (
+        <span
+          className={`text-[10px] font-bold px-2 py-1 rounded-md border ${
+            type === "RENT"
+              ? "bg-blue-50 text-blue-700 border-blue-100"
+              : type === "ELECTRIC"
+              ? "bg-yellow-50 text-yellow-700 border-yellow-100"
+              : type === "WATER"
+              ? "bg-cyan-50 text-cyan-700 border-cyan-100"
+              : type === "DEBT"
+              ? "bg-red-50 text-red-700 border-red-100"
+              : "bg-gray-100 text-gray-600 border-gray-200"
+          }`}
         >
-            {step === 1 ? (
-                <Form form={form} layout="vertical" onFinish={handleGenerateDraft}>
-                    <div className="grid grid-cols-2 gap-4">
-                        <Form.Item name="buildingId" label="Chọn Tòa nhà" rules={[{ required: true }]}>
-                            <Select 
-                                placeholder="Chọn tòa nhà" 
-                                onChange={handleBuildingChange}
-                                options={buildings.map(b => ({ label: b.name, value: b.id }))}
-                                className="h-10"
-                            />
-                        </Form.Item>
-                        <Form.Item name="roomId" label="Chọn Phòng" rules={[{ required: true }]}>
-                            <Select 
-                                placeholder="Chọn phòng" 
-                                options={rooms.map(r => ({ label: r.name, value: r.id }))}
-                                disabled={!selectedBuilding}
-                                className="h-10"
-                            />
-                        </Form.Item>
-                    </div>
-                    <Form.Item name="month" label="Tháng hóa đơn" rules={[{ required: true }]}>
-                        <DatePicker picker="month" format="MM-YYYY" className="w-full h-10" />
-                    </Form.Item>
-                    
-                    <Button 
-                        type="primary" 
-                        htmlType="submit" 
-                        loading={loading}
-                        className="w-full h-12 bg-black text-white font-bold text-lg border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,0.2)] hover:shadow-none hover:translate-y-[2px] hover:translate-x-[2px] transition-all"
-                    >
-                        <CalculatorOutlined /> XEM TRƯỚC (PREVIEW)
-                    </Button>
-                </Form>
-            ) : (
-                <div className="flex flex-col gap-4">
-                    <div className="bg-yellow-50 p-4 border-2 border-black">
-                        <div className="flex justify-between items-center mb-2">
-                            <span className="font-bold">Hóa đơn tháng: {draftInvoice?.month}</span>
-                            <span className="font-bold">Phòng: {draftInvoice?.contract?.room.name}</span>
-                        </div>
-                        <div className="text-sm text-gray-500 italic">
-                            * Kiểm tra kỹ các khoản thu trước khi tạo hóa đơn. Dữ liệu này sẽ được lưu chính xác như bạn thấy.
-                        </div>
-                    </div>
+          {type}
+        </span>
+      ),
+    },
+    {
+      title: "Tên khoản thu",
+      dataIndex: "name",
+      className:
+        "bg-gray-50 text-gray-500 uppercase text-[10px] tracking-wider font-semibold py-3",
+      render: (text: string, record: InvoiceLineItem, index: number) => (
+        <Input
+          value={text}
+          onChange={(e) => handleUpdateLineItem(index, "name", e.target.value)}
+          className="font-medium text-gray-700 border-transparent hover:border-gray-200 focus:border-blue-500 bg-transparent"
+        />
+      ),
+    },
+    {
+      title: "Số lượng",
+      dataIndex: "quantity",
+      width: 100,
+      className:
+        "bg-gray-50 text-gray-500 uppercase text-[10px] tracking-wider font-semibold py-3",
+      render: (val: number, record: InvoiceLineItem, index: number) => (
+        <InputNumber
+          value={val}
+          onChange={(val) => handleUpdateLineItem(index, "quantity", val)}
+          className="w-full border-gray-200 rounded-lg"
+        />
+      ),
+    },
+    {
+      title: "Đơn giá",
+      dataIndex: "unitPrice",
+      width: 140,
+      className:
+        "bg-gray-50 text-gray-500 uppercase text-[10px] tracking-wider font-semibold py-3",
+      render: (val: number, record: InvoiceLineItem, index: number) => (
+        <InputNumber
+          value={val}
+          formatter={(value) =>
+            `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")
+          }
+          parser={(value) => value!.replace(/\$\s?|(,*)/g, "")}
+          onChange={(val) => handleUpdateLineItem(index, "unitPrice", val)}
+          className="w-full border-gray-200 rounded-lg font-mono text-gray-600"
+        />
+      ),
+    },
+    {
+      title: "Thành tiền",
+      dataIndex: "amount",
+      width: 140,
+      align: "right" as const,
+      className:
+        "bg-gray-50 text-gray-500 uppercase text-[10px] tracking-wider font-semibold py-3",
+      render: (val: number) => (
+        <span className="font-bold text-gray-900 font-mono">
+          {val.toLocaleString()}
+        </span>
+      ),
+    },
+    {
+      title: "",
+      width: 50,
+      className: "bg-gray-50 py-3",
+      render: (_: any, __: any, index: number) => (
+        <button
+          onClick={() => handleDeleteLineItem(index)}
+          className="text-gray-400 hover:text-red-500 transition-colors p-1"
+        >
+          <Trash2 size={16} />
+        </button>
+      ),
+    },
+  ];
 
-                    <Table 
-                        dataSource={lineItems}
-                        columns={columns}
-                        pagination={false}
-                        rowKey={(record) => Math.random().toString()} // Temp key
-                        className="border-2 border-black"
-                        summary={(pageData) => {
-                            const total = calculateTotal();
-                            return (
-                                <Table.Summary.Row className="bg-gray-50 font-black text-lg">
-                                    <Table.Summary.Cell index={0} colSpan={4} className="text-right uppercase">Tổng cộng:</Table.Summary.Cell>
-                                    <Table.Summary.Cell index={1} colSpan={2}>{total.toLocaleString()} ₫</Table.Summary.Cell>
-                                </Table.Summary.Row>
-                            );
-                        }}
-                    />
-
-                    <Button onClick={handleAddLineItem} icon={<PlusOutlined />} className="self-start border-dashed border-black">
-                        Thêm dòng
-                    </Button>
-
-                    <div className="flex gap-3 mt-4 justify-end">
-                        <Button onClick={() => setStep(1)} className="h-10 font-bold border-2 border-black">
-                            Quay lại
-                        </Button>
-                        <Button 
-                            onClick={() => handleSave(false)} 
-                            loading={loading}
-                            className="h-10 font-bold border-2 border-black bg-white hover:bg-gray-50"
-                        >
-                            <SaveOutlined /> Tạo hóa đơn
-                        </Button>
-                        <Popconfirm
-                            title="Xác nhận phát hành"
-                            description="Hóa đơn sẽ được chuyển sang trạng thái PUBLISHED và gửi thông báo (nếu có)."
-                            onConfirm={() => handleSave(true)}
-                        >
-                            <Button 
-                                type="primary" 
-                                loading={loading}
-                                className="h-10 font-bold border-2 border-black bg-[#00E054] text-black hover:bg-[#00c04b]"
-                            >
-                                <SendOutlined /> Tạo & Phát hành
-                            </Button>
-                        </Popconfirm>
-                    </div>
-                </div>
+  return (
+    <Modal
+      open={isOpen}
+      onCancel={onCancel}
+      title={null}
+      footer={null}
+      width={900}
+      className="claude-modal"
+      centered
+      closeIcon={
+        <div className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 hover:bg-gray-200 text-gray-500 transition-colors">
+          <span className="text-lg">✕</span>
+        </div>
+      }
+    >
+      <div className="p-0">
+        <div className="p-6 border-b border-gray-100">
+          <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+            {step === 2 && (
+              <button
+                onClick={() => setStep(1)}
+                className="mr-2 text-gray-400 hover:text-gray-900 transition-colors"
+              >
+                <ArrowLeft size={24} />
+              </button>
             )}
-        </Modal>
-    );
-}
+            {step === 1 ? "Tạo hóa đơn mới" : "Chi tiết hóa đơn"}
+          </h2>
+          <p className="text-gray-500 text-sm mt-1">
+            {step === 1
+              ? "Chọn phòng và tháng để tính toán hóa đơn."
+              : `Kiểm tra và điều chỉnh các khoản thu cho tháng ${draftInvoice?.month}.`}
+          </p>
+        </div>
 
-// Need to import axiosClient for the contract fetch workaround
-import axiosClient from '@/lib/axios-client';
+        <div className="p-6">
+          {step === 1 ? (
+            <Form
+              form={form}
+              layout="vertical"
+              onFinish={handleGenerateDraft}
+              className="claude-form"
+            >
+              <div className="grid grid-cols-2 gap-6 mb-6">
+                <Form.Item
+                  name="buildingId"
+                  label={
+                    <span className="font-semibold text-gray-700">Tòa nhà</span>
+                  }
+                  rules={[{ required: true, message: "Chọn tòa nhà" }]}
+                >
+                  <Select
+                    placeholder="Chọn tòa nhà..."
+                    onChange={handleBuildingChange}
+                    options={buildings.map((b) => ({
+                      label: b.name,
+                      value: b.id,
+                    }))}
+                    className="h-12"
+                  />
+                </Form.Item>
+                <Form.Item
+                  name="roomId"
+                  label={
+                    <span className="font-semibold text-gray-700">Phòng</span>
+                  }
+                  rules={[{ required: true, message: "Chọn phòng" }]}
+                >
+                  <Select
+                    placeholder="Chọn phòng..."
+                    options={rooms.map((r) => ({ label: r.name, value: r.id }))}
+                    disabled={!selectedBuilding}
+                    className="h-12"
+                  />
+                </Form.Item>
+              </div>
+              <Form.Item
+                name="month"
+                label={
+                  <span className="font-semibold text-gray-700">
+                    Tháng hóa đơn
+                  </span>
+                }
+                rules={[{ required: true, message: "Chọn tháng" }]}
+              >
+                <DatePicker
+                  picker="month"
+                  format="MM-YYYY"
+                  className="w-full h-12"
+                />
+              </Form.Item>
+
+              <div className="mt-8 flex justify-end">
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="px-8 py-3 bg-black text-white rounded-xl font-bold hover:shadow-lg hover:-translate-y-0.5 transition-all flex items-center gap-2 disabled:opacity-70 disabled:hover:translate-y-0"
+                >
+                  {loading && <Loader2 size={18} className="animate-spin" />}
+                  <Calculator size={18} />
+                  <span>Tính hóa đơn (Preview)</span>
+                </button>
+              </div>
+            </Form>
+          ) : (
+            <div className="flex flex-col gap-6">
+              {/* Info Card */}
+              <div className="bg-gray-50 p-4 rounded-xl border border-gray-100 flex items-center justify-between">
+                <div>
+                  <div className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">
+                    Phòng
+                  </div>
+                  <div className="text-xl font-bold text-gray-900">
+                    {draftInvoice?.contract?.room.name}
+                  </div>
+                </div>
+                <div className="text-right">
+                  <div className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">
+                    Tổng cộng (Tạm tính)
+                  </div>
+                  <div className="text-2xl font-black text-[#D97757] tracking-tight">
+                    {calculateTotal().toLocaleString()} ₫
+                  </div>
+                </div>
+              </div>
+
+              {/* Items Table */}
+              <div className="border border-gray-200 rounded-xl overflow-hidden bg-white shadow-sm">
+                <Table
+                  dataSource={lineItems}
+                  columns={columns}
+                  pagination={false}
+                  rowKey={(record) => Math.random().toString()} // Temp key
+                  className="claude-table-dense"
+                />
+                <div className="p-3 bg-gray-50 border-t border-gray-200">
+                  <button
+                    onClick={handleAddLineItem}
+                    className="flex items-center gap-2 text-sm font-bold text-gray-500 hover:text-black transition-colors px-2 py-1 rounded hover:bg-white"
+                  >
+                    <Plus size={16} />
+                    <span>Thêm khoản thu khác</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Footer Actions */}
+              <div className="flex gap-3 mt-2 justify-end pt-4 border-t border-gray-100">
+                <button
+                  onClick={() => setStep(1)}
+                  className="px-6 py-2.5 rounded-xl font-bold text-gray-500 hover:bg-gray-100 transition-colors"
+                >
+                  Quay lại
+                </button>
+                <button
+                  onClick={() => handleSave(false)}
+                  disabled={loading}
+                  className="px-6 py-2.5 rounded-xl font-bold text-gray-700 bg-white border border-gray-200 hover:bg-gray-50 hover:border-gray-300 transition-all flex items-center gap-2"
+                >
+                  {loading ? (
+                    <Loader2 size={18} className="animate-spin" />
+                  ) : (
+                    <Save size={18} />
+                  )}
+                  <span>Lưu nháp</span>
+                </button>
+                <Popconfirm
+                  title="Xác nhận phát hành"
+                  description="Hóa đơn sẽ được chuyển sang trạng thái PUBLISHED."
+                  onConfirm={() => handleSave(true)}
+                  okButtonProps={{ className: "bg-[#D97757]" }}
+                >
+                  <button
+                    className="px-6 py-2.5 rounded-xl font-bold text-white bg-[#D97757] shadow-lg shadow-orange-100 hover:shadow-xl hover:bg-[#c06040] hover:-translate-y-0.5 transition-all flex items-center gap-2"
+                    disabled={loading}
+                  >
+                    <Send size={18} />
+                    <span>Phát hành ngay</span>
+                  </button>
+                </Popconfirm>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </Modal>
+  );
+}

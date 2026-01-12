@@ -1,27 +1,15 @@
 "use client";
 import { useState, useEffect } from "react";
-import {
-  Table,
-  Tag,
-  Select,
-  message,
-  DatePicker,
-  Popconfirm,
-  Empty,
-  Spin,
-} from "antd";
+import { Table, Select, message, DatePicker, Empty } from "antd";
 import {
   Eye,
   Plus,
   Filter,
   Loader2,
-  Download,
-  Receipt,
-  ArrowUpRight,
   CheckCircle,
   Clock,
   AlertCircle,
-  Calendar,
+  Download,
 } from "lucide-react";
 import { invoicesApi } from "@/lib/api/invoices";
 import { Invoice, InvoiceStatus } from "@/types/invoice";
@@ -55,6 +43,7 @@ export default function InvoicesPage() {
 
   useEffect(() => {
     fetchInvoices();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filters]);
 
   // Handle format currency
@@ -101,7 +90,7 @@ export default function InvoicesPage() {
         "bg-gray-50 text-gray-500 uppercase text-[11px] tracking-wider font-semibold py-3",
       render: (_: unknown, record: Invoice) => (
         <div className="font-mono font-medium text-gray-600">
-          {dayjs(record.startDate).format("MM/YYYY")}
+          {record.month}
         </div>
       ),
     },
@@ -196,120 +185,120 @@ export default function InvoicesPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-[var(--bg-page)] text-gray-900 font-sans p-8">
-      <div className="max-w-7xl mx-auto">
-        {/* Header */}
-        <div className="flex justify-between items-end mb-6">
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight text-gray-900">
-              Quản lý Hóa đơn
-            </h1>
-            <p className="text-gray-500 mt-1">
-              Theo dõi, tạo mới và quản lý thanh toán hàng tháng.
-            </p>
-          </div>
-          <div className="flex gap-3">
-            <button className="claude-btn-secondary flex items-center gap-2 text-sm">
-              <Download size={16} />
-              <span>Xuất báo cáo</span>
-            </button>
-            <button
-              onClick={() => setIsCreateModalOpen(true)}
-              className="claude-btn-primary flex items-center gap-2 group bg-black text-white px-6 py-3 rounded-xl font-bold hover:shadow-lg transition-all"
-            >
-              <Plus
-                size={20}
-                className="group-hover:rotate-90 transition-transform"
-              />
-              <span>Tạo hóa đơn</span>
-            </button>
-          </div>
+    <div className="max-w-7xl mx-auto">
+      {/* HEADER */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 mb-8">
+        <div>
+          <h1 className="text-3xl md:text-4xl claude-header mb-2">
+            Quản lý Hóa đơn
+          </h1>
+          <p className="text-gray-500 font-sans text-lg">
+            Theo dõi, tạo mới và quản lý thanh toán hàng tháng.
+          </p>
         </div>
-
-        {/* Filter Bar */}
-        <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm mb-6 flex items-center gap-4">
-          <div className="flex items-center gap-2 text-gray-500 mr-2">
-            <Filter size={16} />
-            <span className="text-sm font-medium uppercase tracking-wide">
-              Bộ lọc
-            </span>
-          </div>
-
-          <DatePicker
-            picker="month"
-            format="MM-YYYY"
-            allowClear={false}
-            value={dayjs(filters.month, "MM-YYYY")}
-            onChange={(date) =>
-              setFilters((prev) => ({
-                ...prev,
-                month: date
-                  ? date.format("MM-YYYY")
-                  : dayjs().format("MM-YYYY"),
-              }))
-            }
-            className="w-40 border-gray-200 hover:border-gray-300 focus:border-black rounded-md"
-          />
-
-          <Select
-            placeholder="Tất cả trạng thái"
-            allowClear
-            value={filters.status}
-            className="w-48"
-            variant="borderless"
-            style={{ border: "1px solid #e5e7eb", borderRadius: "6px" }}
-            onChange={(val) => setFilters((prev) => ({ ...prev, status: val }))}
+        <div className="flex gap-3">
+          <button className="claude-btn-secondary flex items-center gap-2 text-sm">
+            <Download size={18} />
+            <span>Xuất báo cáo</span>
+          </button>
+          <button
+            onClick={() => setIsCreateModalOpen(true)}
+            className="claude-btn-primary flex items-center gap-2 group"
           >
-            {Object.values(InvoiceStatus).map((status) => (
-              <Select.Option key={status} value={status}>
-                {status}
-              </Select.Option>
-            ))}
-          </Select>
+            <Plus
+              size={20}
+              className="group-hover:rotate-90 transition-transform"
+            />
+            <span>Tạo hóa đơn</span>
+          </button>
+        </div>
+      </div>
+
+      {/* FILTERS */}
+      <div className="bg-white p-4 rounded-2xl border border-gray-200 shadow-sm mb-8 flex flex-wrap items-center gap-4">
+        <div className="flex items-center gap-2 text-gray-500 mr-2 px-2">
+          <Filter size={18} />
+          <span className="font-bold text-sm uppercase tracking-wide">
+            Bộ lọc
+          </span>
         </div>
 
-        {/* Data Table Section */}
-        <div className="bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden">
-          <Table
-            columns={columns}
-            dataSource={invoices}
-            rowKey="id"
-            loading={loading}
-            pagination={{ pageSize: 10 }}
-            rowClassName="hover:bg-gray-50 transition-colors"
-            locale={{
-              emptyText: (
-                <Empty
-                  description="Không có hóa đơn nào"
-                  image={Empty.PRESENTED_IMAGE_SIMPLE}
-                />
-              ),
-            }}
-          />
-        </div>
-
-        {/* Modals */}
-        <InvoiceDetailModal
-          isOpen={isDetailOpen}
-          onCancel={() => setIsDetailOpen(false)}
-          invoice={selectedInvoice}
-          onUpdate={() => {
-            fetchInvoices();
-            if (selectedInvoice) {
-              invoicesApi.getOne(selectedInvoice.id).then(setSelectedInvoice);
-            }
-          }}
+        <DatePicker
+          picker="month"
+          format="MM-YYYY"
+          allowClear={false}
+          value={dayjs(filters.month, "MM-YYYY")}
+          onChange={(date) =>
+            setFilters((prev) => ({
+              ...prev,
+              month: date ? date.format("MM-YYYY") : dayjs().format("MM-YYYY"),
+            }))
+          }
+          className="h-10 w-40 border-gray-200 hover:border-[#D97757] focus:border-[#D97757] rounded-xl font-medium"
         />
 
-        <CreateInvoiceModal
-          isOpen={isCreateModalOpen}
-          onCancel={() => setIsCreateModalOpen(false)}
-          onSuccess={() => {
-            setIsCreateModalOpen(false);
-            fetchInvoices();
+        <Select
+          placeholder="Tất cả trạng thái"
+          allowClear
+          value={filters.status}
+          className="w-48 h-10"
+          onChange={(val) => setFilters((prev) => ({ ...prev, status: val }))}
+          options={Object.values(InvoiceStatus).map((status) => ({
+            label: status === InvoiceStatus.PAID ? "Đã Thanh Toán" : status,
+            value: status,
+          }))}
+        />
+      </div>
+
+      {/* DATA TABLE */}
+      <div className="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden">
+        <Table
+          columns={columns}
+          dataSource={invoices}
+          rowKey="id"
+          loading={{
+            indicator: (
+              <Loader2 size={24} className="animate-spin text-[#D97757]" />
+            ),
+            spinning: loading,
+          }}
+          pagination={{ pageSize: 10 }}
+          rowClassName="hover:bg-gray-50 transition-colors"
+          className="claude-table"
+          locale={{
+            emptyText: (
+              <Empty
+                description={
+                  <span className="text-gray-500">Chưa có hóa đơn nào</span>
+                }
+                image={Empty.PRESENTED_IMAGE_SIMPLE}
+              />
+            ),
           }}
         />
       </div>
+
+      {/* Modals */}
+      <InvoiceDetailModal
+        isOpen={isDetailOpen}
+        onCancel={() => setIsDetailOpen(false)}
+        invoice={selectedInvoice}
+        onUpdate={() => {
+          fetchInvoices();
+          if (selectedInvoice) {
+            invoicesApi.getOne(selectedInvoice.id).then(setSelectedInvoice);
+          }
+        }}
+      />
+
+      <CreateInvoiceModal
+        isOpen={isCreateModalOpen}
+        onCancel={() => setIsCreateModalOpen(false)}
+        onSuccess={() => {
+          setIsCreateModalOpen(false);
+          fetchInvoices();
+        }}
+      />
     </div>
   );
 }
