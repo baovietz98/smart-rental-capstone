@@ -16,12 +16,12 @@ import { Roles } from '../auth/decorators/roles.decorator';
 
 @ApiTags('Readings - Chốt số điện nước')
 @ApiBearerAuth()
-@Roles('ADMIN')
 @Controller('readings')
 export class ReadingsController {
   constructor(private readonly readingsService: ReadingsService) { }
 
   @Get('list')
+  @Roles('ADMIN')
   @ApiOperation({ summary: 'Lấy danh sách chốt số (có filter)' })
   @ApiQuery({ name: 'month', required: false })
   @ApiQuery({ name: 'serviceId', required: false })
@@ -36,6 +36,7 @@ export class ReadingsController {
   }
 
   @Get('prepare-bulk')
+  @Roles('ADMIN')
   @ApiOperation({
     summary:
       'Chuẩn bị dữ liệu chốt số hàng loạt cho cả tòa nhà (Spreadsheet UI)',
@@ -85,6 +86,7 @@ export class ReadingsController {
   }
 
   @Post('bulk')
+  @Roles('ADMIN')
   @ApiOperation({ summary: 'Chốt số hàng loạt (Điện + Nước cùng lúc)' })
   @ApiQuery({
     name: 'month',
@@ -123,6 +125,7 @@ export class ReadingsController {
   }
 
   @Get('unread')
+  @Roles('ADMIN')
   @ApiOperation({ summary: 'Lấy danh sách phòng chưa chốt số tháng này' })
   @ApiQuery({ name: 'month', example: '11-2025' })
   @ApiQuery({ name: 'serviceId', type: Number, description: 'ID dịch vụ' })
@@ -134,6 +137,7 @@ export class ReadingsController {
   }
 
   @Get('stats/:month')
+  @Roles('ADMIN')
   @ApiOperation({ summary: 'Thống kê chốt số theo tháng' })
   @ApiParam({ name: 'month', example: '11-2025' })
   getMonthlyStats(@Param('month') month: string) {
@@ -147,12 +151,14 @@ export class ReadingsController {
   }
 
   @Patch(':id')
+  @Roles('ADMIN')
   @ApiOperation({ summary: 'Cập nhật chỉ số (khi nhập sai)' })
   update(@Param('id', ParseIntPipe) id: number, @Body() dto: UpdateReadingDto) {
     return this.readingsService.update(id, dto);
   }
 
   @Delete(':id')
+  @Roles('ADMIN')
   @ApiOperation({ summary: 'Xóa bản ghi chốt số' })
   remove(@Param('id', ParseIntPipe) id: number) {
     return this.readingsService.remove(id);

@@ -27,7 +27,6 @@ import { GetUser } from '../auth/decorators/get-user.decorator';
 
 @ApiTags('Contracts')
 @ApiBearerAuth()
-@Roles('ADMIN')
 @Controller('contracts')
 export class ContractsController {
   constructor(private readonly contractsService: ContractsService) { }
@@ -93,26 +92,30 @@ export class ContractsController {
     return this.contractsService.findByRoom(roomId);
   }
 
+// ... imports
+
   @Get('tenant/:tenantId')
-  @ApiOperation({
-    summary: 'Lấy hợp đồng theo khách thuê',
-    description: 'Lấy lịch sử hợp đồng của một khách thuê',
-  })
+    @ApiOperation({
+        summary: 'Lấy danh sách hợp đồng của Tenant',
+        description: 'Lấy danh sách hợp đồng của tenant đang đăng nhập',
+    })
+  @Roles('ADMIN', 'TENANT')
   @ApiParam({ name: 'tenantId', type: Number })
-  findByTenant(@Param('tenantId', ParseIntPipe) tenantId: number) {
-    return this.contractsService.findByTenant(tenantId);
+  findByTenant(@Param('tenantId', ParseIntPipe) tenantId: number, @GetUser() user: any) {
+    return this.contractsService.findByTenant(tenantId, user);
   }
 
   @Get(':id')
   @ApiOperation({
     summary: 'Lấy chi tiết hợp đồng',
-    description: 'Trả về thông tin hợp đồng, phòng, khách thuê và hóa đơn',
+    description: 'Lấy thông tin chi tiết của một hợp đồng (cho Admin hoặc Tenant sở hữu)',
   })
   @ApiParam({ name: 'id', type: Number })
+  @Roles('ADMIN', 'TENANT')
   @ApiResponse({ status: 200, description: 'Thành công' })
   @ApiResponse({ status: 404, description: 'Không tìm thấy' })
-  findOne(@Param('id', ParseIntPipe) id: number) {
-    return this.contractsService.findOne(id);
+  findOne(@Param('id', ParseIntPipe) id: number, @GetUser() user: any) {
+    return this.contractsService.findOne(id, user);
   }
 
   @Patch(':id')

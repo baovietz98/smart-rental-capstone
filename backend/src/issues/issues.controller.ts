@@ -22,13 +22,15 @@ import {
 import { IssuesService } from './issues.service';
 import { CreateIssueDto, UpdateIssueDto, IssueStatus } from './dto';
 import { Roles } from '../auth/decorators/roles.decorator';
+import { GetUser } from '../auth/decorators/get-user.decorator';
 
 @ApiTags('Issues - Quản lý sự cố')
 @ApiBearerAuth()
-@Roles('ADMIN')
 @Controller('issues')
 export class IssuesController {
     constructor(private readonly issuesService: IssuesService) { }
+
+
 
     @Post()
     @Roles('ADMIN', 'TENANT')
@@ -38,65 +40,21 @@ export class IssuesController {
     })
     @ApiResponse({ status: 201, description: 'Tạo thành công' })
     @ApiResponse({ status: 404, description: 'Không tìm thấy phòng' })
-    create(@Body() dto: CreateIssueDto) {
-        return this.issuesService.create(dto);
+    create(@Body() dto: CreateIssueDto, @GetUser() user: any) {
+        return this.issuesService.create(dto, user);
     }
 
-    @Get()
-    @ApiOperation({
-        summary: 'Lấy danh sách sự cố',
-        description: 'Lấy tất cả sự cố với các filter tùy chọn',
-    })
-    @ApiQuery({
-        name: 'status',
-        required: false,
-        enum: IssueStatus,
-        description: 'Lọc theo trạng thái',
-    })
-    @ApiQuery({
-        name: 'roomId',
-        required: false,
-        type: Number,
-        description: 'Lọc theo phòng',
-    })
-    @ApiQuery({
-        name: 'buildingId',
-        required: false,
-        type: Number,
-        description: 'Lọc theo tòa nhà',
-    })
-    findAll(
-        @Query('status') status?: IssueStatus,
-        @Query('roomId') roomId?: string,
-        @Query('buildingId') buildingId?: string,
-    ) {
-        return this.issuesService.findAll({
-            status,
-            roomId: roomId ? parseInt(roomId, 10) : undefined,
-            buildingId: buildingId ? parseInt(buildingId, 10) : undefined,
-        });
-    }
 
-    @Get('stats')
-    @ApiOperation({
-        summary: 'Thống kê sự cố',
-        description: 'Trả về số lượng sự cố theo từng trạng thái',
-    })
-    @ApiQuery({ name: 'buildingId', required: false, type: Number })
-    getStats(@Query('buildingId') buildingId?: string) {
-        return this.issuesService.getStats(
-            buildingId ? parseInt(buildingId, 10) : undefined,
-        );
-    }
 
     @Get('room/:roomId')
     @ApiOperation({
         summary: 'Lấy sự cố theo phòng',
         description: 'Lấy tất cả sự cố của một phòng',
     })
+    @Roles('ADMIN', 'TENANT')
     @ApiParam({ name: 'roomId', type: Number })
-    findByRoom(@Param('roomId', ParseIntPipe) roomId: number) {
-        return this.issuesService.findByRoom(roomId);
+    findByRoom(@Param('roomId', ParseIntPipe) roomId: number, @GetUser() user: any) {
+        return this.issuesService.findByRoom(roomId, user);
     }
 
     @Get(':id')
@@ -105,10 +63,11 @@ export class IssuesController {
         description: 'Trả về thông tin chi tiết của sự cố',
     })
     @ApiParam({ name: 'id', type: Number })
+    @Roles('ADMIN', 'TENANT')
     @ApiResponse({ status: 200, description: 'Thành công' })
     @ApiResponse({ status: 404, description: 'Không tìm thấy sự cố' })
-    findOne(@Param('id', ParseIntPipe) id: number) {
-        return this.issuesService.findOne(id);
+    findOne(@Param('id', ParseIntPipe) id: number, @GetUser() user: any) {
+        return this.issuesService.findOne(id, user);
     }
 
     @Patch(':id')

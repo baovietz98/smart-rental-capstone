@@ -47,7 +47,9 @@ export default function CreateInvoiceModal({
 
   // Draft Data
   const [draftInvoice, setDraftInvoice] = useState<Invoice | null>(null);
-  const [lineItems, setLineItems] = useState<InvoiceLineItem[]>([]);
+  const [lineItems, setLineItems] = useState<
+    (InvoiceLineItem & { _id: string })[]
+  >([]);
 
   const [form] = Form.useForm();
 
@@ -107,7 +109,12 @@ export default function CreateInvoiceModal({
       });
 
       // 2. Set data for review (Snapshot)
-      setLineItems(previewData.lineItems);
+      setLineItems(
+        previewData.lineItems.map((item) => ({
+          ...item,
+          _id: Math.random().toString(36).substr(2, 9),
+        }))
+      );
 
       // Store contractId for later use
       setDraftInvoice({
@@ -160,6 +167,7 @@ export default function CreateInvoiceModal({
         unitPrice: 0,
         amount: 0,
         note: "",
+        _id: Math.random().toString(36).substr(2, 9),
       },
     ]);
   };
@@ -173,10 +181,12 @@ export default function CreateInvoiceModal({
     setLoading(true);
     try {
       // 3. Create Invoice with Snapshot (lineItems)
+      // Remove _id before sending
+      const cleanLineItems = lineItems.map(({ _id, ...item }) => item);
       const invoice = await invoicesApi.generateDraft({
         contractId: draftInvoice.contractId,
         month: draftInvoice.month,
-        lineItems: lineItems, // Send the snapshot!
+        lineItems: cleanLineItems, // Send the snapshot!
       });
 
       // 4. Publish if requested
@@ -189,7 +199,12 @@ export default function CreateInvoiceModal({
 
       onSuccess();
     } catch (error: any) {
-      message.error(error.response?.data?.message || "Lỗi khi lưu hóa đơn");
+      if (error.response?.status === 409) {
+        message.warning("Hóa đơn cho phòng này trong tháng đã tồn tại!");
+        onSuccess();
+      } else {
+        message.error(error.response?.data?.message || "Lỗi khi lưu hóa đơn");
+      }
     } finally {
       setLoading(false);
     }
@@ -256,12 +271,17 @@ export default function CreateInvoiceModal({
       render: (val: number, record: InvoiceLineItem, index: number) => (
         <InputNumber
           value={val}
+          min={0}
+          max={9999999999}
           formatter={(value) =>
             `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")
           }
-          parser={(value) => value!.replace(/\$\s?|(,*)/g, "")}
+          parser={(value) =>
+            value?.replace(/\$\s?|(,*)/g, "") as unknown as number
+          }
           onChange={(val) => handleUpdateLineItem(index, "unitPrice", val)}
           className="w-full border-gray-200 rounded-lg font-mono text-gray-600"
+          placeholder="0"
         />
       ),
     },
@@ -425,7 +445,7 @@ export default function CreateInvoiceModal({
                   dataSource={lineItems}
                   columns={columns}
                   pagination={false}
-                  rowKey={(record) => Math.random().toString()} // Temp key
+                  rowKey="_id"
                   className="claude-table-dense"
                 />
                 <div className="p-3 bg-gray-50 border-t border-gray-200">

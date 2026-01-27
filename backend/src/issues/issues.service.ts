@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, ForbiddenException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateIssueDto, UpdateIssueDto, IssueStatus } from './dto';
 
@@ -6,14 +6,38 @@ import { CreateIssueDto, UpdateIssueDto, IssueStatus } from './dto';
 export class IssuesService {
     constructor(private prisma: PrismaService) { }
 
-    async create(dto: CreateIssueDto) {
+    async create(dto: CreateIssueDto, user?: any) {
         // Verify room exists
         const room = await this.prisma.room.findUnique({
             where: { id: dto.roomId },
+            include: {
+                contracts: {
+                    where: { isActive: true },
+                    include: { tenant: true },
+                }
+            }
         });
 
         if (!room) {
             throw new NotFoundException(`Không tìm thấy phòng với ID ${dto.roomId}`);
+        }
+
+        // Validate Tenant Access
+        if (user && user.role === 'TENANT') {
+            // Find tenant associated with this user
+            const tenant = await this.prisma.tenant.findUnique({
+                where: { userId: user.id }
+            });
+
+            if (!tenant) {
+                 throw new ForbiddenException('Tài khoản không liên kết với thông tin khách thuê');
+            }
+
+            // Check if tenant has active contract for this room
+            const hasContract = room.contracts.some(c => c.tenantId === tenant.id);
+            if (!hasContract) {
+                throw new ForbiddenException('Bạn không có quyền báo sự cố cho phòng này');
+            }
         }
 
         return this.prisma.issue.create({
@@ -22,6 +46,8 @@ export class IssuesService {
                 description: dto.description,
                 roomId: dto.roomId,
                 status: IssueStatus.OPEN,
+                priority: dto.priority || 'NORMAL',
+                images: dto.images ? (dto.images as any) : undefined,
             },
             include: {
                 room: {
@@ -65,7 +91,7 @@ export class IssuesService {
         });
     }
 
-    async findOne(id: number) {
+    async findOne(id: number, user?: any) {
         const issue = await this.prisma.issue.findUnique({
             where: { id },
             include: {
@@ -87,11 +113,26 @@ export class IssuesService {
             throw new NotFoundException(`Không tìm thấy sự cố với ID ${id}`);
         }
 
+        // Validate Tenant Access
+        if (user && user.role === 'TENANT') {
+             const tenant = await this.prisma.tenant.findUnique({
+                where: { userId: user.id }
+            });
+             
+             if (!tenant) throw new ForbiddenException('Access Denied');
+
+             // Check if tenant is associated with the room of this issue
+             const hasAccess = issue.room.contracts.some(c => c.tenantId === tenant.id);
+             if (!hasAccess) {
+                 throw new ForbiddenException('Bạn không có quyền xem sự cố này');
+             }
+        }
+
         return issue;
     }
 
     async update(id: number, dto: UpdateIssueDto) {
-        await this.findOne(id); // Verify exists
+        await this.findOne(id); // Verify exists (Admin only usually updates, or add checks if needed)
 
         return this.prisma.issue.update({
             where: { id },
@@ -156,7 +197,27 @@ export class IssuesService {
         return stats;
     }
 
-    async findByRoom(roomId: number) {
+    async findByRoom(roomId: number, user?: any) {
+        if (user && user.role === 'TENANT') {
+             const tenant = await this.prisma.tenant.findUnique({
+                where: { userId: user.id }
+            });
+             if (!tenant) throw new ForbiddenException('Access Denied');
+
+             // Verify contract for this room
+             const contract = await this.prisma.contract.findFirst({
+                 where: {
+                     roomId: roomId,
+                     tenantId: tenant.id,
+                     isActive: true
+                 }
+             });
+
+             if (!contract) {
+                 throw new ForbiddenException('Bạn không có quyền xem sự cố của phòng này');
+             }
+        }
+
         return this.prisma.issue.findMany({
             where: { roomId },
             orderBy: { createdAt: 'desc' },

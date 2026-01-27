@@ -16,12 +16,12 @@ import { Roles } from '../auth/decorators/roles.decorator';
 
 @ApiTags('Services - Dịch vụ')
 @ApiBearerAuth()
-@Roles('ADMIN')
 @Controller('services')
 export class ServicesController {
   constructor(private readonly servicesService: ServicesService) { }
 
   @Post()
+  @Roles('ADMIN')
   @ApiOperation({ summary: 'Tạo dịch vụ mới' })
   create(@Body() dto: CreateServiceDto) {
     return this.servicesService.create(dto);
@@ -47,6 +47,7 @@ export class ServicesController {
   }
 
   @Get('seed')
+  @Roles('ADMIN')
   @ApiOperation({
     summary: 'Khởi tạo dữ liệu dịch vụ mẫu (Điện, Nước, Wifi...)',
   })
@@ -61,12 +62,14 @@ export class ServicesController {
   }
 
   @Patch(':id')
+  @Roles('ADMIN')
   @ApiOperation({ summary: 'Cập nhật dịch vụ' })
   update(@Param('id', ParseIntPipe) id: number, @Body() dto: UpdateServiceDto) {
     return this.servicesService.update(id, dto);
   }
 
   @Delete(':id')
+  @Roles('ADMIN')
   @ApiOperation({ summary: 'Xóa mềm dịch vụ (set isActive = false)' })
   remove(@Param('id', ParseIntPipe) id: number) {
     return this.servicesService.remove(id);

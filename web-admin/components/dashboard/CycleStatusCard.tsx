@@ -6,6 +6,8 @@ interface CycleStatusCardProps {
   totalRooms: number;
   readingsCompleted: number;
   invoicesSent: number;
+  totalReadings?: number; // Target readings (e.g. rooms * 2)
+  totalInvoices?: number; // Target invoices (usually rooms)
   onReadingsClick?: () => void;
   onInvoicesClick?: () => void;
 }
@@ -14,13 +16,18 @@ export default function CycleStatusCard({
   totalRooms,
   readingsCompleted,
   invoicesSent,
+  totalReadings,
+  totalInvoices,
   onReadingsClick,
   onInvoicesClick,
 }: CycleStatusCardProps) {
+  const readingTarget = totalReadings || totalRooms;
+  const invoiceTarget = totalInvoices || totalRooms;
+
   const readingsProgress =
-    totalRooms > 0 ? (readingsCompleted / totalRooms) * 100 : 0;
+    readingTarget > 0 ? (readingsCompleted / readingTarget) * 100 : 0;
   const invoicesProgress =
-    totalRooms > 0 ? (invoicesSent / totalRooms) * 100 : 0;
+    invoiceTarget > 0 ? (invoicesSent / invoiceTarget) * 100 : 0;
 
   return (
     <div className="claude-card p-6">
@@ -38,7 +45,7 @@ export default function CycleStatusCard({
               <span>Chốt điện nước</span>
             </div>
             <span className="text-sm text-gray-500 font-semibold group-hover:text-[#D97757] transition-colors">
-              {readingsCompleted}/{totalRooms}
+              {readingsCompleted}/{readingTarget}
             </span>
           </div>
           <div className="w-full bg-gray-100 rounded-full h-2">
@@ -48,9 +55,9 @@ export default function CycleStatusCard({
             ></div>
           </div>
           <p className="text-xs text-gray-400 mt-1 text-right">
-            {readingsCompleted === totalRooms
+            {readingsCompleted === readingTarget
               ? "Đã hoàn tất"
-              : `${totalRooms - readingsCompleted} phòng chưa chốt`}
+              : `${readingTarget - readingsCompleted} phòng chưa chốt`}
           </p>
         </div>
 
@@ -65,7 +72,7 @@ export default function CycleStatusCard({
               <span>Gửi hóa đơn</span>
             </div>
             <span className="text-sm text-gray-500 font-semibold group-hover:text-[#D97757] transition-colors">
-              {invoicesSent}/{totalRooms}
+              {invoicesSent}/{invoiceTarget}
             </span>
           </div>
           <div className="w-full bg-gray-100 rounded-full h-2">
@@ -75,9 +82,9 @@ export default function CycleStatusCard({
             ></div>
           </div>
           <p className="text-xs text-gray-400 mt-1 text-right">
-            {invoicesSent === totalRooms
+            {invoicesSent === invoiceTarget
               ? "Đã gửi hết"
-              : `${totalRooms - invoicesSent} hóa đơn chưa gửi`}
+              : `${invoiceTarget - invoicesSent} hóa đơn chưa gửi`}
           </p>
         </div>
       </div>

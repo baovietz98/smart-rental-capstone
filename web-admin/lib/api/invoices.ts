@@ -3,6 +3,7 @@ import {
     GenerateInvoiceDto,
     Invoice,
     InvoiceFilters,
+    InvoiceLineItem,
     RecordPaymentDto,
     UpdateInvoiceDto,
 } from '../../types/invoice';

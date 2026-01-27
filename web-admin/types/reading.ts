@@ -24,6 +24,9 @@ export interface ServiceReading {
             };
         };
     };
+    isConfirmed?: boolean;
+    imageUrls?: string[]; // or JSON, but frontend treats as string[] usually
+    type?: 'ADMIN' | 'TENANT';
 }
 
 export interface CreateReadingDto {
@@ -34,6 +37,8 @@ export interface CreateReadingDto {
     newIndex: number;
     isMeterReset?: boolean;
     maxMeterValue?: number;
+    imageUrls?: string[];
+    isConfirmed?: boolean;
 }
 
 export interface UpdateReadingDto {
@@ -43,6 +48,7 @@ export interface UpdateReadingDto {
 export interface ReadingStats {
     month: string;
     totalReadings: number;
+    roomsCount?: number; // Added roomsCount
     totalUsage: number;
     totalCost: number;
     byService: Record<string, {

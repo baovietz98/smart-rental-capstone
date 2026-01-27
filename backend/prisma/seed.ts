@@ -1,168 +1,249 @@
-import { PrismaClient, RoomStatus, ServiceType, CalculationType, InvoiceStatus } from '@prisma/client';
+import { PrismaClient, RoomStatus, ServiceType, CalculationType, InvoiceStatus, UserRole, ReadingSource, RequestStatus } from '@prisma/client';
+import * as bcrypt from 'bcrypt';
 
 const prisma = new PrismaClient();
 
 async function main() {
-    console.log('Start seeding ...');
+    console.log('--- STARTING COMPREHENSIVE SEED ---');
 
-    // 1. Create Buildings
-    let buildingA = await prisma.building.findFirst({ where: { name: 'Sunrise Apartment' } });
-    if (!buildingA) {
-        buildingA = await prisma.building.create({
-            data: {
-                name: 'Sunrise Apartment',
-                address: '123 Le Van Sy, District 3, HCMC',
-            },
-        });
-    }
+    // 1. CLEANUP (Delete in order to avoid Foreign Key constraints)
+    await prisma.transaction.deleteMany();
+    await prisma.invoice.deleteMany();
+    await prisma.serviceReading.deleteMany();
+    await prisma.contract.deleteMany();
+    await prisma.vehicle.deleteMany();
+    await prisma.guestRequest.deleteMany();
+    await prisma.issue.deleteMany(); // Added Issues cleanup
+    await prisma.tenant.deleteMany();
+    await prisma.room.deleteMany();
+    await prisma.service.deleteMany();
+    await prisma.building.deleteMany();
+    await prisma.user.deleteMany();
+    
+    console.log('--- CLEANUP DONE ---');
 
-    let buildingB = await prisma.building.findFirst({ where: { name: 'Green Valley' } });
-    if (!buildingB) {
-        buildingB = await prisma.building.create({
-            data: {
-                name: 'Green Valley',
-                address: '456 Nguyen Van Linh, District 7, HCMC',
-            },
-        });
-    }
+    // 2. Create Admin User
+    const hashedPassword = await bcrypt.hash('admin123', 10);
+    const adminUser = await prisma.user.create({
+        data: {
+            email: 'admin@demo.com',
+            password: hashedPassword,
+            name: 'Super Admin',
+            role: UserRole.ADMIN,
+        }
+    });
 
-    console.log(`Created buildings: ${buildingA.name}, ${buildingB.name}`);
+    // 3. Create Buildings
+    const buildings = await Promise.all([
+        prisma.building.create({
+            data: { name: 'Sunrise Apartment', address: '123 Le Van Sy, Q3, HCMC' }
+        }),
+        prisma.building.create({
+            data: { name: 'Green Valley', address: '456 Nguyen Van Linh, Q7, HCMC' }
+        })
+    ]);
+    const [sunrise, greenValley] = buildings;
 
-    // 2. Create Services
-    const services = [
-        { name: 'Điện', price: 3500, unit: 'kWh', type: ServiceType.INDEX, calculationType: CalculationType.PER_USAGE },
-        { name: 'Nước', price: 20000, unit: 'm3', type: ServiceType.INDEX, calculationType: CalculationType.PER_USAGE },
-        { name: 'Internet', price: 100000, unit: 'tháng', type: ServiceType.FIXED, calculationType: CalculationType.PER_ROOM },
-        { name: 'Rác', price: 20000, unit: 'tháng', type: ServiceType.FIXED, calculationType: CalculationType.PER_ROOM },
+    // 4. Create Services
+    const services = await Promise.all([
+        prisma.service.create({ data: { name: 'Điện', price: 3500, unit: 'kWh', type: ServiceType.INDEX, calculationType: CalculationType.PER_USAGE } }),
+        prisma.service.create({ data: { name: 'Nước', price: 20000, unit: 'm3', type: ServiceType.INDEX, calculationType: CalculationType.PER_USAGE } }),
+        prisma.service.create({ data: { name: 'Internet', price: 100000, unit: 'tháng', type: ServiceType.FIXED, calculationType: CalculationType.PER_ROOM } }),
+        prisma.service.create({ data: { name: 'Rác', price: 20000, unit: 'tháng', type: ServiceType.FIXED, calculationType: CalculationType.PER_ROOM } }),
+        prisma.service.create({ data: { name: 'Gửi xe', price: 100000, unit: 'chiếc', type: ServiceType.FIXED, calculationType: CalculationType.PER_PERSON } }),
+    ]);
+    const [elecService, waterService, netService] = services;
+
+    // 5. Create Rooms (Sunrise: 101-104, Green: B1-B2)
+    const roomsData = [
+        { name: '101', price: 5000000, floor: 1, buildingId: sunrise.id, assets: { 'AirCond': 1, 'Fridge': 1 } },
+        { name: '102', price: 5500000, floor: 1, buildingId: sunrise.id, assets: { 'AirCond': 1, 'Bed': 2 } },
+        { name: '103', price: 5000000, floor: 1, buildingId: sunrise.id, status: RoomStatus.AVAILABLE },
+        { name: 'B.01', price: 3500000, floor: 1, buildingId: greenValley.id, status: RoomStatus.AVAILABLE },
     ];
 
-    for (const service of services) {
-        const existing = await prisma.service.findFirst({ where: { name: service.name } });
-        if (!existing) {
-            await prisma.service.create({ data: service });
+    const rooms = await Promise.all(roomsData.map(r => prisma.room.create({ data: r })));
+    const [room101, room102] = rooms;
+
+    // 6. Create Tenants & Linked Users
+    // Tenant A: Has User Account (Pro features)
+    const tenantUserPhone = '0901234567';
+    const tenantUser = await prisma.user.create({
+        data: {
+            email: 'tenant.a@demo.com',
+            phoneNumber: tenantUserPhone,
+            password: hashedPassword, // 'admin123'
+            name: 'Nguyen Van Tenant',
+            role: UserRole.TENANT,
         }
-    }
-    console.log('Created services');
+    });
 
-    // 3. Create Rooms for Building A
-    const roomsA = [
-        { name: '101', price: 5000000, floor: 1, area: 30, maxTenants: 2 },
-        { name: '102', price: 5500000, floor: 1, area: 35, maxTenants: 3 },
-        { name: '201', price: 5000000, floor: 2, area: 30, maxTenants: 2 },
-        { name: '202', price: 5200000, floor: 2, area: 32, maxTenants: 2 },
-    ];
-
-    for (const room of roomsA) {
-        const existing = await prisma.room.findFirst({ where: { name: room.name, buildingId: buildingA.id } });
-        if (!existing) {
-            await prisma.room.create({
-                data: {
-                    ...room,
-                    buildingId: buildingA.id,
-                    status: RoomStatus.AVAILABLE,
-                },
-            });
+    const tenantA = await prisma.tenant.create({
+        data: {
+            fullName: 'Nguyen Van Tenant',
+            phone: tenantUserPhone,
+            cccd: '079123456789',
+            userId: tenantUser.id, // Linked!
+            vehicles: {
+                create: [
+                    { plateNumber: '59-A1 123.45', type: 'Motorbike', image: 'https://via.placeholder.com/150' }
+                ]
+            }
         }
-    }
+    });
 
-    // 4. Create Rooms for Building B
-    const roomsB = [
-        { name: 'B.101', price: 4000000, floor: 1, area: 25, maxTenants: 2 },
-        { name: 'B.102', price: 4000000, floor: 1, area: 25, maxTenants: 2 },
-    ];
-
-    for (const room of roomsB) {
-        const existing = await prisma.room.findFirst({ where: { name: room.name, buildingId: buildingB.id } });
-        if (!existing) {
-            await prisma.room.create({
-                data: {
-                    ...room,
-                    buildingId: buildingB.id,
-                    status: RoomStatus.AVAILABLE,
-                },
-            });
+    // Tenant B: Traditional (No App Account)
+    const tenantB = await prisma.tenant.create({
+        data: {
+            fullName: 'Tran Thi Traditional',
+            phone: '0909888777', // No User linked
+            cccd: '079988877766'
         }
-    }
-    console.log('Created rooms');
+    });
 
-    // 5. Create Tenant & Contract for Room 101 (RENTED)
-    let tenant1 = await prisma.tenant.findUnique({ where: { phone: '0909000111' } });
-    if (!tenant1) {
-        tenant1 = await prisma.tenant.create({
-            data: {
-                fullName: 'Nguyen Van A',
-                phone: '0909000111',
-                cccd: '079090000111',
+    console.log('--- Created Users & Tenants ---');
+
+    // 7. Contracts
+    // Contract A: Room 101, Active
+    const contractA = await prisma.contract.create({
+        data: {
+            roomId: room101.id,
+            tenantId: tenantA.id,
+            startDate: new Date('2025-01-01'),
+            endDate: new Date('2026-01-01'),
+            price: room101.price,
+            deposit: room101.price,
+            initialIndexes: { 
+                [elecService.id]: 100, 
+                [waterService.id]: 10 
             },
-        });
-    }
-
-    const room101 = await prisma.room.findFirst({ where: { name: '101', buildingId: buildingA.id } });
-
-    if (room101) {
-        // Check if contract exists
-        const existingContract = await prisma.contract.findFirst({
-            where: { roomId: room101.id, tenantId: tenant1.id, isActive: true }
-        });
-
-        if (!existingContract) {
-            // Update Room Status
-            await prisma.room.update({
-                where: { id: room101.id },
-                data: { status: RoomStatus.RENTED },
-            });
-
-            // Create Contract
-            const contract = await prisma.contract.create({
-                data: {
-                    roomId: room101.id,
-                    tenantId: tenant1.id,
-                    startDate: new Date('2025-01-01'),
-                    endDate: new Date('2026-01-01'),
-                    price: room101.price,
-                    deposit: room101.price,
-                    isActive: true,
-                    initialIndexes: { 'Điện': 100, 'Nước': 10 },
-                },
-            });
-
-            console.log(`Created contract for Room 101 with Tenant ${tenant1.fullName}`);
-
-            // Create Invoice for current month
-            await prisma.invoice.create({
-                data: {
-                    month: '12-2025',
-                    contractId: contract.id,
-                    status: InvoiceStatus.PAID,
-                    roomCharge: room101.price,
-                    serviceCharge: 500000,
-                    totalAmount: room101.price + 500000,
-                    paidAmount: room101.price + 500000,
-                    debtAmount: 0,
-                    lineItems: [
-                        {
-                            type: 'RENT',
-                            name: 'Tiền phòng',
-                            quantity: 1,
-                            unit: 'tháng',
-                            unitPrice: room101.price,
-                            amount: room101.price
-                        },
-                        {
-                            type: 'FIXED',
-                            name: 'Dịch vụ',
-                            quantity: 1,
-                            unit: 'tháng',
-                            unitPrice: 500000,
-                            amount: 500000
-                        }
-                    ],
-                }
-            });
+            isActive: true, // Ensuring it is active
         }
-    }
+    });
+    // Update Room Status
+    await prisma.room.update({ where: { id: room101.id }, data: { status: RoomStatus.RENTED } });
 
-    console.log('Seeding finished.');
+    // Contract B: Room 102, Active
+    const contractB = await prisma.contract.create({
+        data: {
+            roomId: room102.id,
+            tenantId: tenantB.id,
+            startDate: new Date('2025-02-01'),
+            price: room102.price,
+            deposit: room102.price,
+            initialIndexes: { 
+                [elecService.id]: 500, 
+                [waterService.id]: 50 
+            },
+            isActive: true,
+        }
+    });
+    await prisma.room.update({ where: { id: room102.id }, data: { status: RoomStatus.RENTED } });
+
+    // 8. Service Readings (Last Month - Admin Confirmed)
+    // 8. Service Readings (Last Month - Admin Confirmed)
+    // REMOVED TO ALLOW USER TESTING
+    /*
+    await prisma.serviceReading.create({
+        data: {
+            contractId: contractA.id,
+            serviceId: elecService.id,
+            month: '01-2026',
+            oldIndex: 100,
+            newIndex: 150, // Used 50
+            usage: 50,
+            unitPrice: elecService.price,
+            totalCost: 50 * elecService.price,
+            isConfirmed: true,
+            type: ReadingSource.ADMIN
+        }
+    });
+
+    // 9. Service Readings (This Month - Tenant Submitted / Self-Service)
+    // Tenant A submits reading for Feb
+    await prisma.serviceReading.create({
+        data: {
+            contractId: contractA.id,
+            serviceId: elecService.id,
+            month: '02-2026', // Current/Next month
+            oldIndex: 150,
+            newIndex: 180, 
+            usage: 30,
+            unitPrice: elecService.price,
+            totalCost: 30 * elecService.price,
+            isConfirmed: false, // Pending Admin Approval
+            type: ReadingSource.TENANT,
+            imageUrls: ['https://via.placeholder.com/200?text=Meter+Photo']
+        }
+    });
+    */
+
+    // 10. Invoices
+    // Invoice 1: Jan 2026 (Paid)
+    await prisma.invoice.create({
+        data: {
+            contractId: contractA.id,
+            month: '01-2026',
+            status: InvoiceStatus.PAID,
+            roomCharge: room101.price,
+            serviceCharge: 200000,
+            totalAmount: room101.price + 200000,
+            paidAmount: room101.price + 200000,
+            debtAmount: 0,
+            lineItems: [],
+            updatedAt: new Date('2026-01-05')
+        }
+    });
+
+    // Invoice 2: Feb 2026 (Draft/Unpaid)
+    await prisma.invoice.create({
+        data: {
+            contractId: contractA.id,
+            month: '02-2026',
+            status: InvoiceStatus.PUBLISHED, // Sent to tenant
+            roomCharge: room101.price,
+            serviceCharge: 0, // Not calculated yet
+            totalAmount: room101.price,
+            paidAmount: 0,
+            debtAmount: room101.price,
+            lineItems: [],
+            dueDate: new Date('2026-02-10')
+        }
+    });
+
+    // 11. Issues Reporting (Requested specifically by User)
+    await prisma.issue.create({
+        data: {
+            roomId: room101.id,
+            title: 'Hỏng máy lạnh',
+            description: 'Máy lạnh không ra hơi lạnh, chỉ có gió.',
+            status: 'OPEN',
+            createdAt: new Date('2026-02-01T10:00:00Z')
+        }
+    });
+    
+    await prisma.issue.create({
+        data: {
+            roomId: room101.id,
+            title: 'Bóng đèn nhà vệ sinh nhấp nháy',
+            description: 'Cần thay bóng đèn mới.',
+            status: 'DONE', // Completed
+            createdAt: new Date('2026-01-15T09:00:00Z')
+        }
+    });
+
+    // 12. Guest Requests
+    await prisma.guestRequest.create({
+        data: {
+            tenantId: tenantA.id,
+            guestName: 'Nguyen Van Ban',
+            startDate: new Date('2026-02-10'),
+            endDate: new Date('2026-02-12'),
+            status: RequestStatus.PENDING
+        }
+    });
+
+    console.log('--- SEEDING COMPLETED WITH FULL DATA (ISSUES, GUESTS, READINGS) ---');
 }
 
 main()

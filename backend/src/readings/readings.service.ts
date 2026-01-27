@@ -39,6 +39,8 @@ export class ReadingsService {
     serviceId: number,
     month: string,
   ): Promise<PrepareReadingResponse> {
+    console.log(`Preparing reading for Contract ${contractId}, Service ${serviceId}, Month ${month}`);
+
     // 1. Validate format tháng (MM-YYYY)
     if (!/^\d{2}-\d{4}$/.test(month)) {
       throw new BadRequestException(
@@ -363,6 +365,9 @@ export class ReadingsService {
         totalCost,
         isMeterReset: dto.isMeterReset ?? false,
         note,
+        imageUrls: dto.imageUrls ? dto.imageUrls : undefined,
+        isConfirmed: dto.isConfirmed ?? true,
+        type: dto.isConfirmed === false ? 'TENANT' : 'ADMIN',
       },
       include: {
         service: true,
@@ -640,9 +645,12 @@ export class ReadingsService {
       statsByService[key].count += 1;
     }
 
+    const uniqueContracts = new Set(readings.map((r) => r.contractId));
+
     return {
       month,
       totalRecords: readings.length,
+      roomsCount: uniqueContracts.size, // Number of rooms/contracts that have readings
       totalAmount: readings.reduce((sum, r) => sum + r.totalCost, 0),
       byService: Object.values(statsByService),
     };

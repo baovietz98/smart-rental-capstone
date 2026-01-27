@@ -3,6 +3,7 @@ import {
   NotFoundException,
   BadRequestException,
   ConflictException,
+  ForbiddenException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateContractDto, UpdateContractDto, MoveContractDto } from './dto';
@@ -170,7 +171,20 @@ export class ContractsService {
   /**
    * Lấy hợp đồng theo khách thuê
    */
-  async findByTenant(tenantId: number) {
+  async findByTenant(tenantId: number, user?: any) {
+    // Validate access for TENANT
+    if (user && user.role === 'TENANT') {
+        // Tenants can only view their own contracts
+        // First find the tenant record for this user
+        const tenant = await this.prisma.tenant.findUnique({
+             where: { userId: user.id }
+        });
+        
+        if (!tenant || tenant.id !== tenantId) {
+             throw new ForbiddenException('Bạn không có quyền xem hợp đồng của khách thuê khác');
+        }
+    }
+
     return this.prisma.contract.findMany({
       where: { tenantId },
       include: {
@@ -186,7 +200,7 @@ export class ContractsService {
   /**
    * Lấy chi tiết hợp đồng
    */
-  async findOne(id: number) {
+  async findOne(id: number, user?: any) {
     const contract = await this.prisma.contract.findUnique({
       where: { id },
       include: {
@@ -203,6 +217,17 @@ export class ContractsService {
 
     if (!contract) {
       throw new NotFoundException(`Không tìm thấy hợp đồng với ID: ${id}`);
+    }
+
+    // Validate access for TENANT
+    if (user && user.role === 'TENANT') {
+         const tenant = await this.prisma.tenant.findUnique({
+              where: { userId: user.id }
+         });
+         
+         if (!tenant || contract.tenantId !== tenant.id) {
+              throw new ForbiddenException(`Bạn không có quyền xem chi tiết hợp đồng này. Contract Tenant: ${contract.tenantId}, Your Tenant: ${tenant?.id}`);
+         }
     }
 
     return contract;

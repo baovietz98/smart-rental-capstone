@@ -39,6 +39,10 @@ model Tenant {
   cccd      String?
   info      Json?
   contracts Contract[]
+  userId    Int?            @unique
+  user      User?           @relation(fields: [userId], references: [id])
+  vehicles  Vehicle[]
+  requests  GuestRequest[]
 }
 
 model Contract {
@@ -89,8 +93,11 @@ model ServiceReading {
   usage        Float
   isMeterReset Boolean  @default(false)
   note         String?
-  contract     Contract @relation(fields: [contractId], references: [id], onDelete: Cascade)
-  service      Service  @relation(fields: [serviceId], references: [id])
+  contract     Contract      @relation(fields: [contractId], references: [id], onDelete: Cascade)
+  service      Service       @relation(fields: [serviceId], references: [id])
+  isConfirmed  Boolean       @default(true)
+  imageUrls    Json?
+  type         ReadingSource @default(ADMIN)
 
   @@unique([contractId, serviceId, month])
 }
@@ -141,15 +148,40 @@ model Issue {
   id          Int      @id @default(autoincrement())
   title       String
   description String?
-  status      String   @default("OPEN")
+  status      String   @default("OPEN") // OPEN, PROCESSING, DONE
+  priority    String   @default("NORMAL") // LOW, NORMAL, HIGH, URGENT
+  images      Json?    // List of image URLs
   roomId      Int
   createdAt   DateTime @default(now())
+  updatedAt   DateTime @default(now()) @updatedAt
   room        Room     @relation(fields: [roomId], references: [id])
+}
+
+model Vehicle {
+  id          Int      @id @default(autoincrement())
+  plateNumber String
+  type        String
+  image       String?
+  tenantId    Int
+  tenant      Tenant   @relation(fields: [tenantId], references: [id])
+  createdAt   DateTime @default(now())
+}
+
+model GuestRequest {
+  id        Int           @id @default(autoincrement())
+  guestName String
+  startDate DateTime
+  endDate   DateTime?
+  status    RequestStatus @default(PENDING)
+  tenantId  Int
+  tenant    Tenant        @relation(fields: [tenantId], references: [id])
+  createdAt DateTime      @default(now())
 }
 
 model User {
   id            Int       @id @default(autoincrement())
   email         String    @unique
+  phoneNumber   String?   @unique
   password      String
   name          String
   role          UserRole  @default(ADMIN)
@@ -159,12 +191,24 @@ model User {
   updatedAt     DateTime  @updatedAt
   resetToken    String?
   resetTokenExp DateTime?
+  tenant        Tenant?
 }
 
 enum RoomStatus {
   AVAILABLE
   RENTED
   MAINTENANCE
+}
+
+enum ReadingSource {
+  ADMIN
+  TENANT
+}
+
+enum RequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
 }
 
 enum ServiceType {

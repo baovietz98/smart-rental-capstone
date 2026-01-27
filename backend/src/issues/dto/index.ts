@@ -31,6 +31,21 @@ export class CreateIssueDto {
     @IsInt()
     @IsNotEmpty()
     roomId: number;
+
+    @ApiPropertyOptional({
+        description: 'Mức độ ưu tiên',
+        enum: ['LOW', 'NORMAL', 'HIGH', 'URGENT'],
+        example: 'NORMAL',
+    })
+    @IsOptional()
+    priority?: string;
+
+    @ApiPropertyOptional({
+        description: 'Danh sách ảnh minh chứng',
+        example: ['https://example.com/img1.jpg'],
+    })
+    @IsOptional()
+    images?: string[];
 }
 
 export class UpdateIssueDto {
@@ -57,4 +72,17 @@ export class UpdateIssueDto {
     @IsEnum(IssueStatus)
     @IsOptional()
     status?: IssueStatus;
+
+    @ApiPropertyOptional({
+        description: 'Mức độ ưu tiên',
+        enum: ['LOW', 'NORMAL', 'HIGH', 'URGENT'],
+    })
+    @IsOptional()
+    priority?: string;
+
+    @ApiPropertyOptional({
+        description: 'Danh sách ảnh minh chứng',
+    })
+    @IsOptional()
+    images?: string[];
 }

@@ -27,12 +27,22 @@ export class AuthService {
 
     async register(dto: RegisterDto) {
         // Check if email already exists
-        const existingUser = await this.prisma.user.findUnique({
-            where: { email: dto.email },
-        });
+        if (dto.email) {
+            const existingUser = await this.prisma.user.findUnique({
+                where: { email: dto.email },
+            });
+            if (existingUser) {
+                throw new ConflictException('Email đã được sử dụng');
+            }
+        }
 
-        if (existingUser) {
-            throw new ConflictException('Email đã được sử dụng');
+        if (dto.phoneNumber) {
+            const existingUserPhone = await this.prisma.user.findUnique({
+                where: { phoneNumber: dto.phoneNumber },
+            });
+            if (existingUserPhone) {
+                throw new ConflictException('Số điện thoại đã được sử dụng');
+            }
         }
 
         // Hash password
@@ -41,12 +51,31 @@ export class AuthService {
         // Create user
         const user = await this.prisma.user.create({
             data: {
-                email: dto.email,
+                email: dto.email || '', // Handle optional email
+                phoneNumber: dto.phoneNumber,
                 password: hashedPassword,
                 name: dto.name,
                 role: dto.role || UserRole.ADMIN,
             },
         });
+
+        // Auto-link with match Tenant by Phone
+        if (dto.phoneNumber) {
+            const tenant = await this.prisma.tenant.findUnique({
+                where: { phone: dto.phoneNumber },
+            });
+            
+            // Link if tenant exists and not yet linked
+            if (tenant && !tenant.userId) {
+                await this.prisma.tenant.update({
+                    where: { id: tenant.id },
+                    data: { userId: user.id },
+                });
+                
+                // Optional: Update user role to TENANT if it matches
+                // For now, we respect the registered role or default
+            }
+        }
 
         // Generate tokens
         const tokens = await this.generateTokens(user.id, user.email, user.role);
@@ -67,12 +96,19 @@ export class AuthService {
 
     async login(dto: LoginDto) {
         // Find user
-        const user = await this.prisma.user.findUnique({
-            where: { email: dto.email },
-        });
+        let user;
+        if (dto.email) {
+            user = await this.prisma.user.findUnique({
+                where: { email: dto.email },
+            });
+        } else if (dto.phoneNumber) {
+            user = await this.prisma.user.findUnique({
+                where: { phoneNumber: dto.phoneNumber },
+            });
+        }
 
         if (!user) {
-            throw new UnauthorizedException('Email hoặc mật khẩu không đúng');
+            throw new UnauthorizedException('Tài khoản không tồn tại');
         }
 
         if (!user.isActive) {
@@ -83,7 +119,7 @@ export class AuthService {
         const passwordValid = await bcrypt.compare(dto.password, user.password);
 
         if (!passwordValid) {
-            throw new UnauthorizedException('Email hoặc mật khẩu không đúng');
+            throw new UnauthorizedException('Mật khẩu không chính xác');
         }
 
         // Generate tokens
@@ -142,13 +178,16 @@ export class AuthService {
     async getProfile(userId: number) {
         const user = await this.prisma.user.findUnique({
             where: { id: userId },
-            select: {
-                id: true,
-                email: true,
-                name: true,
-                role: true,
-                isActive: true,
-                createdAt: true,
+            include: {
+                tenant: {
+                    include: {
+                        contracts: {
+                            // Fetch all contracts (history)
+                            orderBy: { startDate: 'desc' },
+                            include: { room: { include: { building: true } } },
+                        },
+                    },
+                },
             },
         });
 

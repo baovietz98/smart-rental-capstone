@@ -19,8 +19,16 @@ export class RegisterDto {
         example: 'admin@example.com',
     })
     @IsEmail()
-    @IsNotEmpty()
-    email: string;
+    @IsOptional()
+    email?: string;
+
+    @ApiPropertyOptional({
+        description: 'Số điện thoại',
+        example: '0901234567',
+    })
+    @IsString()
+    @IsOptional()
+    phoneNumber?: string;
 
     @ApiProperty({
         description: 'Mật khẩu (tối thiểu 6 ký tự)',
@@ -55,8 +63,16 @@ export class LoginDto {
         example: 'admin@example.com',
     })
     @IsEmail()
-    @IsNotEmpty()
-    email: string;
+    @IsOptional()
+    email?: string;
+
+    @ApiProperty({
+        description: 'Số điện thoại',
+        example: '0901234567',
+    })
+    @IsString()
+    @IsOptional()
+    phoneNumber?: string;
 
     @ApiProperty({
         description: 'Mật khẩu',

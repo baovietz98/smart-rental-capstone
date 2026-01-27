@@ -69,6 +69,7 @@ export interface GenerateInvoiceDto {
     month: string;
     proratedRent?: boolean;
     startDay?: number;
+    lineItems?: InvoiceLineItem[];
 }
 
 export interface ExtraChargeDto {
