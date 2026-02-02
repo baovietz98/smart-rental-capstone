@@ -262,29 +262,34 @@ export default function TenantBillingPage() {
 
             {/* Scrollable Content */}
             <div className="flex-1 overflow-y-auto p-6 space-y-6">
-              {/* Payment Section (Mock) */}
+              {/* Payment Section (Real VietQR) */}
               {selectedInvoice.status !== "PAID" && (
-                <div className="bg-indigo-50 rounded-xl p-4 border border-indigo-100 flex items-center gap-4">
-                  <div className="bg-white p-2 rounded-lg shadow-sm">
-                    {/* Fake QR */}
-                    <div className="w-12 h-12 bg-slate-900 flex items-center justify-center text-white text-[8px] font-mono text-center leading-none">
-                      QR
-                      <br />
-                      CODE
-                    </div>
+                <div className="bg-indigo-50 rounded-xl p-4 border border-indigo-100 flex flex-col items-center gap-4 text-center sm:flex-row sm:text-left">
+                  <div className="bg-white p-2 rounded-lg shadow-sm shrink-0">
+                    {/* VietQR Dynamic */}
+                    <img
+                      src={`https://img.vietqr.io/image/TCB-1998199815-compact2.png?amount=${selectedInvoice.debtAmount}&addInfo=${encodeURIComponent(
+                        `THANH TOAN HD T${selectedInvoice.month} ${selectedInvoice.contract?.room?.name || ""}`,
+                      )}&accountName=CAMELSTAY`}
+                      alt="VietQR"
+                      className="w-32 h-auto"
+                    />
                   </div>
-                  <div className="flex-1">
+                  <div className="flex-1 min-w-0">
                     <p className="text-xs text-indigo-600 font-bold uppercase mb-1">
-                      Thông tin chuyển khoản
+                      Quét mã để thanh toán
                     </p>
-                    <p className="text-sm font-bold text-slate-900">
-                      VIETCOMBANK
+                    <p className="text-sm font-bold text-slate-900 truncate">
+                      TECHCOMBANK
                     </p>
-                    <p className="text-sm font-mono text-slate-700">
-                      1900 123 456 789
+                    <p className="text-lg font-mono font-black text-slate-800 tracking-wider">
+                      1998 1998 15
                     </p>
                     <p className="text-xs text-slate-500">
-                      Chủ TK: NGUYEN VAN CHU NHA
+                      Chủ TK: <b>CAMELSTAY OWNER</b>
+                    </p>
+                    <p className="text-[10px] text-indigo-400 mt-1 italic">
+                      *Nội dung chuyển khoản đã được tự động điền trong mã QR
                     </p>
                   </div>
                 </div>
@@ -296,9 +301,42 @@ export default function TenantBillingPage() {
                   <Filter size={14} /> Chi tiết dịch vụ
                 </h3>
                 <div className="space-y-3">
-                  {selectedInvoice.lineItems &&
-                  selectedInvoice.lineItems.length > 0 ? (
-                    selectedInvoice.lineItems.map((item: any, idx: number) => (
+                  {(() => {
+                    const items =
+                      selectedInvoice.lineItems &&
+                      selectedInvoice.lineItems.length > 0
+                        ? selectedInvoice.lineItems
+                        : [
+                            {
+                              name: "Tiền phòng",
+                              amount: selectedInvoice.roomCharge,
+                              quantity: 1,
+                              unit: "tháng",
+                              unitPrice: selectedInvoice.roomCharge,
+                            },
+                            ...(selectedInvoice.serviceCharge > 0
+                              ? [
+                                  {
+                                    name: "Dịch vụ & Phí khác",
+                                    amount: selectedInvoice.serviceCharge,
+                                    quantity: 1,
+                                    unit: "gói",
+                                    unitPrice: selectedInvoice.serviceCharge,
+                                    note: "Điện, nước, dịch vụ...",
+                                  },
+                                ]
+                              : []),
+                          ];
+
+                    if (items.length === 0) {
+                      return (
+                        <div className="text-center text-slate-400 text-sm py-4">
+                          Chi tiết không khả dụng
+                        </div>
+                      );
+                    }
+
+                    return items.map((item: any, idx: number) => (
                       <div
                         key={idx}
                         className="flex justify-between items-start py-2 border-b border-slate-50 last:border-0"
@@ -328,13 +366,8 @@ export default function TenantBillingPage() {
                           {formatCurrency(item.amount)}
                         </p>
                       </div>
-                    ))
-                  ) : (
-                    // Fallback if no lineItems
-                    <div className="text-center text-slate-400 text-sm py-4">
-                      Chi tiết không khả dụng
-                    </div>
-                  )}
+                    ));
+                  })()}
                 </div>
               </div>
 

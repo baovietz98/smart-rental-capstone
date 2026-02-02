@@ -85,7 +85,12 @@ async function main() {
             contractId: c1.id, month: '01-2026', status: InvoiceStatus.PAID,
             totalAmount: 5500000, paidAmount: 5500000, debtAmount: 0,
             roomCharge: 5000000, serviceCharge: 500000,
-            lineItems: []
+            lineItems: [
+                { name: 'Tiền phòng T01/2026', amount: 5000000, quantity: 1, unit: 'tháng', unitPrice: 5000000, type: 'ROOM' },
+                { name: 'Điện (CS cũ: 100 - CS mới: 150)', amount: 175000, quantity: 50, unit: 'kWh', unitPrice: 3500, type: 'SERVICE', note: 'Chỉ số cũ: 100 - Mới: 150' },
+                { name: 'Nước (CS cũ: 10 - CS mới: 20)', amount: 200000, quantity: 10, unit: 'm3', unitPrice: 20000, type: 'SERVICE', note: 'Chỉ số cũ: 10 - Mới: 20' },
+                { name: 'Rác, Internet, Dịch vụ khác', amount: 125000, quantity: 1, unit: 'gói', unitPrice: 125000, type: 'SERVICE' }
+            ]
         }
     });
 
@@ -110,7 +115,12 @@ async function main() {
             contractId: c2.id, month: '01-2026', status: InvoiceStatus.OVERDUE,
             totalAmount: 6000000, paidAmount: 0, debtAmount: 6000000,
             roomCharge: 5500000, serviceCharge: 500000,
-            lineItems: [], dueDate: new Date('2026-01-10')
+            lineItems: [
+                { name: 'Tiền phòng T01/2026', amount: 5500000, quantity: 1, unit: 'tháng', unitPrice: 5500000, type: 'ROOM' },
+                { name: 'Điện (CS cũ: 500 - CS mới: 600)', amount: 350000, quantity: 100, unit: 'kWh', unitPrice: 3500, type: 'SERVICE', note: 'Chỉ số cũ: 500 - Mới: 600' },
+                { name: 'Nước (CS cũ: 50 - CS mới: 55)', amount: 100000, quantity: 5, unit: 'm3', unitPrice: 20000, type: 'SERVICE', note: 'Chỉ số cũ: 50 - Mới: 55' },
+                { name: 'Rác, Internet', amount: 50000, quantity: 1, unit: 'gói', unitPrice: 50000, type: 'SERVICE' }
+            ], dueDate: new Date('2026-01-10')
         }
     });
     // Open Issue
@@ -161,11 +171,85 @@ async function main() {
         ]
     });
 
+    // ---------------------------------------------------------
+    // NEW BUILDING: LANDMARK TOWER (VIP & Cases)
+    // ---------------------------------------------------------
+    console.log('7. Creating Landmark Tower...');
+    const landmark = await prisma.building.create({
+        data: { name: 'Landmark Tower', address: '99 Nguyen Hue, Q1, HCMC' }
+    });
+    
+    // Rooms
+    const rL01 = await prisma.room.create({ data: { name: 'L.01', price: 10000000, floor: 1, buildingId: landmark.id, status: RoomStatus.RENTED, assets: ['TV 65"', 'Sofa', 'Bếp từ'] } });
+    const rL02 = await prisma.room.create({ data: { name: 'L.02', price: 8000000, floor: 1, buildingId: landmark.id, status: RoomStatus.RENTED, assets: ['TV 50"', 'Tủ lạnh'] } });
+    const rL03 = await prisma.room.create({ data: { name: 'L.03', price: 8000000, floor: 1, buildingId: landmark.id, status: RoomStatus.MAINTENANCE, assets: [] } }); // Maintenance
+    const rL04 = await prisma.room.create({ data: { name: 'L.04', price: 8000000, floor: 1, buildingId: landmark.id, status: RoomStatus.AVAILABLE, assets: [] } });
+
+    // Tenant 4: VIP (Richie Rich)
+    const u4 = await prisma.user.create({ data: { email: 'vip@demo.com', password, name: 'Pham Van VIP', role: UserRole.TENANT, phoneNumber: '0908888888' } });
+    const t4 = await prisma.tenant.create({ data: { fullName: 'Pham Van VIP', phone: '0908888888', cccd: '004', userId: u4.id } });
+    const c4 = await prisma.contract.create({
+        data: {
+            roomId: rL01.id, tenantId: t4.id, startDate: new Date('2025-06-01'), endDate: new Date('2026-06-01'),
+            price: rL01.price, deposit: rL01.price, isActive: true,
+            initialIndexes: { [elec.id]: 2000, [water.id]: 200 }
+        }
+    });
+    // Invoice VIP match FE requirements (Detailed)
+    await prisma.invoice.create({
+        data: {
+            contractId: c4.id, month: '01-2026', status: InvoiceStatus.PAID,
+            // Room 10tr + Elec 1tr + Water 400k + Service 500k = 11.9tr
+            roomCharge: 10000000, serviceCharge: 1900000, totalAmount: 11900000, paidAmount: 11900000, debtAmount: 0,
+            lineItems: [
+                { name: 'Tiền phòng T01/2026 (VIP)', amount: 10000000, quantity: 1, unit: 'tháng', unitPrice: 10000000, type: 'ROOM' },
+                { name: 'Điện (CS cũ: 2000 - CS mới: 2300)', amount: 1050000, quantity: 300, unit: 'kWh', unitPrice: 3500, type: 'SERVICE', note: 'Chỉ số cũ: 2000 - Mới: 2300' },
+                { name: 'Nước (CS cũ: 200 - CS mới: 220)', amount: 400000, quantity: 20, unit: 'm3', unitPrice: 20000, type: 'SERVICE', note: 'Chỉ số cũ: 200 - Mới: 220' },
+                { name: 'Phí quản lý & Gym/Pool', amount: 450000, quantity: 1, unit: 'gói', unitPrice: 450000, type: 'SERVICE' }
+            ]
+        }
+    });
+
+    // Tenant 5: Newbie (Just moved in, partial payment)
+    const u5 = await prisma.user.create({ data: { email: 'newbie@demo.com', password, name: 'Le Van Moi', role: UserRole.TENANT, phoneNumber: '0909999999' } });
+    const t5 = await prisma.tenant.create({ data: { fullName: 'Le Van Moi', phone: '0909999999', cccd: '005', userId: u5.id } });
+    const c5 = await prisma.contract.create({
+        data: {
+            roomId: rL02.id, tenantId: t5.id, startDate: new Date('2026-01-15'), endDate: new Date('2027-01-15'),
+            price: rL02.price, deposit: rL02.price, isActive: true,
+            initialIndexes: { [elec.id]: 0, [water.id]: 0 }
+        }
+    });
+    // Partial Invoice (Half month room + services)
+    await prisma.invoice.create({
+        data: {
+            contractId: c5.id, month: '01-2026', status: InvoiceStatus.PARTIAL,
+            // Half room (4tr) + Deposit (8tr) + Service (200k) = 12.2tr
+            // User paid Deposit (8tr) + Room (4tr) = 12tr, owes 200k service
+            roomCharge: 4000000, serviceCharge: 200000, totalAmount: 4200000, paidAmount: 4000000, debtAmount: 200000,
+            lineItems: [
+                { name: 'Tiền phòng T01/2026 (15 ngày)', amount: 4000000, quantity: 0.5, unit: 'tháng', unitPrice: 8000000, type: 'ROOM', note: 'Vào ở từ 15/01' },
+                { name: 'Điện (CS cũ: 0 - CS mới: 30)', amount: 105000, quantity: 30, unit: 'kWh', unitPrice: 3500, type: 'SERVICE' },
+                { name: 'Nước (CS cũ: 0 - CS mới: 3)', amount: 60000, quantity: 3, unit: 'm3', unitPrice: 20000, type: 'SERVICE' },
+                { name: 'Rác', amount: 35000, quantity: 1, unit: 'tháng', unitPrice: 35000, type: 'SERVICE' }
+            ], dueDate: new Date('2026-01-20')
+        }
+    });
+
+    // Issue for Maintenance Room
+    await prisma.issue.create({
+        data: {
+            roomId: rL03.id, title: 'Thấm trần nhà vệ sinh', description: 'Nước nhỏ giọt từ tầng trên xuống.', status: 'IN_PROGRESS', createdAt: new Date()
+        }
+    });
+
     console.log('--- SEEDING COMPLETED ---');
     console.log('Admin:    admin@demo.com / admin123');
     console.log('Tenant 1: tenant1@demo.com / 123456 (Happy)');
     console.log('Tenant 2: tenant2@demo.com / 123456 (Issues/Overdue)');
     console.log('Tenant 3: tenant3@demo.com / 123456 (Expiring/Pending)');
+    console.log('Tenant 4: vip@demo.com     / 123456 (Landmark VIP)');
+    console.log('Tenant 5: newbie@demo.com  / 123456 (Landmark New/Partial)');
 }
 
 main()
