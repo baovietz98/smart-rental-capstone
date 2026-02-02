@@ -12,6 +12,7 @@ async function main() {
     console.log('   Deleting data...');
     // Manual deletion order to be safe
     await prisma.notification.deleteMany();
+    await prisma.transaction.deleteMany();
     await prisma.invoice.deleteMany();
     await prisma.serviceReading.deleteMany();
     await prisma.contract.deleteMany();
@@ -240,6 +241,144 @@ async function main() {
     await prisma.issue.create({
         data: {
             roomId: rL03.id, title: 'Thấm trần nhà vệ sinh', description: 'Nước nhỏ giọt từ tầng trên xuống.', status: 'IN_PROGRESS', createdAt: new Date()
+        }
+    });
+
+    // 9. TRANSACTIONS (Finance Data)
+    console.log('8. Creating transactions for finance page...');
+    
+    // Deposits when tenants moved in
+    await prisma.transaction.create({
+        data: {
+            code: 'PT-0001',
+            amount: 5000000,
+            type: 'DEPOSIT',
+            date: new Date('2026-01-01'),
+            note: 'Tiềncọc phòng 101 - Nguyen Van Happy',
+            contractId: c1.id
+        }
+    });
+
+    await prisma.transaction.create({
+        data: {
+            code: 'PT-0002',
+            amount: 5500000,
+            type: 'DEPOSIT',
+            date: new Date('2026-01-01'),
+            note: 'Tiền cọc phòng 102 - Tran Van Issue',
+            contractId: c2.id
+        }
+    });
+
+    await prisma.transaction.create({
+        data: {
+            code: 'PT-0003',
+            amount: 4500000,
+            type: 'DEPOSIT',
+            date: new Date('2025-08-01'),
+            note: 'Tiền cọc phòng 103 - Le Thi Edge',
+            contractId: c3.id
+        }
+    });
+
+    await prisma.transaction.create({
+        data: {
+            code: 'PT-0004',
+            amount: 10000000,
+            type: 'DEPOSIT',
+            date: new Date('2025-06-01'),
+            note: 'Tiền cọc phòng L.01 VIP - Pham Van VIP',
+            contractId: c4.id
+        }
+    });
+
+    await prisma.transaction.create({
+        data: {
+            code: 'PT-0005',
+            amount: 8000000,
+            type: 'DEPOSIT',
+            date: new Date('2026-01-15'),
+            note: 'Tiền cọc phòng L.02 - Le Van Moi',
+            contractId: c5.id
+        }
+    });
+
+    // Invoice payments (Tenant 1 paid, Tenant 4 VIP paid)
+    await prisma.transaction.create({
+        data: {
+            code: 'PT-0006',
+            amount: 5800000,
+            type: 'INVOICE_PAYMENT',
+            date: new Date('2026-01-05'),
+            note: 'Thanh toán hóa đơn T01/2026 - Phòng 101',
+            contractId: c1.id
+        }
+    });
+
+    await prisma.transaction.create({
+        data: {
+            code: 'PT-0007',
+            amount: 11900000,
+            type: 'INVOICE_PAYMENT',
+            date: new Date('2026-01-03'),
+            note: 'Thanh toán hóa đơn T01/2026 (VIP) - Phòng L.01',
+            contractId: c4.id
+        }
+    });
+
+    await prisma.transaction.create({
+        data: {
+            code: 'PT-0008',
+            amount: 4000000,
+            type: 'INVOICE_PAYMENT',
+            date: new Date('2026-01-18'),
+            note: 'Thanh toán 1 phần hóa đơn T01/2026 - Phòng L.02',
+            contractId: c5.id
+        }
+    });
+
+    // Operating expenses
+    await prisma.transaction.create({
+        data: {
+            code: 'PT-0009',
+            amount: 500000,
+            type: 'EXPENSE',
+            date: new Date('2026-01-10'),
+            note: 'Sửa chữa máy lạnh phòng 102',
+            contractId: null
+        }
+    });
+
+    await prisma.transaction.create({
+        data: {
+            code: 'PT-0010',
+            amount: 800000,
+            type: 'EXPENSE',
+            date: new Date('2026-01-15'),
+            note: 'Tiền điện chung khu tòa nhà - Tháng 01/2026',
+            contractId: null
+        }
+    });
+
+    await prisma.transaction.create({
+        data: {
+            code: 'PT-0011',
+            amount: 300000,
+            type: 'EXPENSE',
+            date: new Date('2026-01-20'),
+            note: 'Vệ sinh định kỳ toàn bộ tòa nhà',
+            contractId: null
+        }
+    });
+
+    await prisma.transaction.create({
+        data: {
+            code: 'PT-0012',
+            amount: 200000,
+            type: 'EXPENSE',
+            date: new Date('2026-01-25'),
+            note: 'Mua bóng đèn và vật tư điện',
+            contractId: null
         }
     });
 
