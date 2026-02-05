@@ -68,10 +68,21 @@ export class ContractsController {
     type: Boolean,
     description: 'Lọc theo trạng thái (true/false)',
   })
-  findAll(@Query('isActive') isActive?: string) {
+  @ApiQuery({ name: 'roomId', required: false, type: Number })
+  @ApiQuery({ name: 'buildingId', required: false, type: Number })
+  findAll(
+    @Query('isActive') isActive?: string,
+    @Query('roomId') roomId?: string,
+    @Query('buildingId') buildingId?: string,
+  ) {
     const active =
       isActive === 'true' ? true : isActive === 'false' ? false : undefined;
-    return this.contractsService.findAll(active);
+
+    return this.contractsService.findAll({
+      isActive: active,
+      roomId: roomId ? parseInt(roomId, 10) : undefined,
+      buildingId: buildingId ? parseInt(buildingId, 10) : undefined,
+    });
   }
 
   @Get('stats')

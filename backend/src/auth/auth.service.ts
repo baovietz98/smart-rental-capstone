@@ -6,7 +6,7 @@ import {
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '../prisma/prisma.service';
-import { RegisterDto, LoginDto, UserRole } from './dto';
+import { RegisterDto, LoginDto, UserRole, UpdateProfileDto } from './dto';
 import * as bcrypt from 'bcrypt';
 import * as crypto from 'crypto';
 import { MailService } from '../mail/mail.service';
@@ -199,6 +199,46 @@ export class AuthService {
     return user;
   }
 
+  async updateProfile(userId: number, dto: UpdateProfileDto) {
+    // 1. Check if phone is taken (if changing)
+    if (dto.phoneNumber) {
+      const existingUser = await this.prisma.user.findUnique({
+        where: { phoneNumber: dto.phoneNumber },
+      });
+      if (existingUser && existingUser.id !== userId) {
+        throw new ConflictException(
+          'Số điện thoại đã được sử dụng bởi tài khoản khác',
+        );
+      }
+    }
+
+    // 2. Update User
+    const updatedUser = await this.prisma.user.update({
+      where: { id: userId },
+      data: {
+        name: dto.name,
+        phoneNumber: dto.phoneNumber,
+      },
+    });
+
+    // 3. Sync with Tenant if linked
+    const tenant = await this.prisma.tenant.findUnique({
+      where: { userId },
+    });
+
+    if (tenant) {
+      await this.prisma.tenant.update({
+        where: { id: tenant.id },
+        data: {
+          fullName: dto.name || tenant.fullName,
+          phone: dto.phoneNumber || tenant.phone,
+        },
+      });
+    }
+
+    return updatedUser;
+  }
+
   async forgotPassword(email: string) {
     const user = await this.prisma.user.findUnique({ where: { email } });
     if (!user) {
@@ -245,11 +285,18 @@ export class AuthService {
     return { message: 'Password reset successfully' };
   }
 
-  private async generateTokens(userId: number, email: string, role: string) {
+  private async generateTokens(
+    userId: number,
+    email: string,
+    role: string,
+    isRemember = false,
+  ) {
+    const accessTokenExpiresIn = isRemember ? '30d' : '1d';
+
     const [accessToken, refreshToken] = await Promise.all([
       this.jwtService.signAsync(
         { sub: userId, email, role },
-        { expiresIn: '15m' },
+        { expiresIn: accessTokenExpiresIn },
       ),
       this.jwtService.signAsync(
         { sub: userId, email, role },

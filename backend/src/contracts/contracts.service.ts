@@ -138,8 +138,24 @@ export class ContractsService {
   /**
    * Lấy danh sách tất cả hợp đồng
    */
-  async findAll(isActive?: boolean) {
-    const where = isActive !== undefined ? { isActive } : {};
+  async findAll(filters: {
+    isActive?: boolean;
+    roomId?: number;
+    buildingId?: number;
+  }) {
+    const where: Prisma.ContractWhereInput = {};
+
+    if (filters.isActive !== undefined) {
+      where.isActive = filters.isActive;
+    }
+
+    if (filters.roomId) {
+      where.roomId = filters.roomId;
+    }
+
+    if (filters.buildingId) {
+      where.room = { buildingId: filters.buildingId };
+    }
 
     return this.prisma.contract.findMany({
       where,

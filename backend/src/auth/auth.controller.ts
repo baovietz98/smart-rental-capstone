@@ -6,6 +6,7 @@ import {
   UseGuards,
   HttpCode,
   HttpStatus,
+  Patch,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -14,7 +15,12 @@ import {
   ApiBearerAuth,
 } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
-import { RegisterDto, LoginDto, RefreshTokenDto } from './dto';
+import {
+  RegisterDto,
+  LoginDto,
+  RefreshTokenDto,
+  UpdateProfileDto,
+} from './dto';
 import { JwtAuthGuard, JwtRefreshGuard } from './guards/jwt-auth.guard';
 import { Public } from './decorators/public.decorator';
 import { GetUser } from './decorators/get-user.decorator';
@@ -46,6 +52,7 @@ export class AuthController {
   @ApiResponse({ status: 200, description: 'Đăng nhập thành công' })
   @ApiResponse({ status: 401, description: 'Thông tin đăng nhập sai' })
   login(@Body() dto: LoginDto) {
+    console.log('DEBUG LOGIN DTO:', JSON.stringify(dto, null, 2));
     return this.authService.login(dto);
   }
 
@@ -105,5 +112,17 @@ export class AuthController {
   @ApiResponse({ status: 401, description: 'Chưa đăng nhập' })
   getProfile(@GetUser('id') userId: number) {
     return this.authService.getProfile(userId);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Patch('profile')
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: 'Cập nhật hồ sơ',
+    description: 'Cập nhật thông tin cá nhân (Tên, SĐT)',
+  })
+  @ApiResponse({ status: 200, description: 'Cập nhật thành công' })
+  updateProfile(@GetUser('id') userId: number, @Body() dto: UpdateProfileDto) {
+    return this.authService.updateProfile(userId, dto);
   }
 }

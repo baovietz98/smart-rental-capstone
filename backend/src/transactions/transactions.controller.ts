@@ -26,6 +26,7 @@ import {
   TransactionType,
 } from './dto';
 import { Roles } from '../auth/decorators/roles.decorator';
+import { Public } from '../auth/decorators/public.decorator';
 
 @ApiTags('Transactions - Giao dịch tài chính')
 @ApiBearerAuth()
@@ -198,5 +199,16 @@ export class TransactionsController {
   @ApiResponse({ status: 404, description: 'Không tìm thấy giao dịch' })
   remove(@Param('id', ParseIntPipe) id: number) {
     return this.transactionsService.remove(id);
+  }
+
+  @Post('webhook/sepay')
+  @Public()
+  @ApiOperation({ summary: 'Webhook nhận thông báo từ SePay' })
+  async sePayWebhook(@Body() payload: any) {
+    // Note: In production, verify SePay API Key matches env
+    // const apiKey = headers['authorization'];
+    // if (apiKey !== process.env.SEPAY_API_KEY) throw new UnauthorizedException();
+
+    return this.transactionsService.processSePayWebhook(payload);
   }
 }

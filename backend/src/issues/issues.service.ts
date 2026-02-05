@@ -120,34 +120,34 @@ export class IssuesService {
     });
 
     if (!tenant) {
-        return []; // Or throw error, but empty list is safer for dashboard
+      return []; // Or throw error, but empty list is safer for dashboard
     }
 
     const roomIds = tenant.contracts.map((c) => c.roomId);
-    
+
     // If no active rooms, return empty
     if (roomIds.length === 0) return [];
 
     const where: any = {
-        roomId: { in: roomIds }
+      roomId: { in: roomIds },
     };
 
     if (filters?.status) {
-        where.status = filters.status;
+      where.status = filters.status;
     }
 
     return this.prisma.issue.findMany({
-        where,
-        include: {
-            room: {
-                include: {
-                    building: true,
-                },
-            },
+      where,
+      include: {
+        room: {
+          include: {
+            building: true,
+          },
         },
-        orderBy: {
-            createdAt: 'desc',
-        },
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
     });
   }
 

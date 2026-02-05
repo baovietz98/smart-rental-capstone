@@ -33,7 +33,8 @@ export class IssuesController {
   @Get()
   @ApiOperation({
     summary: 'Lấy danh sách sự cố',
-    description: 'Lấy tất cả sự cố (Admin) hoặc sự cố của phòng đang thuê (Tenant)',
+    description:
+      'Lấy tất cả sự cố (Admin) hoặc sự cố của phòng đang thuê (Tenant)',
   })
   @Roles('ADMIN', 'TENANT')
   @ApiQuery({ name: 'status', enum: IssueStatus, required: false })

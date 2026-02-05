@@ -6,6 +6,7 @@ import {
   MinLength,
   IsOptional,
   IsEnum,
+  IsBoolean,
 } from 'class-validator';
 
 export enum UserRole {
@@ -87,6 +88,7 @@ export class LoginDto {
     example: true,
   })
   @IsOptional()
+  @IsBoolean()
   remember?: boolean;
 }
 
@@ -98,3 +100,5 @@ export class RefreshTokenDto {
   @IsNotEmpty()
   refreshToken: string;
 }
+
+export * from './update-profile.dto';

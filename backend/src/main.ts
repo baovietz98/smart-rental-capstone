@@ -17,7 +17,7 @@ async function bootstrap() {
     process.env.DATABASE_URL ? 'DEFINED' : 'UNDEFINED',
   );
   console.log('DEBUG: Current Directory:', process.cwd());
-  // Force restart: 2026-01-13
+  // Force restart: 2026-02-04 16:45
 
   // 1. Cấu hình CORS (Để Web Admin và App Mobile gọi được API)
   app.enableCors();

@@ -17,12 +17,12 @@ export class NotificationsService {
     // If not provided (Admin), fetch all? Or maybe separate endpoint.
     // For now, simple logic:
     const where: any = {};
-    
+
     if (tenantId) {
-        where.OR = [
-            { tenantId: null },      // Public/General
-            { tenantId: tenantId }   // Private
-        ];
+      where.OR = [
+        { tenantId: null }, // Public/General
+        { tenantId: tenantId }, // Private
+      ];
     }
 
     return this.prisma.notification.findMany({
@@ -33,7 +33,7 @@ export class NotificationsService {
 
   async findLatest() {
     return this.prisma.notification.findFirst({
-        orderBy: { createdAt: 'desc' },
+      orderBy: { createdAt: 'desc' },
     });
   }
 }

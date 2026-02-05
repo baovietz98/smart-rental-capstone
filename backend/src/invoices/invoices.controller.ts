@@ -193,16 +193,8 @@ export class InvoicesController {
   }
 
   /**
-   * Chi tiết hóa đơn
-   */
-  @Get(':id')
-  @ApiOperation({ summary: 'Lấy chi tiết hóa đơn' })
-  findOne(@Param('id', ParseIntPipe) id: number) {
-    return this.invoicesService.findOne(id);
-  }
-
-  /**
    * Lấy chi tiết hóa đơn (Public - Tenant xem không cần đăng nhập)
+   * CRITICAL: Must be BEFORE :id route to avoid route conflict
    */
   @Public()
   @Get('public/:code')
@@ -216,6 +208,15 @@ export class InvoicesController {
   })
   findByAccessCode(@Param('code') code: string) {
     return this.invoicesService.findByAccessCode(code);
+  }
+
+  /**
+   * Chi tiết hóa đơn
+   */
+  @Get(':id')
+  @ApiOperation({ summary: 'Lấy chi tiết hóa đơn' })
+  findOne(@Param('id', ParseIntPipe) id: number) {
+    return this.invoicesService.findOne(id);
   }
 
   /**

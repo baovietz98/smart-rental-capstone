@@ -404,4 +404,91 @@ export class TransactionsService {
       .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
       .slice(0, limit);
   }
+
+  /**
+   * Process Webhook from SePay
+   * Format content: "HD {invoiceId}" or "HD{invoiceId}"
+   */
+  async processSePayWebhook(payload: any) {
+    console.log('SePay Webhook Payload:', payload);
+
+    // 1. Parse content to find Invoice ID
+    // Regex matches "HD" followed by optional space and digits
+    // Case insensitive
+    const regex = /HD\s*(\d+)/i;
+    const match = payload.content.match(regex);
+
+    if (!match) {
+      console.log('No Invoice ID found in content:', payload.content);
+      return { success: false, message: 'No Invoice ID found' };
+    }
+
+    const invoiceId = parseInt(match[1], 10);
+    console.log('Found Invoice ID:', invoiceId);
+
+    // 2. Find Invoice
+    const invoice = await this.prisma.invoice.findUnique({
+      where: { id: invoiceId },
+      include: {
+        contract: true,
+      },
+    });
+
+    if (!invoice) {
+      console.log('Invoice not found:', invoiceId);
+      return { success: false, message: 'Invoice not found' };
+    }
+
+    // 3. Create Transaction
+    // Check if transaction already exists (avoid duplicate by sepay id or reference)
+    const existingTx = await this.prisma.transaction.findFirst({
+      where: {
+        note: {
+          contains: `SePay Ref: ${payload.referenceCode}`,
+        },
+      },
+    });
+
+    if (existingTx) {
+      console.log('Transaction already exists for this payment');
+      return { success: true, message: 'Transaction already exists' };
+    }
+
+    const code = await this.generateCode();
+
+    await this.prisma.transaction.create({
+      data: {
+        code,
+        amount: payload.transferAmount,
+        type: TransactionType.INVOICE_PAYMENT,
+        date: new Date(payload.transactionDate), // SePay sends ISO date usually
+        note: `Thanh toán qua SePay (Ref: ${payload.referenceCode}) - ${payload.content}`,
+        contractId: invoice.contractId,
+        invoiceId: invoice.id,
+      },
+    });
+
+    // 4. Update Invoice Status
+    const newPaidAmount = invoice.paidAmount + payload.transferAmount;
+    let newStatus = invoice.status;
+
+    if (newPaidAmount >= invoice.totalAmount) {
+      newStatus = 'PAID';
+    } else if (payload.content.toUpperCase().includes('DEMO')) {
+      // DEMO MODE: Treat as full payment regardless of amount
+      newStatus = 'PAID';
+    } else if (newPaidAmount > 0) {
+      newStatus = 'PARTIAL';
+    }
+
+    await this.prisma.invoice.update({
+      where: { id: invoice.id },
+      data: {
+        paidAmount: newPaidAmount,
+        status: newStatus,
+      },
+    });
+
+    return { success: true, message: 'Payment processed successfully' };
+  }
 }
