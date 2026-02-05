@@ -9,8 +9,17 @@ import {
   Download,
   ArrowUpRight,
   Plus,
+  ArrowRight,
 } from "lucide-react";
-import { message, Modal, Form, Input, DatePicker, Button } from "antd";
+import {
+  message,
+  Modal,
+  Form,
+  Input,
+  DatePicker,
+  Button,
+  InputNumber,
+} from "antd";
 import axiosClient from "@/lib/axios-client";
 import dayjs from "dayjs";
 
@@ -280,58 +289,126 @@ export default function FinancePage() {
         </div>
       </div>
 
-      {/* Create Expense Modal */}
+      {/* Create Expense Modal - Premium Redesign */}
       <Modal
-        title="Tạo phiếu chi"
+        title={null}
         open={isExpenseModalOpen}
         onCancel={() => setIsExpenseModalOpen(false)}
         footer={null}
-      >
-        <Form
-          form={form}
-          layout="vertical"
-          onFinish={handleCreateExpense}
-          initialValues={{ date: dayjs() }}
-        >
-          <Form.Item
-            name="amount"
-            label="Số tiền"
-            rules={[{ required: true, message: "Vui lòng nhập số tiền" }]}
-          >
-            <Input type="number" prefix="₫" placeholder="Nhập số tiền..." />
-          </Form.Item>
-
-          <Form.Item
-            name="date"
-            label="Ngày chi"
-            rules={[{ required: true, message: "Vui lòng chọn ngày" }]}
-          >
-            <DatePicker className="w-full" format="DD/MM/YYYY" />
-          </Form.Item>
-
-          <Form.Item
-            name="note"
-            label="Lý do chi"
-            rules={[{ required: true, message: "Vui lòng nhập lý do chi" }]}
-          >
-            <Input.TextArea
-              placeholder="Ví dụ: Sửa bóng đèn, Mua văn phòng phẩm..."
-              rows={3}
-            />
-          </Form.Item>
-
-          <div className="flex justify-end gap-2 mt-6">
-            <Button onClick={() => setIsExpenseModalOpen(false)}>Hủy</Button>
-            <Button
-              type="primary"
-              htmlType="submit"
-              loading={submitLoading}
-              danger
-            >
-              Tạo phiếu chi
-            </Button>
+        width={600}
+        closeIcon={
+          <div className="p-2 hover:bg-gray-100 rounded-full transition-colors">
+            <span className="text-gray-400 font-light text-xl">×</span>
           </div>
-        </Form>
+        }
+        styles={{
+          content: {
+            borderRadius: 24,
+            padding: 0,
+            overflow: "hidden",
+            boxShadow: "0 20px 40px rgba(0,0,0,0.08)",
+          },
+        }}
+      >
+        <div className="bg-[#FAF9F6] px-8 py-6 border-b border-gray-100 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-white rounded-xl shadow-sm flex items-center justify-center text-[#D97757]">
+              <TrendingDown size={20} />
+            </div>
+            <div>
+              <h3 className="text-xl font-bold text-[#2D2D2C] font-serif m-0">
+                Tạo phiếu chi mới
+              </h3>
+              <p className="text-gray-500 text-sm m-0">
+                Ghi nhận các khoản chi phí vận hành
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div className="p-8 bg-white">
+          <Form
+            form={form}
+            layout="vertical"
+            onFinish={handleCreateExpense}
+            initialValues={{ date: dayjs() }}
+            requiredMark={false}
+          >
+            <Form.Item
+              name="amount"
+              label={
+                <span className="text-sm font-semibold text-gray-700">
+                  Số tiền chi
+                </span>
+              }
+              rules={[{ required: true, message: "Vui lòng nhập số tiền" }]}
+              className="mb-6"
+            >
+              <InputNumber
+                className="w-full text-lg font-medium rounded-xl border-gray-200 bg-gray-50 focus:bg-white transition-all hover:border-[#D97757] focus:border-[#D97757]"
+                formatter={(value) =>
+                  `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ".") + " ₫"
+                }
+                parser={(displayValue) =>
+                  displayValue!.replace(/\s?₫|(\.*)/g, "")
+                }
+                placeholder="Nhập số tiền..."
+                style={{ width: "100%", padding: "4px 12px" }}
+                controls={false}
+              />
+            </Form.Item>
+
+            <Form.Item
+              name="date"
+              label={
+                <span className="text-sm font-semibold text-gray-700">
+                  Ngày ghi nhận
+                </span>
+              }
+              rules={[{ required: true, message: "Vui lòng chọn ngày" }]}
+              className="mb-6"
+            >
+              <DatePicker
+                className="w-full h-12 rounded-xl border-gray-200 bg-gray-50 hover:border-[#D97757] focus:border-[#D97757]"
+                format="DD/MM/YYYY"
+              />
+            </Form.Item>
+
+            <Form.Item
+              name="note"
+              label={
+                <span className="text-sm font-semibold text-gray-700">
+                  Lý do chi
+                </span>
+              }
+              rules={[{ required: true, message: "Vui lòng nhập lý do chi" }]}
+              className="mb-8"
+            >
+              <Input.TextArea
+                placeholder="Ví dụ: Sửa bóng đèn, Mua văn phòng phẩm..."
+                rows={4}
+                className="hover:border-[#D97757] focus:border-[#D97757] px-4 py-3 rounded-xl border-gray-200 bg-gray-50 transition-all resize-none"
+              />
+            </Form.Item>
+
+            <div className="flex justify-end gap-3 pt-4 border-t border-gray-50">
+              <button
+                type="button"
+                onClick={() => setIsExpenseModalOpen(false)}
+                className="bg-white border-0 text-gray-500 font-medium hover:bg-gray-50 hover:text-gray-900 rounded-xl h-11 px-6 transition-colors"
+              >
+                Hủy bỏ
+              </button>
+              <button
+                type="submit"
+                disabled={submitLoading}
+                className="claude-btn-primary flex items-center gap-2 px-8 h-11 rounded-xl shadow-lg shadow-orange-100 hover:shadow-orange-200"
+              >
+                Tạo phiếu chi <ArrowRight size={18} />
+              </button>
+            </div>
+          </Form>
+        </div>
       </Modal>
     </div>
   );

@@ -188,9 +188,21 @@ export default function Login() {
                 )}
               </TouchableOpacity>
             </View>
+            </View>
           </View>
 
-          <View className="mt-12 flex-row justify-center items-center">
+          <View className="mt-8 flex-row justify-center items-center">
+            <Text className="text-gray-500 text-xs font-medium">
+              Chưa có tài khoản?{" "}
+            </Text>
+            <TouchableOpacity onPress={() => router.push("/(auth)/register")}>
+              <Text className="text-claude-accent text-xs font-bold">
+                Đăng ký ngay
+              </Text>
+            </TouchableOpacity>
+          </View>
+
+          <View className="mt-8 flex-row justify-center items-center">
             <View className="h-[1px] w-8 bg-gray-200" />
             <Text className="mx-4 text-gray-300 text-[10px] font-bold uppercase tracking-widest">
               Powered by Antigravity

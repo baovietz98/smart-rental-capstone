@@ -20,7 +20,7 @@ import Link from "next/link";
 import axiosClient from "@/lib/axios-client";
 import { formatCurrency } from "../../lib/utils";
 import dayjs from "dayjs";
-import { Empty, Spin } from "antd";
+import { Spin } from "antd";
 import { notificationsApi, Notification } from "@/lib/api/notifications";
 
 interface Activity {
@@ -161,6 +161,8 @@ export default function TenantDashboard() {
     if (type === "INVOICE") {
       if (status === "PAID")
         return "bg-emerald-100 text-emerald-700 border-emerald-200";
+      if (status === "PARTIAL")
+        return "bg-blue-100 text-blue-700 border-blue-200";
       if (status === "OVERDUE") return "bg-red-100 text-red-700 border-red-200";
       return "bg-amber-100 text-amber-700 border-amber-200";
     }
@@ -176,6 +178,7 @@ export default function TenantDashboard() {
   const getStatusLabel = (status: string, type: string) => {
     if (type === "INVOICE") {
       if (status === "PAID") return "ĐÃ TT";
+      if (status === "PARTIAL") return "TT 1 PHẦN";
       if (status === "OVERDUE") return "QUÁ HẠN";
       return "CHỜ TT";
     }
@@ -258,8 +261,34 @@ export default function TenantDashboard() {
         <div className="hidden"></div>
       )}
 
-      {/* 3. Bill Status Card */}
-      {bill ? (
+      {/* 3. Bill Status or No Contract State */}
+      {!user?.tenant?.contracts || user.tenant.contracts.length === 0 ? (
+        <div className="bg-slate-900 rounded-3xl p-6 text-white shadow-xl relative overflow-hidden group">
+          {/* Decorative Background */}
+          <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/20 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 pointer-events-none"></div>
+
+          <div className="relative z-10 flex flex-col items-center text-center py-6">
+            <div className="w-16 h-16 bg-white/10 rounded-full flex items-center justify-center mb-4 backdrop-blur-md border border-white/10">
+              <ShieldCheck size={32} className="text-indigo-300" />
+            </div>
+            <h2 className="text-2xl font-bold mb-2 tracking-tight">
+              Chưa có phòng
+            </h2>
+            <p className="text-slate-300 text-sm font-medium mb-6 max-w-[250px] mx-auto leading-relaxed">
+              Bạn chưa được thêm vào phòng nào. Vui lòng liên hệ quản lý để kích
+              hoạt tài khoản.
+            </p>
+
+            <button
+              onClick={() => router.push("/tenant/requests/issues")} // Redirect to request/support
+              className="bg-white text-slate-900 hover:bg-indigo-50 py-3 px-6 rounded-xl text-sm font-bold shadow-lg flex items-center gap-2 transition-all active:scale-[0.98]"
+            >
+              <Megaphone size={16} />
+              Liên hệ quản lý
+            </button>
+          </div>
+        </div>
+      ) : bill ? (
         <div className="bg-slate-900 rounded-3xl p-6 text-white shadow-xl relative overflow-hidden group">
           {/* Decorative Background */}
           <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 pointer-events-none transition-transform duration-700 group-hover:scale-110"></div>
@@ -276,7 +305,11 @@ export default function TenantDashboard() {
                 </h2>
                 <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/10 backdrop-blur-md border border-white/10 text-xs text-amber-200 font-medium">
                   <AlertCircle size={12} />
-                  {bill.status === "OVERDUE" ? "Đã quá hạn" : "Chưa thanh toán"}
+                  {bill.status === "OVERDUE"
+                    ? "Đã quá hạn"
+                    : bill.status === "PARTIAL"
+                      ? `Còn nợ ${formatCurrency(bill.totalAmount - bill.paidAmount)}`
+                      : "Chưa thanh toán"}
                 </div>
               </div>
             </div>
@@ -286,7 +319,10 @@ export default function TenantDashboard() {
                 onClick={() => router.push("/tenant/billing")}
                 className="w-full bg-white text-slate-900 hover:bg-slate-50 py-3.5 px-4 rounded-xl text-sm font-bold shadow-lg flex items-center justify-center gap-2 transition-all active:scale-[0.98]"
               >
-                <QrCode size={18} /> Thanh toán qua VietQR
+                <QrCode size={18} />
+                {bill.status === "PARTIAL"
+                  ? "Thanh toán phần còn lại"
+                  : "Thanh toán qua VietQR"}
               </button>
             </div>
           </div>

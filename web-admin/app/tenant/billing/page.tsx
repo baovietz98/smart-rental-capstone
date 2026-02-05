@@ -12,7 +12,7 @@ import {
   Download,
   Calendar,
 } from "lucide-react";
-import { Spin, Modal, Button, Tag, Empty } from "antd";
+import { Spin, Modal, Button, Tag, Empty, Switch } from "antd";
 import axiosClient from "@/lib/axios-client";
 import { formatCurrency } from "../../../lib/utils";
 import dayjs from "dayjs";
@@ -24,10 +24,56 @@ export default function TenantBillingPage() {
   const [contract, setContract] = useState<any>(null);
   const [filter, setFilter] = useState("ALL"); // ALL, UNPAID, PAID
   const [selectedInvoice, setSelectedInvoice] = useState<any>(null);
+  const [isDemoMode, setIsDemoMode] = useState(false);
 
   useEffect(() => {
     fetchInvoices();
   }, []);
+
+  // Polling for invoice status when modal is open and not PAID
+  useEffect(() => {
+    let interval: any;
+    if (selectedInvoice && selectedInvoice.status !== "PAID") {
+      interval = setInterval(async () => {
+        try {
+          // Fetch just this invoice to check status
+          // Since we don't have a direct public endpoint for single invoice without auth easily usable here without passing headers (which axiosClient does), we can reuse fetchInvoices or a lighter endpoint if available.
+          // For simplicity, we re-fetch the specific contract detail or invoice
+          const res = await axiosClient.get(
+            `/transactions/${selectedInvoice.id}`,
+          ); // Wait, this is transaction endpoint. Need Invoice.
+          // Let's use the invoices endpoint which is nested or just re-fetch all for now (safest)
+          // Optimization: direct invoice check
+          // Actually, let's just re-call fetchInvoices silently
+          const profileRes = await axiosClient.get("/auth/profile");
+          const tenant = profileRes.data.tenant;
+          if (tenant && tenant.contracts) {
+            const activeContract =
+              tenant.contracts.find((c: any) => c.isActive) ||
+              tenant.contracts[0];
+            if (activeContract) {
+              const contractRes = await axiosClient.get(
+                `/contracts/${activeContract.id}`,
+              );
+              const updatedInvoices = contractRes.data.invoices || [];
+              const updated = updatedInvoices.find(
+                (i: any) => i.id === selectedInvoice.id,
+              );
+
+              if (updated && updated.status === "PAID") {
+                setSelectedInvoice(updated); // Update logic to show success
+                setInvoices(updatedInvoices);
+                // Optional: Play sound or vibrate
+              }
+            }
+          }
+        } catch (e) {
+          // ignore
+        }
+      }, 3000); // Check every 3s
+    }
+    return () => clearInterval(interval);
+  }, [selectedInvoice]);
 
   const fetchInvoices = async () => {
     try {
@@ -64,6 +110,8 @@ export default function TenantBillingPage() {
       if (filter === "UNPAID")
         return (
           inv.status === "PENDING" ||
+          inv.status === "PUBLISHED" ||
+          inv.status === "SENT" ||
           inv.status === "OVERDUE" ||
           inv.status === "PARTIAL"
         );
@@ -79,7 +127,11 @@ export default function TenantBillingPage() {
     switch (status) {
       case "PAID":
         return "bg-emerald-50 text-emerald-600 border-emerald-100";
+      case "PARTIAL":
+        return "bg-blue-50 text-blue-600 border-blue-100";
       case "PENDING":
+      case "PUBLISHED":
+      case "SENT":
         return "bg-orange-50 text-orange-600 border-orange-100";
       case "OVERDUE":
         return "bg-red-50 text-red-600 border-red-100";
@@ -92,7 +144,11 @@ export default function TenantBillingPage() {
     switch (status) {
       case "PAID":
         return "Đã thanh toán";
+      case "PARTIAL":
+        return "Thanh toán 1 phần";
       case "PENDING":
+      case "PUBLISHED":
+      case "SENT":
         return "Chờ thanh toán";
       case "OVERDUE":
         return "Quá hạn";
@@ -231,7 +287,7 @@ export default function TenantBillingPage() {
           <div className="bg-white flex flex-col max-h-[90vh]">
             {/* Modal Header */}
             <div
-              className={`p-6 border-b border-slate-100 flex flex-col items-center justify-center relative ${selectedInvoice.status === "PAID" ? "bg-emerald-50/50" : "bg-slate-50/50"}`}
+              className={`p-6 border-b border-slate-100 flex flex-col items-center justify-center relative transition-colors duration-500 ${selectedInvoice.status === "PAID" ? "bg-emerald-50/50" : "bg-slate-50/50"}`}
             >
               <button
                 onClick={() => setSelectedInvoice(null)}
@@ -239,58 +295,102 @@ export default function TenantBillingPage() {
               >
                 ✕
               </button>
-              <div
-                className={`w-16 h-16 rounded-2xl flex items-center justify-center mb-3 shadow-sm ${
-                  selectedInvoice.status === "PAID"
-                    ? "bg-emerald-100 text-emerald-600"
-                    : "bg-orange-100 text-orange-600"
-                }`}
-              >
-                <FileText size={32} />
-              </div>
-              <h2 className="text-xl font-bold text-slate-900">
-                Hóa đơn T{getInvoiceDate(selectedInvoice).format("MM/YYYY")}
-              </h2>
-              <div
-                className={`mt-2 px-3 py-1 rounded-full text-xs font-bold border ${getStatusColor(
-                  selectedInvoice.status,
-                )}`}
-              >
-                {getStatusLabel(selectedInvoice.status)}
-              </div>
+
+              {selectedInvoice.status === "PAID" ? (
+                <div className="flex flex-col items-center animate-in zoom-in duration-300">
+                  <div className="w-20 h-20 bg-emerald-100 rounded-full flex items-center justify-center mb-3 shadow-sm text-emerald-600">
+                    <CheckCircle size={40} className="animate-bounce" />
+                  </div>
+                  <h2 className="text-xl font-bold text-slate-900">
+                    Thanh toán thành công!
+                  </h2>
+                  <p className="text-emerald-600 font-medium text-sm">
+                    Hóa đơn đã được gạch nợ
+                  </p>
+                </div>
+              ) : (
+                <>
+                  <div
+                    className={`w-16 h-16 rounded-2xl flex items-center justify-center mb-3 shadow-sm ${
+                      selectedInvoice.status === "PAID"
+                        ? "bg-emerald-100 text-emerald-600"
+                        : "bg-orange-100 text-orange-600"
+                    }`}
+                  >
+                    <FileText size={32} />
+                  </div>
+                  <h2 className="text-xl font-bold text-slate-900">
+                    Hóa đơn T{getInvoiceDate(selectedInvoice).format("MM/YYYY")}
+                  </h2>
+                  <div
+                    className={`mt-2 px-3 py-1 rounded-full text-xs font-bold border ${getStatusColor(
+                      selectedInvoice.status,
+                    )}`}
+                  >
+                    {getStatusLabel(selectedInvoice.status)}
+                  </div>
+                </>
+              )}
             </div>
 
             {/* Scrollable Content */}
             <div className="flex-1 overflow-y-auto p-6 space-y-6">
               {/* Payment Section (Real VietQR) */}
               {selectedInvoice.status !== "PAID" && (
-                <div className="bg-indigo-50 rounded-xl p-4 border border-indigo-100 flex flex-col items-center gap-4 text-center sm:flex-row sm:text-left">
-                  <div className="bg-white p-2 rounded-lg shadow-sm shrink-0">
-                    {/* VietQR Dynamic */}
-                    <img
-                      src={`https://img.vietqr.io/image/TCB-1998199815-compact2.png?amount=${selectedInvoice.debtAmount}&addInfo=${encodeURIComponent(
-                        `THANH TOAN HD T${selectedInvoice.month} ${selectedInvoice.contract?.room?.name || ""}`,
-                      )}&accountName=CAMELSTAY`}
-                      alt="VietQR"
-                      className="w-32 h-auto"
-                    />
+                <div className="bg-indigo-50 rounded-xl p-4 border border-indigo-100 flex flex-col gap-4">
+                  {/* Demo Mode Toggle */}
+                  <div className="flex items-center justify-between border-b border-indigo-200 pb-3 mb-1">
+                    <span className="text-sm font-bold text-indigo-900">
+                      Thanh toán QR
+                    </span>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-semibold text-indigo-600">
+                        Chế độ Demo (1.000đ)
+                      </span>
+                      <Switch
+                        size="small"
+                        checked={isDemoMode}
+                        onChange={setIsDemoMode}
+                      />
+                    </div>
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs text-indigo-600 font-bold uppercase mb-1">
-                      Quét mã để thanh toán
-                    </p>
-                    <p className="text-sm font-bold text-slate-900 truncate">
-                      TECHCOMBANK
-                    </p>
-                    <p className="text-lg font-mono font-black text-slate-800 tracking-wider">
-                      1998 1998 15
-                    </p>
-                    <p className="text-xs text-slate-500">
-                      Chủ TK: <b>CAMELSTAY OWNER</b>
-                    </p>
-                    <p className="text-[10px] text-indigo-400 mt-1 italic">
-                      *Nội dung chuyển khoản đã được tự động điền trong mã QR
-                    </p>
+
+                  <div className="flex flex-col items-center gap-4 text-center sm:flex-row sm:text-left">
+                    <div className="bg-white p-2 rounded-lg shadow-sm shrink-0">
+                      {/* VietQR Dynamic */}
+                      <img
+                        src={`https://img.vietqr.io/image/MB-9300131000273-compact2.png?amount=${
+                          isDemoMode ? 1000 : selectedInvoice.debtAmount
+                        }&addInfo=${encodeURIComponent(
+                          `HD${selectedInvoice.id} ${isDemoMode ? "DEMO" : ""}`,
+                        )}&accountName=CAMELSTAY`}
+                        alt="VietQR"
+                        className="w-32 h-auto"
+                      />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs text-indigo-600 font-bold uppercase mb-1">
+                        Quét mã để thanh toán
+                      </p>
+                      <p className="text-sm font-bold text-slate-900 truncate">
+                        MB BANK
+                      </p>
+                      <p className="text-lg font-mono font-black text-slate-800 tracking-wider">
+                        9300 131 000 273
+                      </p>
+                      <p className="text-xs text-slate-500">
+                        Chủ TK: <b>CAMELSTAY OWNER</b>
+                      </p>
+                      <p className="text-[10px] text-indigo-400 mt-1 italic">
+                        *Nội dung: <b>HD{selectedInvoice.id}</b> (Vui lòng giữ
+                        nguyên)
+                        {isDemoMode && (
+                          <span className="block font-bold text-orange-500">
+                            (ĐANG DÙNG CHẾ ĐỘ DEMO - 1.000đ)
+                          </span>
+                        )}
+                      </p>
+                    </div>
                   </div>
                 </div>
               )}

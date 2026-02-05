@@ -171,7 +171,7 @@ export default function IssuesPage() {
     (issue) =>
       issue.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
       issue.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      issue.room?.name.toLowerCase().includes(searchTerm.toLowerCase())
+      issue.room?.name.toLowerCase().includes(searchTerm.toLowerCase()),
   );
 
   return (
@@ -311,7 +311,7 @@ export default function IssuesPage() {
                           onClick: () =>
                             handleUpdateStatus(
                               issue.id,
-                              IssueStatus.PROCESSING
+                              IssueStatus.PROCESSING,
                             ),
                         },
                         {
@@ -364,84 +364,117 @@ export default function IssuesPage() {
         destroyOnHidden
         width={600}
         centered
-        className="claude-modal"
         closeIcon={
-          <div className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 hover:bg-gray-200 text-gray-500">
-            <span className="text-lg">✕</span>
+          <div className="p-2 hover:bg-gray-100 rounded-full transition-colors">
+            <span className="text-gray-400 font-light text-xl">×</span>
           </div>
         }
+        styles={{
+          content: {
+            borderRadius: 24,
+            padding: 0,
+            overflow: "hidden",
+            boxShadow: "0 20px 40px rgba(0,0,0,0.08)",
+          },
+        }}
       >
-        <div className="p-0">
-          <div className="p-6 border-b border-gray-100">
-            <h2 className="text-xl font-bold text-gray-900">
-              Báo cáo sự cố mới
-            </h2>
-            <p className="text-gray-500 text-sm mt-1">
-              Ghi nhận vấn đề từ khách thuê để xử lý kịp thời.
-            </p>
+        <div className="bg-[#FAF9F6] px-8 py-6 border-b border-gray-100 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-white rounded-xl shadow-sm flex items-center justify-center text-[#D97757]">
+              <AlertCircle size={20} />
+            </div>
+            <div>
+              <h3 className="text-xl font-bold text-[#2D2D2C] font-serif m-0">
+                Báo cáo sự cố mới
+              </h3>
+              <p className="text-gray-500 text-sm m-0">
+                Ghi nhận vấn đề từ khách thuê để xử lý kịp thời
+              </p>
+            </div>
           </div>
+        </div>
 
-          <div className="p-6">
-            <Form
-              form={form}
-              layout="vertical"
-              onFinish={handleCreateIssue}
-              className="claude-form"
+        <div className="p-8 bg-white">
+          <Form
+            form={form}
+            layout="vertical"
+            onFinish={handleCreateIssue}
+            className="claude-form"
+            requiredMark={false}
+          >
+            <Form.Item
+              label={
+                <span className="text-sm font-semibold text-gray-700">
+                  Tiêu đề sự cố
+                </span>
+              }
+              name="title"
+              rules={[{ required: true, message: "Vui lòng nhập tiêu đề" }]}
+              className="mb-6"
             >
-              <Form.Item
-                label="Tiêu đề sự cố"
-                name="title"
-                rules={[{ required: true, message: "Vui lòng nhập tiêu đề" }]}
+              <Input
+                placeholder="Ví dụ: Bóng đèn hỏng, vòi nước rò rỉ..."
+                className="hover:border-[#D97757] focus:border-[#D97757] w-full px-4 py-3 rounded-xl border-gray-200 bg-gray-50 font-medium transition-all"
+              />
+            </Form.Item>
+
+            <Form.Item
+              label={
+                <span className="text-sm font-semibold text-gray-700">
+                  Phòng xảy ra sự cố
+                </span>
+              }
+              name="roomId"
+              rules={[{ required: true, message: "Vui lòng chọn phòng" }]}
+              className="mb-6"
+            >
+              <Select
+                placeholder="-- Chọn phòng --"
+                className="h-12 text-base"
+                showSearch
+                optionFilterProp="label"
+                options={rooms.map((r) => ({
+                  label: `${r.name} - ${r.building?.name}`,
+                  value: r.id,
+                }))}
+                popupClassName="claude-select-popup"
+                dropdownStyle={{ backgroundColor: "#ffffff" }}
+              />
+            </Form.Item>
+
+            <Form.Item
+              label={
+                <span className="text-sm font-semibold text-gray-700">
+                  Mô tả chi tiết
+                </span>
+              }
+              name="description"
+              className="mb-8"
+            >
+              <Input.TextArea
+                rows={4}
+                placeholder="Mô tả chi tiết vấn đề..."
+                className="hover:border-[#D97757] focus:border-[#D97757] px-4 py-3 rounded-xl border-gray-200 bg-gray-50 transition-all resize-none"
+              />
+            </Form.Item>
+
+            <div className="flex justify-end gap-3 pt-4 border-t border-gray-50">
+              <button
+                type="button"
+                onClick={() => setIsModalOpen(false)}
+                className="bg-white border-0 text-gray-500 font-medium hover:bg-gray-50 hover:text-gray-900 rounded-xl h-11 px-6 transition-colors"
               >
-                <Input
-                  placeholder="Ví dụ: Bóng đèn hỏng, vòi nước rò rỉ..."
-                  className="h-12 rounded-xl text-base"
-                />
-              </Form.Item>
-
-              <Form.Item
-                label="Phòng xảy ra sự cố"
-                name="roomId"
-                rules={[{ required: true, message: "Vui lòng chọn phòng" }]}
+                Hủy bỏ
+              </button>
+              <button
+                type="submit"
+                disabled={submitting}
+                className="claude-btn-primary flex items-center gap-2 px-8 h-11 rounded-xl shadow-lg shadow-orange-100 hover:shadow-orange-200"
               >
-                <Select
-                  placeholder="-- Chọn phòng --"
-                  className="h-12 text-base"
-                  showSearch
-                  optionFilterProp="label"
-                  options={rooms.map((r) => ({
-                    label: `${r.name} - ${r.building?.name}`,
-                    value: r.id,
-                  }))}
-                />
-              </Form.Item>
-
-              <Form.Item label="Mô tả chi tiết" name="description">
-                <Input.TextArea
-                  rows={4}
-                  placeholder="Mô tả chi tiết vấn đề..."
-                  className="rounded-xl p-4 text-base"
-                />
-              </Form.Item>
-
-              <div className="flex justify-end gap-3 mt-8 pt-4 border-t border-gray-100">
-                <button
-                  type="button"
-                  onClick={() => setIsModalOpen(false)}
-                  className="px-5 py-2.5 rounded-xl font-bold text-gray-500 hover:bg-gray-100 transition-colors"
-                >
-                  Hủy bỏ
-                </button>
-                <button
-                  type="submit"
-                  disabled={submitting}
-                  className="px-6 py-2.5 rounded-xl font-bold bg-black text-white hover:bg-[#D97757] transition-colors shadow-lg shadow-gray-200"
-                >
-                  {submitting ? "Đang gửi..." : "Gửi báo cáo"}
-                </button>
-              </div>
-            </Form>
-          </div>
+                {submitting ? "Đang gửi..." : "Gửi báo cáo"}
+              </button>
+            </div>
+          </Form>
         </div>
       </Modal>
     </div>

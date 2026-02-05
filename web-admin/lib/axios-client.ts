@@ -36,4 +36,12 @@ axiosClient.interceptors.response.use((response) => {
     return Promise.reject(error);
 });
 
+// Public axios client (no auth headers) for public endpoints like /bill/:code
+export const publicAxiosClient = axios.create({
+    baseURL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000',
+    headers: {
+        'Content-Type': 'application/json',
+    },
+});
+
 export default axiosClient;

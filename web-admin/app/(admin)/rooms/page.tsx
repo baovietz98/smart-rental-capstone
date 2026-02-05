@@ -29,12 +29,14 @@ import MaintenanceActionModal from "@/components/rooms/MaintenanceActionModal";
 import MajorMaintenanceWarningModal from "@/components/rooms/MajorMaintenanceWarningModal";
 import MoveRoomModal from "@/components/rooms/MoveRoomModal";
 import { useRouter } from "next/navigation";
+import RoomDetailModal from "@/components/rooms/RoomDetailModal";
+import { servicesApi } from "@/lib/api/services";
+import { Service } from "@/types/service";
+import CreateContractWizard from "@/components/contracts/CreateContractWizard";
 
 // Helper: Format Currency
 const formatCurrency = (value: number) =>
   new Intl.NumberFormat("vi-VN").format(value);
-
-import RoomDetailModal from "@/components/rooms/RoomDetailModal";
 
 export default function AllRoomsPage() {
   const router = useRouter();
@@ -42,6 +44,7 @@ export default function AllRoomsPage() {
   // Data State
   const [rooms, setRooms] = useState<any[]>([]);
   const [buildings, setBuildings] = useState<any[]>([]);
+  const [services, setServices] = useState<Service[]>([]); // Added services state
   const [loading, setLoading] = useState(true);
 
   // UI State
@@ -57,6 +60,10 @@ export default function AllRoomsPage() {
 
   // Detail Modal State
   const [detailRoomId, setDetailRoomId] = useState<number | null>(null);
+
+  // Create Contract State
+  const [createContractRoom, setCreateContractRoom] = useState<any>(null);
+  const [isCreateContractOpen, setIsCreateContractOpen] = useState(false);
 
   // Advanced Maintenance State
   const [maintenanceRoom, setMaintenanceRoom] = useState<any>(null); // Room triggering maintenance
@@ -76,13 +83,15 @@ export default function AllRoomsPage() {
   const fetchData = async () => {
     setLoading(true);
     try {
-      // Parallel fetch: All Rooms & All Buildings
-      const [roomsRes, buildingsRes] = await Promise.all([
+      // Parallel fetch: All Rooms, Buildings, Services
+      const [roomsRes, buildingsRes, servicesRes] = await Promise.all([
         axios.get("/rooms"),
         axios.get("/buildings"),
+        servicesApi.getAll(),
       ]);
       setRooms(roomsRes.data);
       setBuildings(buildingsRes.data);
+      setServices(servicesRes);
     } catch (error) {
       console.error(error);
       message.error("Không thể tải dữ liệu phòng!");
@@ -1089,7 +1098,42 @@ export default function AllRoomsPage() {
         open={!!detailRoomId}
         roomId={detailRoomId}
         onCancel={() => setDetailRoomId(null)}
+        onCreateContract={(room) => {
+          setCreateContractRoom(room);
+          setDetailRoomId(null);
+          setIsCreateContractOpen(true);
+        }}
+        onMaintenanceAction={(room) => {
+          setMaintenanceRoom(room);
+          setDetailRoomId(null);
+        }}
       />
+
+      <Modal
+        open={isCreateContractOpen}
+        onCancel={() => setIsCreateContractOpen(false)}
+        footer={null}
+        width={900}
+        centered
+        destroyOnHidden
+        className="claude-modal"
+        closeIcon={
+          <div className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 hover:bg-gray-200 text-gray-500 transition-colors">
+            <span className="text-xl pb-1">&times;</span>
+          </div>
+        }
+      >
+        <CreateContractWizard
+          onCancel={() => setIsCreateContractOpen(false)}
+          onSuccess={() => {
+            setIsCreateContractOpen(false);
+            fetchData();
+          }}
+          buildings={buildings}
+          services={services}
+          initialRoom={createContractRoom}
+        />
+      </Modal>
     </div>
   );
 }

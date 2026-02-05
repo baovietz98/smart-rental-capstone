@@ -167,7 +167,7 @@ export default function ServicesPage() {
                   <div className="flex justify-between items-start mb-4">
                     <div
                       className={`w-12 h-12 rounded-xl flex items-center justify-center border-2 ${getServiceColor(
-                        service.name
+                        service.name,
                       )}`}
                     >
                       {getServiceIcon(service.name)}
@@ -258,28 +258,40 @@ export default function ServicesPage() {
         onCancel={() => setIsModalOpen(false)}
         footer={null}
         width={500}
-        className="claude-modal"
         centered
         closeIcon={
-          <div className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 hover:bg-gray-200 text-gray-500">
-            <span className="text-lg">✕</span>
+          <div className="p-2 hover:bg-gray-100 rounded-full transition-colors">
+            <span className="text-gray-400 font-light text-xl">×</span>
           </div>
         }
+        styles={{
+          content: {
+            borderRadius: 24,
+            padding: 0,
+            overflow: "hidden",
+            boxShadow: "0 20px 40px rgba(0,0,0,0.08)",
+          },
+        }}
       >
-        <div className="p-6">
-          <h2 className="text-2xl font-bold mb-6 text-gray-900 border-b pb-4">
+        <div className="bg-[#FAF9F6] px-8 py-6 border-b border-gray-100">
+          <h2 className="text-xl font-bold text-[#2D2D2C] font-serif m-0">
             {editingId ? "Cập Nhật Dịch Vụ" : "Thêm Dịch Vụ Mới"}
           </h2>
+        </div>
 
+        <div className="p-6 bg-white">
           <Form
             form={form}
             layout="vertical"
             onFinish={handleSave}
             className="claude-form"
+            requiredMark={false}
           >
             <Form.Item
               name="name"
-              label="Tên dịch vụ"
+              label={
+                <span className="font-semibold text-gray-700">Tên dịch vụ</span>
+              }
               rules={[{ required: true, message: "Vui lòng nhập tên dịch vụ" }]}
             >
               <Input
@@ -291,7 +303,9 @@ export default function ServicesPage() {
             <div className="grid grid-cols-2 gap-4">
               <Form.Item
                 name="price"
-                label="Đơn giá"
+                label={
+                  <span className="font-semibold text-gray-700">Đơn giá</span>
+                }
                 rules={[{ required: true, message: "Nhập đơn giá" }]}
               >
                 <InputNumber
@@ -305,7 +319,11 @@ export default function ServicesPage() {
               </Form.Item>
               <Form.Item
                 name="unit"
-                label="Đơn vị tính"
+                label={
+                  <span className="font-semibold text-gray-700">
+                    Đơn vị tính
+                  </span>
+                }
                 rules={[{ required: true, message: "Nhập đơn vị" }]}
               >
                 <Input
@@ -318,10 +336,18 @@ export default function ServicesPage() {
             <div className="grid grid-cols-2 gap-4">
               <Form.Item
                 name="type"
-                label="Loại dịch vụ"
+                label={
+                  <span className="font-semibold text-gray-700">
+                    Loại dịch vụ
+                  </span>
+                }
                 rules={[{ required: true }]}
               >
-                <Select className="h-11 rounded-xl">
+                <Select
+                  className="h-11 rounded-xl text-base"
+                  popupClassName="claude-select-popup"
+                  dropdownStyle={{ backgroundColor: "#ffffff" }}
+                >
                   <Select.Option value={ServiceType.INDEX}>
                     Theo chỉ số (Điện/Nước)
                   </Select.Option>
@@ -338,10 +364,18 @@ export default function ServicesPage() {
                   getFieldValue("type") === ServiceType.FIXED ? (
                     <Form.Item
                       name="calculationType"
-                      label="Cách tính"
+                      label={
+                        <span className="font-semibold text-gray-700">
+                          Cách tính
+                        </span>
+                      }
                       rules={[{ required: true }]}
                     >
-                      <Select className="h-11 rounded-xl">
+                      <Select
+                        className="h-11 rounded-xl text-base"
+                        popupClassName="claude-select-popup"
+                        dropdownStyle={{ backgroundColor: "#ffffff" }}
+                      >
                         <Select.Option value={CalculationType.PER_ROOM}>
                           Theo phòng
                         </Select.Option>

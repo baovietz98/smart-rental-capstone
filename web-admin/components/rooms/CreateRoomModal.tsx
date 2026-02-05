@@ -65,11 +65,11 @@ export default function CreateRoomModal({
       }}
     >
       <div className="bg-[#FCFCFA] p-6 md:p-10 font-[family-name:Inter]">
-        <div className="text-center mb-8">
-          <h2 className="text-2xl md:text-3xl font-serif font-bold text-[#2D2D2C] mb-2 tracking-tight">
+        <div className="text-center mb-6 md:mb-8">
+          <h2 className="text-xl md:text-3xl font-serif font-bold text-[#2D2D2C] mb-2 tracking-tight">
             Thêm Phòng Mới
           </h2>
-          <p className="text-[#6B6B6A] text-sm font-medium">
+          <p className="text-[#6B6B6A] text-xs md:text-sm font-medium">
             Tạo phòng mới vào hệ thống quản lý
           </p>
         </div>
@@ -290,11 +290,11 @@ export default function CreateRoomModal({
             />
           </Form.Item>
 
-          <div className="flex justify-end gap-3 mt-10 pt-6 border-t border-[#E5E5E0] items-center">
+          <div className="flex flex-col sm:flex-row justify-end gap-2 md:gap-3 mt-8 md:mt-10 pt-4 md:pt-6 border-t border-[#E5E5E0] items-center">
             <button
               type="button"
               onClick={onCancel}
-              className="px-5 py-2.5 rounded-lg border border-[#E5E5E0] bg-white text-[#6B6B6A] font-semibold text-sm hover:bg-[#F4F4F0] hover:text-[#2D2D2C] transition-all duration-200"
+              className="w-full sm:w-auto px-5 py-2.5 rounded-lg border border-[#E5E5E0] bg-white text-[#6B6B6A] font-semibold text-sm hover:bg-[#F4F4F0] hover:text-[#2D2D2C] transition-all duration-200"
             >
               Hủy bỏ
             </button>
@@ -302,7 +302,7 @@ export default function CreateRoomModal({
               type="button"
               onClick={handleSubmit}
               disabled={loading}
-              className="px-6 py-2.5 rounded-lg bg-[#D97757] text-white font-semibold text-sm shadow-[0_2px_0_0_#B05C3F] hover:bg-[#C06040] hover:shadow-[0_1px_0_0_#B05C3F] hover:translate-y-[1px] active:translate-y-[2px] active:shadow-none transition-all duration-200 disabled:opacity-70 disabled:cursor-not-allowed"
+              className="w-full sm:w-auto px-6 py-2.5 rounded-lg bg-[#D97757] text-white font-semibold text-sm shadow-[0_2px_0_0_#B05C3F] hover:bg-[#C06040] hover:shadow-[0_1px_0_0_#B05C3F] hover:translate-y-[1px] active:translate-y-[2px] active:shadow-none transition-all duration-200 disabled:opacity-70 disabled:cursor-not-allowed"
             >
               {loading ? "Đang lưu..." : "Lưu Phòng"}
             </button>

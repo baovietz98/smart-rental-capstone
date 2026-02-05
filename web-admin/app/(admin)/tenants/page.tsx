@@ -13,11 +13,15 @@ import {
 import axios from "@/lib/axios-client";
 import { message, Form, Input, Modal } from "antd";
 
+// ... (Add user to interface)
 interface Tenant {
   id: number;
   fullName: string;
   phone: string;
   cccd?: string;
+  user?: {
+    email: string;
+  };
   contracts?: {
     room?: {
       name: string;
@@ -146,9 +150,18 @@ export default function TenantsPage() {
   }, [searchTerm]);
 
   // Sync form data when modal opens for editing
+  // Sync form data when modal opens for editing
   useEffect(() => {
     if (isModalOpen && editingTenant) {
-      form.setFieldsValue(editingTenant);
+      // Merge user email into info.email for display in form
+      const formValues = {
+        ...editingTenant,
+        info: {
+          ...editingTenant.info,
+          email: editingTenant.user?.email || editingTenant.info?.email,
+        },
+      };
+      form.setFieldsValue(formValues);
     } else if (isModalOpen && !editingTenant) {
       form.resetFields();
     }
@@ -625,7 +638,9 @@ export default function TenantsPage() {
                       Email
                     </label>
                     <p className="font-semibold text-gray-800">
-                      {selectedTenantDetail.info?.email || "---"}
+                      {selectedTenantDetail.user?.email ||
+                        selectedTenantDetail.info?.email ||
+                        "---"}
                     </p>
                   </div>
                   <div>

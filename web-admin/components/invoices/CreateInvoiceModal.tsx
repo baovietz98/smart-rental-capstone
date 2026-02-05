@@ -93,7 +93,7 @@ export default function CreateInvoiceModal({
 
       // Fetch contract for room
       const contractsRes = await axiosClient.get(
-        `/contracts?roomId=${values.roomId}&isActive=true`
+        `/contracts?roomId=${values.roomId}&isActive=true`,
       );
       if (contractsRes.data.length === 0) {
         message.error("Phòng này chưa có hợp đồng đang hoạt động!");
@@ -113,7 +113,7 @@ export default function CreateInvoiceModal({
         previewData.lineItems.map((item) => ({
           ...item,
           _id: Math.random().toString(36).substr(2, 9),
-        }))
+        })),
       );
 
       // Store contractId for later use
@@ -137,7 +137,7 @@ export default function CreateInvoiceModal({
   const handleUpdateLineItem = (
     index: number,
     field: keyof InvoiceLineItem,
-    value: any
+    value: any,
   ) => {
     const newItems = [...lineItems];
     newItems[index] = { ...newItems[index], [field]: value };
@@ -223,12 +223,12 @@ export default function CreateInvoiceModal({
             type === "RENT"
               ? "bg-blue-50 text-blue-700 border-blue-100"
               : type === "ELECTRIC"
-              ? "bg-yellow-50 text-yellow-700 border-yellow-100"
-              : type === "WATER"
-              ? "bg-cyan-50 text-cyan-700 border-cyan-100"
-              : type === "DEBT"
-              ? "bg-red-50 text-red-700 border-red-100"
-              : "bg-gray-100 text-gray-600 border-gray-200"
+                ? "bg-yellow-50 text-yellow-700 border-yellow-100"
+                : type === "WATER"
+                  ? "bg-cyan-50 text-cyan-700 border-cyan-100"
+                  : type === "DEBT"
+                    ? "bg-red-50 text-red-700 border-red-100"
+                    : "bg-gray-100 text-gray-600 border-gray-200"
           }`}
         >
           {type}
@@ -320,183 +320,202 @@ export default function CreateInvoiceModal({
       title={null}
       footer={null}
       width={900}
-      className="claude-modal"
-      centered
       closeIcon={
-        <div className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 hover:bg-gray-200 text-gray-500 transition-colors">
-          <span className="text-lg">✕</span>
+        <div className="p-2 hover:bg-gray-100 rounded-full transition-colors">
+          <span className="text-gray-400 font-light text-xl">×</span>
         </div>
       }
+      styles={{
+        content: {
+          borderRadius: 24,
+          padding: 0,
+          overflow: "hidden",
+          boxShadow: "0 20px 40px rgba(0,0,0,0.08)",
+        },
+      }}
+      centered
     >
-      <div className="p-0">
-        <div className="p-6 border-b border-gray-100">
-          <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-            {step === 2 && (
-              <button
-                onClick={() => setStep(1)}
-                className="mr-2 text-gray-400 hover:text-gray-900 transition-colors"
-              >
-                <ArrowLeft size={24} />
-              </button>
-            )}
-            {step === 1 ? "Tạo hóa đơn mới" : "Chi tiết hóa đơn"}
-          </h2>
-          <p className="text-gray-500 text-sm mt-1">
-            {step === 1
-              ? "Chọn phòng và tháng để tính toán hóa đơn."
-              : `Kiểm tra và điều chỉnh các khoản thu cho tháng ${draftInvoice?.month}.`}
-          </p>
-        </div>
-
-        <div className="p-6">
-          {step === 1 ? (
-            <Form
-              form={form}
-              layout="vertical"
-              onFinish={handleGenerateDraft}
-              className="claude-form"
-            >
-              <div className="grid grid-cols-2 gap-6 mb-6">
-                <Form.Item
-                  name="buildingId"
-                  label={
-                    <span className="font-semibold text-gray-700">Tòa nhà</span>
-                  }
-                  rules={[{ required: true, message: "Chọn tòa nhà" }]}
-                >
-                  <Select
-                    placeholder="Chọn tòa nhà..."
-                    onChange={handleBuildingChange}
-                    options={buildings.map((b) => ({
-                      label: b.name,
-                      value: b.id,
-                    }))}
-                    className="h-12"
-                  />
-                </Form.Item>
-                <Form.Item
-                  name="roomId"
-                  label={
-                    <span className="font-semibold text-gray-700">Phòng</span>
-                  }
-                  rules={[{ required: true, message: "Chọn phòng" }]}
-                >
-                  <Select
-                    placeholder="Chọn phòng..."
-                    options={rooms.map((r) => ({ label: r.name, value: r.id }))}
-                    disabled={!selectedBuilding}
-                    className="h-12"
-                  />
-                </Form.Item>
-              </div>
-              <Form.Item
-                name="month"
-                label={
-                  <span className="font-semibold text-gray-700">
-                    Tháng hóa đơn
-                  </span>
-                }
-                rules={[{ required: true, message: "Chọn tháng" }]}
-              >
-                <DatePicker
-                  picker="month"
-                  format="MM-YYYY"
-                  className="w-full h-12"
-                />
-              </Form.Item>
-
-              <div className="mt-8 flex justify-end">
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="px-8 py-3 bg-black text-white rounded-xl font-bold hover:shadow-lg hover:-translate-y-0.5 transition-all flex items-center gap-2 disabled:opacity-70 disabled:hover:translate-y-0"
-                >
-                  {loading && <Loader2 size={18} className="animate-spin" />}
-                  <Calculator size={18} />
-                  <span>Tính hóa đơn (Preview)</span>
-                </button>
-              </div>
-            </Form>
-          ) : (
-            <div className="flex flex-col gap-6">
-              {/* Info Card */}
-              <div className="bg-gray-50 p-4 rounded-xl border border-gray-100 flex items-center justify-between">
-                <div>
-                  <div className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">
-                    Phòng
-                  </div>
-                  <div className="text-xl font-bold text-gray-900">
-                    {draftInvoice?.contract?.room.name}
-                  </div>
-                </div>
-                <div className="text-right">
-                  <div className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">
-                    Tổng cộng (Tạm tính)
-                  </div>
-                  <div className="text-2xl font-black text-[#D97757] tracking-tight">
-                    {calculateTotal().toLocaleString()} ₫
-                  </div>
-                </div>
-              </div>
-
-              {/* Items Table */}
-              <div className="border border-gray-200 rounded-xl overflow-hidden bg-white shadow-sm">
-                <Table
-                  dataSource={lineItems}
-                  columns={columns}
-                  pagination={false}
-                  rowKey="_id"
-                  className="claude-table-dense"
-                />
-                <div className="p-3 bg-gray-50 border-t border-gray-200">
-                  <button
-                    onClick={handleAddLineItem}
-                    className="flex items-center gap-2 text-sm font-bold text-gray-500 hover:text-black transition-colors px-2 py-1 rounded hover:bg-white"
-                  >
-                    <Plus size={16} />
-                    <span>Thêm khoản thu khác</span>
-                  </button>
-                </div>
-              </div>
-
-              {/* Footer Actions */}
-              <div className="flex gap-3 mt-2 justify-end pt-4 border-t border-gray-100">
+      <div className="bg-[#FAF9F6] px-8 py-6 border-b border-gray-100 flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 bg-white rounded-xl shadow-sm flex items-center justify-center text-[#D97757]">
+            <Calculator size={20} />
+          </div>
+          <div>
+            <h3 className="text-xl font-bold text-[#2D2D2C] font-serif m-0 flex items-center gap-2">
+              {step === 2 && (
                 <button
                   onClick={() => setStep(1)}
-                  className="px-6 py-2.5 rounded-xl font-bold text-gray-500 hover:bg-gray-100 transition-colors"
+                  className="text-gray-400 hover:text-[#D97757] transition-colors mr-1"
                 >
-                  Quay lại
+                  <ArrowLeft size={20} />
                 </button>
-                <button
-                  onClick={() => handleSave(false)}
-                  disabled={loading}
-                  className="px-6 py-2.5 rounded-xl font-bold text-gray-700 bg-white border border-gray-200 hover:bg-gray-50 hover:border-gray-300 transition-all flex items-center gap-2"
-                >
-                  {loading ? (
-                    <Loader2 size={18} className="animate-spin" />
-                  ) : (
-                    <Save size={18} />
-                  )}
-                  <span>Lưu nháp</span>
-                </button>
-                <Popconfirm
-                  title="Xác nhận phát hành"
-                  description="Hóa đơn sẽ được chuyển sang trạng thái PUBLISHED."
-                  onConfirm={() => handleSave(true)}
-                  okButtonProps={{ className: "bg-[#D97757]" }}
-                >
-                  <button
-                    className="px-6 py-2.5 rounded-xl font-bold text-white bg-[#D97757] shadow-lg shadow-orange-100 hover:shadow-xl hover:bg-[#c06040] hover:-translate-y-0.5 transition-all flex items-center gap-2"
-                    disabled={loading}
-                  >
-                    <Send size={18} />
-                    <span>Phát hành ngay</span>
-                  </button>
-                </Popconfirm>
+              )}
+              {step === 1 ? "Tạo hóa đơn mới" : "Chi tiết hóa đơn"}
+            </h3>
+            <p className="text-gray-500 text-sm m-0">
+              {step === 1
+                ? "Chọn phòng và tháng để tính toán hóa đơn"
+                : `Kiểm tra và điều chỉnh các khoản thu cho tháng ${draftInvoice?.month}`}
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <div className="p-8 bg-white">
+        {step === 1 ? (
+          <Form
+            form={form}
+            layout="vertical"
+            onFinish={handleGenerateDraft}
+            className="claude-form"
+            requiredMark={false}
+          >
+            <div className="grid grid-cols-2 gap-6 mb-6">
+              <Form.Item
+                name="buildingId"
+                label={
+                  <span className="font-semibold text-gray-700">Tòa nhà</span>
+                }
+                rules={[{ required: true, message: "Chọn tòa nhà" }]}
+              >
+                <Select
+                  placeholder="Chọn tòa nhà..."
+                  onChange={handleBuildingChange}
+                  options={buildings.map((b) => ({
+                    label: b.name,
+                    value: b.id,
+                  }))}
+                  className="h-12 text-base"
+                  popupClassName="claude-select-popup"
+                  dropdownStyle={{ backgroundColor: "#ffffff" }}
+                />
+              </Form.Item>
+              <Form.Item
+                name="roomId"
+                label={
+                  <span className="font-semibold text-gray-700">Phòng</span>
+                }
+                rules={[{ required: true, message: "Chọn phòng" }]}
+              >
+                <Select
+                  placeholder="Chọn phòng..."
+                  options={rooms.map((r) => ({ label: r.name, value: r.id }))}
+                  disabled={!selectedBuilding}
+                  className="h-12 text-base"
+                  popupClassName="claude-select-popup"
+                  dropdownStyle={{ backgroundColor: "#ffffff" }}
+                />
+              </Form.Item>
+            </div>
+            <Form.Item
+              name="month"
+              label={
+                <span className="font-semibold text-gray-700">
+                  Tháng hóa đơn
+                </span>
+              }
+              rules={[{ required: true, message: "Chọn tháng" }]}
+              className="mb-8"
+            >
+              <DatePicker
+                picker="month"
+                format="MM-YYYY"
+                className="w-full h-12 rounded-xl text-base"
+              />
+            </Form.Item>
+
+            <div className="mt-8 flex justify-end pt-4 border-t border-gray-50">
+              <button
+                type="submit"
+                disabled={loading}
+                className="claude-btn-primary flex items-center gap-2 px-8 h-11 rounded-xl shadow-lg shadow-orange-100 hover:shadow-orange-200"
+              >
+                {loading && <Loader2 size={18} className="animate-spin" />}
+                <Calculator size={18} />
+                <span>Tính hóa đơn (Preview)</span>
+              </button>
+            </div>
+          </Form>
+        ) : (
+          <div className="flex flex-col gap-6">
+            {/* Info Card */}
+            <div className="bg-[#FAF9F6] p-4 rounded-xl border border-gray-100 flex items-center justify-between">
+              <div>
+                <div className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">
+                  Phòng
+                </div>
+                <div className="text-xl font-bold text-[#2D2D2C]">
+                  {draftInvoice?.contract?.room.name}
+                </div>
+              </div>
+              <div className="text-right">
+                <div className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">
+                  Tổng cộng (Tạm tính)
+                </div>
+                <div className="text-2xl font-black text-[#D97757] tracking-tight">
+                  {calculateTotal().toLocaleString()} ₫
+                </div>
               </div>
             </div>
-          )}
-        </div>
+
+            {/* Items Table */}
+            <div className="border border-gray-100 rounded-xl overflow-hidden bg-white shadow-sm">
+              <Table
+                dataSource={lineItems}
+                columns={columns}
+                pagination={false}
+                rowKey="_id"
+                className="claude-table-dense"
+              />
+              <div className="p-3 bg-gray-50 border-t border-gray-100">
+                <button
+                  onClick={handleAddLineItem}
+                  className="flex items-center gap-2 text-sm font-bold text-gray-500 hover:text-[#D97757] transition-colors px-2 py-1 rounded hover:bg-white"
+                >
+                  <Plus size={16} />
+                  <span>Thêm khoản thu khác</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Footer Actions */}
+            <div className="flex gap-3 mt-4 justify-end pt-6 border-t border-gray-50">
+              <button
+                onClick={() => setStep(1)}
+                className="px-6 py-2.5 rounded-xl font-bold text-gray-500 hover:bg-gray-50 transition-colors"
+                disabled={loading}
+              >
+                Quay lại
+              </button>
+              <button
+                onClick={() => handleSave(false)}
+                disabled={loading}
+                className="px-6 py-2.5 rounded-xl font-bold text-gray-700 bg-white border border-gray-200 hover:bg-gray-50 hover:border-gray-300 transition-all flex items-center gap-2"
+              >
+                {loading ? (
+                  <Loader2 size={18} className="animate-spin" />
+                ) : (
+                  <Save size={18} />
+                )}
+                <span>Lưu nháp</span>
+              </button>
+              <Popconfirm
+                title="Xác nhận phát hành"
+                description="Hóa đơn sẽ được chuyển sang trạng thái PUBLISHED."
+                onConfirm={() => handleSave(true)}
+                okButtonProps={{ className: "bg-[#D97757]" }}
+              >
+                <button
+                  className="claude-btn-primary px-6 py-2.5 rounded-xl shadow-lg shadow-orange-100 hover:shadow-xl flex items-center gap-2"
+                  disabled={loading}
+                >
+                  <Send size={18} />
+                  <span>Phát hành ngay</span>
+                </button>
+              </Popconfirm>
+            </div>
+          </div>
+        )}
       </div>
     </Modal>
   );

@@ -34,6 +34,7 @@ import {
 import type { UploadFile } from "antd/es/upload/interface";
 import axiosClient from "@/lib/axios-client";
 import dayjs from "dayjs";
+import TenantEmptyState from "@/components/tenant/TenantEmptyState";
 
 // -- Interfaces --
 interface Issue {
@@ -90,7 +91,7 @@ export default function TenantIssuesPage() {
         contracts.find((c: any) => c.isActive) || contracts[0];
 
       if (!activeContract) {
-        message.warning("Không tìm thấy hợp đồng thuê!");
+        // Just return, handled in render
         return;
       }
 
@@ -280,6 +281,14 @@ export default function TenantIssuesPage() {
             <Skeleton active avatar paragraph={{ rows: 2 }} />
             <Skeleton active avatar paragraph={{ rows: 2 }} />
           </>
+        ) : !contract ? (
+          <TenantEmptyState
+            icon={AlertCircle}
+            title="Chưa có phòng"
+            description="Bạn chưa có phòng nên chưa thể báo cáo sự cố. Vui lòng liên hệ quản lý để được hỗ trợ."
+            actionLabel="Quay lại Trang chủ"
+            actionLink="/tenant"
+          />
         ) : filteredIssues.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20 text-center">
             <div className="w-20 h-20 bg-slate-100 rounded-full flex items-center justify-center mb-4">

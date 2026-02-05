@@ -14,10 +14,12 @@ import {
   Settings,
 } from "lucide-react";
 import { Button, Avatar, Spin } from "antd";
+import UpdateProfileModal from "@/components/tenant/UpdateProfileModal";
 
 export default function TenantProfilePage() {
   const router = useRouter();
   const [user, setUser] = useState<any>(null);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
   useEffect(() => {
     // 1. Get user info
@@ -39,6 +41,13 @@ export default function TenantProfilePage() {
 
     // 3. Redirect
     router.push("/login");
+  };
+
+  const handleUpdateSuccess = (updatedUser: any) => {
+    // Merge updated fields with current user state (to keep other potential fields)
+    const newUserState = { ...user, ...updatedUser };
+    setUser(newUserState);
+    localStorage.setItem("user", JSON.stringify(newUserState));
   };
 
   if (!user) {
@@ -71,9 +80,18 @@ export default function TenantProfilePage() {
           </div>
         </div>
 
-        <h2 className="text-xl font-bold text-slate-900 text-center mb-1 relative z-10">
-          {user.name}
-        </h2>
+        <div className="flex items-center gap-2 mb-1 relative z-10">
+          <h2 className="text-xl font-bold text-slate-900 text-center">
+            {user.name}
+          </h2>
+          <button
+            onClick={() => setIsEditModalOpen(true)}
+            className="p-1.5 rounded-full bg-slate-100 text-slate-500 hover:bg-indigo-50 hover:text-indigo-600 transition-colors"
+          >
+            <Settings size={16} />
+          </button>
+        </div>
+
         <p className="text-slate-500 text-xs font-bold uppercase tracking-wider bg-slate-100 px-3 py-1.5 rounded-full relative z-10 border border-slate-200">
           {user.role === "TENANT" ? "Khách thuê" : user.role}
         </p>
@@ -154,6 +172,14 @@ export default function TenantProfilePage() {
       <p className="text-center text-slate-400 text-xs mt-8 font-medium">
         Phiên bản 1.0.0
       </p>
+
+      {/* Modals */}
+      <UpdateProfileModal
+        isOpen={isEditModalOpen}
+        onClose={() => setIsEditModalOpen(false)}
+        currentUser={user}
+        onUpdateSuccess={handleUpdateSuccess}
+      />
     </div>
   );
 }

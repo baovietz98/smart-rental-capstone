@@ -38,7 +38,7 @@ export default function ReadingsPage() {
   const [loading, setLoading] = useState(true);
   const [services, setServices] = useState<Service[]>([]);
   const [buildings, setBuildings] = useState<{ id: number; name: string }[]>(
-    []
+    [],
   );
 
   // Filters
@@ -108,7 +108,7 @@ export default function ReadingsPage() {
       const response = await readingsApi.bulkCreate(month, readings);
 
       const successes = response.filter(
-        (r: BulkCreateResult) => r.success
+        (r: BulkCreateResult) => r.success,
       ).length;
       const failures = response.filter((r: BulkCreateResult) => !r.success);
 
@@ -314,15 +314,15 @@ export default function ReadingsPage() {
   ];
 
   return (
-    <div className="claude-page p-6 md:p-12">
+    <div className="claude-page p-3 md:p-6 lg:p-12">
       <div className="max-w-7xl mx-auto">
         {/* HEADER */}
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 mb-8">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-3 md:gap-4 mb-6 md:mb-8">
           <div>
-            <h1 className="text-3xl md:text-4xl claude-header mb-2">
+            <h1 className="text-2xl md:text-3xl lg:text-4xl claude-header mb-1 md:mb-2">
               Chốt số điện nước
             </h1>
-            <p className="text-gray-500 font-sans text-lg">
+            <p className="text-gray-500 font-sans text-sm md:text-base lg:text-lg">
               Ghi nhận và quản lý chỉ số dịch vụ hàng tháng.
             </p>
           </div>
@@ -332,7 +332,7 @@ export default function ReadingsPage() {
               form.resetFields();
               setIsModalOpen(true);
             }}
-            className="claude-btn-primary flex items-center gap-2"
+            className="claude-btn-primary flex items-center gap-2 w-full md:w-auto justify-center"
           >
             <Plus size={20} />
             <span>Chốt số mới</span>
@@ -340,10 +340,10 @@ export default function ReadingsPage() {
         </div>
 
         {/* FILTERS */}
-        <div className="bg-white p-4 rounded-2xl border border-gray-200 shadow-sm mb-8 flex flex-wrap items-center gap-4">
-          <div className="flex items-center gap-2 text-gray-500 mr-2 px-2">
-            <Filter size={18} />
-            <span className="font-bold text-sm uppercase tracking-wide">
+        <div className="bg-white p-3 md:p-4 rounded-2xl border border-gray-200 shadow-sm mb-6 md:mb-8 flex flex-wrap items-center gap-3 md:gap-4">
+          <div className="flex items-center gap-2 text-gray-500 px-1 md:px-2">
+            <Filter size={16} className="md:w-[18px] md:h-[18px]" />
+            <span className="font-bold text-xs md:text-sm uppercase tracking-wide">
               Bộ lọc
             </span>
           </div>
@@ -355,16 +355,16 @@ export default function ReadingsPage() {
             value={dayjs(month, "MM-YYYY")}
             onChange={(date) =>
               setMonth(
-                date ? date.format("MM-YYYY") : dayjs().format("MM-YYYY")
+                date ? date.format("MM-YYYY") : dayjs().format("MM-YYYY"),
               )
             }
-            className="h-10 w-40 border-gray-200 hover:border-[#D97757] focus:border-[#D97757] rounded-xl font-medium"
+            className="h-9 md:h-10 w-32 md:w-40 border-gray-200 hover:border-[#D97757] focus:border-[#D97757] rounded-xl font-medium text-sm"
           />
 
           <Select
             placeholder="Tất cả dịch vụ"
             allowClear
-            className="w-48 h-10"
+            className="flex-1 min-w-[140px] md:flex-none md:w-48 h-9 md:h-10"
             value={selectedService}
             onChange={(val) => setSelectedService(val ?? null)}
             options={services.map((s) => ({ label: s.name, value: s.id }))}
@@ -372,7 +372,8 @@ export default function ReadingsPage() {
         </div>
 
         {/* CONTENT */}
-        <div className="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden">
+        {/* DESKTOP TABLE */}
+        <div className="hidden md:block bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden">
           <Table
             columns={columns}
             dataSource={readings}
@@ -383,39 +384,133 @@ export default function ReadingsPage() {
             className="claude-table"
           />
         </div>
+
+        {/* MOBILE CARD VIEW */}
+        <div className="md:hidden space-y-3">
+          {loading ? (
+            <div className="bg-white rounded-xl p-8 text-center">
+              <Loader2
+                className="animate-spin mx-auto mb-2 text-gray-400"
+                size={24}
+              />
+              <p className="text-gray-500 text-sm">Đang tải...</p>
+            </div>
+          ) : readings.length === 0 ? (
+            <div className="bg-white rounded-xl p-8 text-center">
+              <p className="text-gray-500 text-sm">Không có dữ liệu</p>
+            </div>
+          ) : (
+            readings.map((record) => (
+              <div
+                key={record.id}
+                className="bg-white border border-gray-200 rounded-xl p-3 shadow-sm"
+              >
+                <div className="flex justify-between items-start mb-2">
+                  <div>
+                    <div className="font-bold text-gray-900 text-sm">
+                      {record.contract?.room.name}
+                    </div>
+                    <div className="text-xs text-gray-400">
+                      {record.contract?.room.building.name}
+                    </div>
+                  </div>
+                  {!record.isBilled && (
+                    <Popconfirm
+                      title="Xác nhận xóa?"
+                      description="Hành động này không thể hoàn tác."
+                      onConfirm={() => handleDelete(record.id)}
+                      okText="Xóa"
+                      cancelText="Hủy"
+                      okButtonProps={{ danger: true, type: "primary" }}
+                    >
+                      <button className="text-gray-400 hover:text-red-500 transition-colors p-1">
+                        <Trash2 size={16} />
+                      </button>
+                    </Popconfirm>
+                  )}
+                </div>
+                <ServiceBadge name={record.service.name} />
+                <div className="grid grid-cols-2 gap-2 mt-3 text-xs">
+                  <div>
+                    <div className="text-gray-400 uppercase mb-1">
+                      Chỉ số cũ
+                    </div>
+                    <div className="font-mono text-gray-600">
+                      {record.oldIndex.toLocaleString()}
+                    </div>
+                  </div>
+                  <div>
+                    <div className="text-gray-400 uppercase mb-1">
+                      Chỉ số mới
+                    </div>
+                    <div className="font-bold text-blue-600 font-mono">
+                      {record.newIndex.toLocaleString()}
+                    </div>
+                  </div>
+                  <div>
+                    <div className="text-gray-400 uppercase mb-1">Sử dụng</div>
+                    <div className="font-bold text-gray-700 font-mono">
+                      {record.usage} {record.service.unit}
+                    </div>
+                  </div>
+                  <div>
+                    <div className="text-gray-400 uppercase mb-1">
+                      Thành tiền
+                    </div>
+                    <div className="font-bold text-emerald-600 font-mono text-xs">
+                      {record.totalCost.toLocaleString()} đ
+                    </div>
+                  </div>
+                </div>
+                <div className="mt-2">
+                  <span
+                    className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
+                      record.isBilled
+                        ? "bg-green-100 text-green-800"
+                        : "bg-orange-100 text-orange-800"
+                    }`}
+                  >
+                    {record.isBilled ? "Đã lên HĐ" : "Chưa lên HĐ"}
+                  </span>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
       </div>
 
       <Modal
         open={isModalOpen}
         onCancel={() => setIsModalOpen(false)}
         footer={null}
-        width={900}
+        width="95vw"
+        style={{ maxWidth: 900 }}
         className="claude-modal"
         centered
         destroyOnHidden
         closeIcon={
-          <div className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 hover:bg-gray-200 text-gray-500 transition-colors">
-            <span className="text-lg">✕</span>
+          <div className="w-7 h-7 md:w-8 md:h-8 flex items-center justify-center rounded-full bg-gray-100 hover:bg-gray-200 text-gray-500 transition-colors">
+            <span className="text-base md:text-lg">✕</span>
           </div>
         }
       >
-        <div className="p-0 flex flex-col h-[85vh] max-h-[800px]">
+        <div className="p-0 flex flex-col h-[90vh] md:h-[85vh] max-h-[800px]">
           {/* MODAL HEADER */}
-          <div className="p-6 border-b border-gray-100 flex-shrink-0 bg-white rounded-t-2xl z-10">
-            <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-3">
+          <div className="p-4 md:p-6 border-b border-gray-100 flex-shrink-0 bg-white rounded-t-2xl z-10">
+            <h2 className="text-lg md:text-2xl font-bold text-gray-900 flex flex-col md:flex-row md:items-center gap-2 md:gap-3">
               <span>Chốt số tháng {month}</span>
-              <span className="text-sm font-normal text-gray-400 bg-gray-50 px-3 py-1 rounded-full border border-gray-100">
+              <span className="text-xs md:text-sm font-normal text-gray-400 bg-gray-50 px-2 md:px-3 py-1 rounded-full border border-gray-100 w-fit">
                 {modalLoading ? "Đang tải dữ liệu..." : "Chế độ nhập liệu"}
               </span>
             </h2>
-            <p className="text-gray-500 text-sm mt-1">
-              Nhập chỉ số diện, nước cho từng phòng. Hệ thống tự động tính toán
+            <p className="text-gray-500 text-xs md:text-sm mt-1">
+              Nhập chỉ số điện, nước cho từng phòng. Hệ thống tự động tính toán
               mức sử dụng.
             </p>
           </div>
 
           {/* SCROLLABLE CONTENT */}
-          <div className="flex-1 overflow-y-auto bg-[#F9F9F7] p-6 custom-scrollbar">
+          <div className="flex-1 overflow-y-auto bg-[#F9F9F7] p-3 md:p-6 custom-scrollbar">
             <Form
               form={form}
               layout="vertical"
@@ -599,7 +694,7 @@ export default function ReadingsPage() {
                                               ]);
                                               if (!isReset && value < old)
                                                 return Promise.reject(
-                                                  new Error("Phải >= cũ")
+                                                  new Error("Phải >= cũ"),
                                                 );
                                               return Promise.resolve();
                                             },
@@ -612,7 +707,7 @@ export default function ReadingsPage() {
                                           formatter={(value) =>
                                             `${value}`.replace(
                                               /\B(?=(\d{3})+(?!\d))/g,
-                                              ","
+                                              ",",
                                             )
                                           }
                                           parser={(value) =>
@@ -651,7 +746,7 @@ export default function ReadingsPage() {
                                             ? s.newIndex
                                             : Math.max(
                                                 0,
-                                                s.newIndex - s.oldIndex
+                                                s.newIndex - s.oldIndex,
                                               );
                                           return (
                                             <span className="font-bold text-blue-600 font-mono text-lg block text-center bg-blue-50 px-2 py-1 rounded-lg">
@@ -728,7 +823,7 @@ export default function ReadingsPage() {
                                     </Form.Item>
                                   </div>
                                 </div>
-                              )
+                              ),
                             )}
                           </div>
                         </div>

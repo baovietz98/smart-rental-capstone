@@ -13,6 +13,7 @@ import { message, Upload, Button, Input, Spin, Checkbox } from "antd";
 import { readingsApi } from "@/lib/api/readings";
 import axiosClient from "@/lib/axios-client";
 import dayjs from "dayjs";
+import TenantEmptyState from "@/components/tenant/TenantEmptyState";
 
 // Types
 interface ReadingServiceState {
@@ -90,7 +91,7 @@ export default function TenantReadingsPage() {
       // Find active contract
       const activeContract = tenant.contracts?.find((c: any) => c.isActive);
       if (!activeContract) {
-        message.warning("Bạn chưa có hợp đồng thuê phòng nào đang hoạt động.");
+        // Just return, handled in render
         setLoading(false);
         return;
       }
@@ -237,6 +238,32 @@ export default function TenantReadingsPage() {
         <Spin size="large" />
       </div>
     );
+
+  // Check specifically for no contract state to render empty state
+  if (!loading && !contract) {
+    return (
+      <div className="min-h-screen bg-[#F9F9F7] pb-24 font-sans text-slate-900">
+        <div className="bg-white/80 backdrop-blur-md p-4 border-b border-slate-100 sticky top-0 z-20 flex items-center gap-3 shadow-sm">
+          <button
+            onClick={() => router.back()}
+            className="p-2 -ml-2 hover:bg-slate-100 rounded-full text-slate-500 transition-colors"
+          >
+            <ArrowLeft size={22} />
+          </button>
+          <h1 className="text-xl font-bold text-slate-900 tracking-tight">
+            Chốt Điện Nước
+          </h1>
+        </div>
+        <TenantEmptyState
+          icon={UploadCloud}
+          title="Chưa có dịch vụ"
+          description="Chức năng chốt điện nước chỉ dành cho khách đang có hợp đồng thuê phòng."
+          actionLabel="Quay lại Trang chủ"
+          actionLink="/tenant"
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#F9F9F7] pb-24 font-sans text-slate-900">

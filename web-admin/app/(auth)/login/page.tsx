@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Form, Input, Checkbox, message } from "antd";
 import { User, Lock, Mail, ArrowRight } from "lucide-react";
 import Link from "next/link";
@@ -11,16 +11,28 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const router = useRouter();
   const [messageApi, contextHolder] = message.useMessage();
+  const [form] = Form.useForm();
+
+  useEffect(() => {
+    const savedIdentifier = localStorage.getItem("savedIdentifier");
+    if (savedIdentifier) {
+      form.setFieldsValue({
+        identifier: savedIdentifier,
+        remember: true,
+      });
+    }
+  }, [form]);
 
   const onFinish = async (values: any) => {
     try {
       setLoading(true);
 
-      const isEmail = values.identifier.includes("@");
+      const identifier = values.identifier?.trim();
+      const isEmail = identifier.includes("@");
       const payload = {
         ...values,
-        email: isEmail ? values.identifier : undefined,
-        phoneNumber: !isEmail ? values.identifier : undefined,
+        email: isEmail ? identifier : undefined,
+        phoneNumber: !isEmail ? identifier : undefined,
       };
       delete payload.identifier; // Clean up
 
@@ -41,6 +53,12 @@ export default function LoginPage() {
 
       messageApi.success("Đăng nhập thành công!");
 
+      if (values.remember) {
+        localStorage.setItem("savedIdentifier", values.identifier);
+      } else {
+        localStorage.removeItem("savedIdentifier");
+      }
+
       // 3. Redirect based on Role
       if (user.role === "TENANT") {
         router.push("/tenant");
@@ -49,9 +67,11 @@ export default function LoginPage() {
       }
     } catch (error: any) {
       console.error("Login failed:", error);
-      const msg =
-        error.response?.data?.message ||
-        "Đăng nhập thất bại. Vui lòng kiểm tra lại.";
+      const msg = error.response?.data?.message
+        ? Array.isArray(error.response.data.message)
+          ? error.response.data.message.join(", ")
+          : error.response.data.message
+        : "Đăng nhập thất bại. Vui lòng kiểm tra lại.";
       messageApi.error(msg);
     } finally {
       setLoading(false);
@@ -66,6 +86,7 @@ export default function LoginPage() {
       {contextHolder}
 
       <Form
+        form={form}
         name="login_form"
         initialValues={{ remember: true }}
         onFinish={onFinish}

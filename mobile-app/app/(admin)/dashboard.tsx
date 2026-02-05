@@ -22,7 +22,7 @@ export default function Dashboard() {
 
   const currentMonth = `${String(selectedDate.getMonth() + 1).padStart(
     2,
-    "0"
+    "0",
   )}-${selectedDate.getFullYear()}`;
 
   // 1. Fetch Buildings
@@ -96,11 +96,11 @@ export default function Dashboard() {
 
         // Tính toán Nợ xấu (Overdue)
         const overdueList = overdueInvoicesRes.data.filter(
-          (inv: any) => inv.debtAmount > 0
+          (inv: any) => inv.debtAmount > 0,
         );
         const badDebtTotal = overdueList.reduce(
           (sum: number, inv: any) => sum + inv.debtAmount,
-          0
+          0,
         );
 
         // Tổng hợp Registry "Cần xử lý ngay"
@@ -277,6 +277,13 @@ export default function Dashboard() {
             Command Center
           </Text>
           <View className="flex-row items-center">
+            <TouchableOpacity
+              className="mr-3 relative"
+              onPress={() => router.push("/(admin)/notifications" as any)}
+            >
+              <FontAwesome5 name="bell" size={16} color="#383838" />
+              <View className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-red-500 rounded-full border border-white" />
+            </TouchableOpacity>
             <View className="w-2 h-2 bg-green-500 rounded-full mr-2 shadow-sm shadow-green-200" />
             <Text className="text-[10px] font-black text-[#383838]/60 uppercase tracking-widest">
               Live
@@ -368,7 +375,7 @@ export default function Dashboard() {
               <View className="items-end">
                 <Text className="text-white text-xl font-bold">
                   {Math.round(
-                    (finance?.totalPaid / (finance?.totalAmount || 1)) * 100
+                    (finance?.totalPaid / (finance?.totalAmount || 1)) * 100,
                   ) || 0}
                   %
                 </Text>
@@ -521,8 +528,8 @@ export default function Dashboard() {
                       action.type === "READING"
                         ? "bg-[#DA7756]/10"
                         : action.type === "PAYMENT"
-                        ? "bg-[#C64545]/10"
-                        : "bg-gray-100"
+                          ? "bg-[#C64545]/10"
+                          : "bg-gray-100"
                     } border border-white shadow-sm`}
                   >
                     <MaterialCommunityIcons
@@ -532,8 +539,8 @@ export default function Dashboard() {
                         action.type === "READING"
                           ? "#DA7756"
                           : action.type === "PAYMENT"
-                          ? "#C64545"
-                          : "#383838"
+                            ? "#C64545"
+                            : "#383838"
                       }
                     />
                   </View>
@@ -548,8 +555,8 @@ export default function Dashboard() {
                       {action.type === "READING"
                         ? "Điện nước"
                         : action.type === "PAYMENT"
-                        ? "Tài chính"
-                        : "Bảo trì"}
+                          ? "Tài chính"
+                          : "Bảo trì"}
                     </Text>
                   </View>
                   <TouchableOpacity
@@ -557,8 +564,8 @@ export default function Dashboard() {
                       action.type === "READING"
                         ? "bg-[#DA7756] border-[#DA7756]"
                         : action.type === "PAYMENT"
-                        ? "bg-[#C64545] border-[#C64545]"
-                        : "bg-[#383838] border-[#383838]"
+                          ? "bg-[#C64545] border-[#C64545]"
+                          : "bg-[#383838] border-[#383838]"
                     }`}
                     onPress={() => router.push(action.route as any)}
                   >

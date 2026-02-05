@@ -23,6 +23,7 @@ interface Props {
   onSuccess: () => void;
   buildings: any[];
   services: Service[];
+  initialRoom?: any;
 }
 
 export default function CreateContractWizard({
@@ -30,6 +31,7 @@ export default function CreateContractWizard({
   onSuccess,
   buildings,
   services,
+  initialRoom,
 }: Props) {
   const [currentStep, setCurrentStep] = useState(0);
 
@@ -46,6 +48,16 @@ export default function CreateContractWizard({
   const [contractForm] = Form.useForm();
   const [tenantForm] = Form.useForm();
 
+  // Handle Initial Room
+  useEffect(() => {
+    if (initialRoom) {
+      setSelectedBuilding(initialRoom.buildingId);
+      setSelectedRoom(initialRoom);
+      // If we have a room, skip to Step 1 (Tenant Selection)
+      setCurrentStep(1);
+    }
+  }, [initialRoom]);
+
   // --- HANDLERS ---
   const handleBuildingChange = async (buildingId: number) => {
     setSelectedBuilding(buildingId);
@@ -54,7 +66,7 @@ export default function CreateContractWizard({
       const res = await axios.get(`/rooms/by-building/${buildingId}`);
       // Only show AVAILABLE rooms
       const availableRooms = res.data.filter(
-        (r: any) => r.status === "AVAILABLE"
+        (r: any) => r.status === "AVAILABLE",
       );
       setRooms(availableRooms);
     } catch (error) {

@@ -5,21 +5,23 @@ import {
   TouchableOpacity,
   RefreshControl,
   ActivityIndicator,
+  ScrollView,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { FontAwesome5, MaterialCommunityIcons } from "@expo/vector-icons";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function BillList() {
   const router = useRouter();
+  const [statusFilter, setStatusFilter] = useState("ALL");
   const [selectedMonth, setSelectedMonth] = useState(new Date());
 
   const currentMonthStr = `${String(selectedMonth.getMonth() + 1).padStart(
     2,
-    "0"
+    "0",
   )}-${selectedMonth.getFullYear()}`;
 
   const {
@@ -36,6 +38,15 @@ export default function BillList() {
     },
   });
 
+  const filteredBills = useMemo(() => {
+    if (!bills) return [];
+    if (statusFilter === "ALL") return bills;
+    // Special handling for UNPAID/OVERDUE if backend logic differs
+    // Assuming backend status returns DRAFT, PUBLISHED (which implies unpaid but published), PAID, OVERDUE
+    return bills.filter((b: any) => b.status === statusFilter);
+  }, [bills, statusFilter]);
+
+  /* Helpers */
   const getStatusInfo = (status: string) => {
     switch (status) {
       case "PAID":
@@ -105,6 +116,37 @@ export default function BillList() {
         </View>
       </View>
 
+      {/* FILTERS */}
+      <View className="px-6 py-3">
+        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+          {[
+            { id: "ALL", label: "Tất cả" },
+            { id: "DRAFT", label: "Nháp" },
+            { id: "PUBLISHED", label: "Đã phát hành" },
+            { id: "PAID", label: "Đã thu" },
+            { id: "OVERDUE", label: "Quá hạn" },
+          ].map((f) => (
+            <TouchableOpacity
+              key={f.id}
+              onPress={() => setStatusFilter(f.id)}
+              className={`mr-3 px-4 py-2 rounded-xl border ${
+                statusFilter === f.id
+                  ? "bg-[#383838] border-[#383838]"
+                  : "bg-white border-gray-200"
+              }`}
+            >
+              <Text
+                className={`font-bold text-xs ${
+                  statusFilter === f.id ? "text-white" : "text-gray-600"
+                }`}
+              >
+                {f.label}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+      </View>
+
       <View className="flex-1">
         {isLoading ? (
           <View className="flex-1 items-center justify-center">
@@ -112,9 +154,9 @@ export default function BillList() {
           </View>
         ) : (
           <FlatList
-            data={bills}
+            data={filteredBills}
             keyExtractor={(item) => item.id.toString()}
-            contentContainerStyle={{ padding: 20 }}
+            contentContainerStyle={{ padding: 24, paddingBottom: 100 }}
             refreshControl={
               <RefreshControl
                 refreshing={isLoading}

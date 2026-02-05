@@ -21,10 +21,14 @@ export default function RoomDetailModal({
   open,
   roomId,
   onCancel,
+  onCreateContract,
+  onMaintenanceAction,
 }: {
   open: boolean;
   roomId: number | null;
   onCancel: () => void;
+  onCreateContract?: (room: any) => void;
+  onMaintenanceAction?: (room: any) => void;
 }) {
   const [loading, setLoading] = useState(false);
   const [room, setRoom] = useState<any>(null);
@@ -65,11 +69,34 @@ export default function RoomDetailModal({
     <Modal
       open={open}
       onCancel={onCancel}
-      footer={[
-        <Button key="close" onClick={onCancel}>
-          Đóng
-        </Button>,
-      ]}
+      footer={
+        <div className="flex justify-end gap-3 pt-2">
+          <button
+            onClick={onCancel}
+            className="h-10 px-6 rounded-xl border border-gray-200 hover:bg-gray-50 text-gray-500 font-medium transition-colors"
+          >
+            Đóng
+          </button>
+
+          {room?.status === "AVAILABLE" && onCreateContract && (
+            <button
+              onClick={() => onCreateContract(room)}
+              className="h-10 px-6 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold flex items-center gap-2 shadow-lg shadow-emerald-100 transition-all hover:-translate-y-0.5"
+            >
+              <UserOutlined /> Tạo Hợp Đồng
+            </button>
+          )}
+
+          {room?.status === "MAINTENANCE" && onMaintenanceAction && (
+            <button
+              onClick={() => onMaintenanceAction(room)}
+              className="h-10 px-6 rounded-xl bg-[#D97757] hover:bg-[#c06040] text-white font-bold flex items-center gap-2 shadow-lg shadow-orange-100 transition-all hover:-translate-y-0.5"
+            >
+              <ToolOutlined /> Cập nhật Bảo trì
+            </button>
+          )}
+        </div>
+      }
       title={
         <div className="flex items-center gap-3">
           <span className="text-xl font-bold">Phòng {room?.name}</span>

@@ -187,27 +187,27 @@ export default function InvoicesPage() {
   return (
     <div className="max-w-7xl mx-auto">
       {/* HEADER */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 mb-8">
+      <div className="flex flex-col gap-4 mb-6 md:mb-8">
         <div>
-          <h1 className="text-3xl md:text-4xl claude-header mb-2">
+          <h1 className="text-2xl md:text-3xl lg:text-4xl claude-header mb-2">
             Quản lý Hóa đơn
           </h1>
-          <p className="text-gray-500 font-sans text-lg">
+          <p className="text-gray-500 font-sans text-sm md:text-base lg:text-lg">
             Theo dõi, tạo mới và quản lý thanh toán hàng tháng.
           </p>
         </div>
-        <div className="flex gap-3">
-          <button className="claude-btn-secondary flex items-center gap-2 text-sm">
-            <Download size={18} />
+        <div className="flex flex-col sm:flex-row gap-2 md:gap-3">
+          <button className="claude-btn-secondary flex items-center justify-center gap-2 text-sm md:text-base w-full sm:w-auto">
+            <Download size={16} className="md:w-[18px] md:h-[18px]" />
             <span>Xuất báo cáo</span>
           </button>
           <button
             onClick={() => setIsCreateModalOpen(true)}
-            className="claude-btn-primary flex items-center gap-2 group"
+            className="claude-btn-primary flex items-center justify-center gap-2 group w-full sm:w-auto"
           >
             <Plus
-              size={20}
-              className="group-hover:rotate-90 transition-transform"
+              size={18}
+              className="md:w-[20px] md:h-[20px] group-hover:rotate-90 transition-transform"
             />
             <span>Tạo hóa đơn</span>
           </button>
@@ -215,10 +215,10 @@ export default function InvoicesPage() {
       </div>
 
       {/* FILTERS */}
-      <div className="bg-white p-4 rounded-2xl border border-gray-200 shadow-sm mb-8 flex flex-wrap items-center gap-4">
-        <div className="flex items-center gap-2 text-gray-500 mr-2 px-2">
-          <Filter size={18} />
-          <span className="font-bold text-sm uppercase tracking-wide">
+      <div className="bg-white p-3 md:p-4 rounded-2xl border border-gray-200 shadow-sm mb-6 md:mb-8 flex flex-wrap items-center gap-3 md:gap-4">
+        <div className="flex items-center gap-2 text-gray-500 md:mr-2 md:px-2">
+          <Filter size={16} className="md:w-[18px] md:h-[18px]" />
+          <span className="font-bold text-xs md:text-sm uppercase tracking-wide">
             Bộ lọc
           </span>
         </div>
@@ -234,14 +234,14 @@ export default function InvoicesPage() {
               month: date ? date.format("MM-YYYY") : dayjs().format("MM-YYYY"),
             }))
           }
-          className="h-10 w-40 border-gray-200 hover:border-[#D97757] focus:border-[#D97757] rounded-xl font-medium"
+          className="h-9 md:h-10 w-32 md:w-40 border-gray-200 hover:border-[#D97757] focus:border-[#D97757] rounded-xl font-medium text-sm"
         />
 
         <Select
           placeholder="Tất cả trạng thái"
           allowClear
           value={filters.status}
-          className="w-48 h-10"
+          className="w-40 md:w-48 h-9 md:h-10 text-sm md:text-base"
           onChange={(val) => setFilters((prev) => ({ ...prev, status: val }))}
           options={Object.values(InvoiceStatus).map((status) => ({
             label: status === InvoiceStatus.PAID ? "Đã Thanh Toán" : status,
@@ -250,8 +250,8 @@ export default function InvoicesPage() {
         />
       </div>
 
-      {/* DATA TABLE */}
-      <div className="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden">
+      {/* DESKTOP TABLE VIEW */}
+      <div className="hidden md:block bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden">
         <Table
           columns={columns}
           dataSource={invoices}
@@ -276,6 +276,117 @@ export default function InvoicesPage() {
             ),
           }}
         />
+      </div>
+
+      {/* MOBILE CARD VIEW */}
+      <div className="md:hidden space-y-3">
+        {loading ? (
+          <div className="flex justify-center py-12">
+            <Loader2 size={32} className="animate-spin text-[#D97757]" />
+          </div>
+        ) : invoices.length === 0 ? (
+          <div className="bg-white border border-gray-200 rounded-2xl p-8 text-center">
+            <Empty
+              description={
+                <span className="text-gray-500">Chưa có hóa đơn nào</span>
+              }
+              image={Empty.PRESENTED_IMAGE_SIMPLE}
+            />
+          </div>
+        ) : (
+          invoices.map((invoice) => {
+            let statusColor = "";
+            let statusIcon = null;
+            let statusText = "";
+
+            switch (invoice.status) {
+              case InvoiceStatus.PAID:
+                statusColor =
+                  "bg-emerald-50 text-emerald-700 border-emerald-200";
+                statusIcon = <CheckCircle size={14} />;
+                statusText = "Đã Thanh Toán";
+                break;
+              case InvoiceStatus.PARTIAL:
+                statusColor = "bg-blue-50 text-blue-700 border-blue-200";
+                statusIcon = <Clock size={14} />;
+                statusText = "Partial";
+                break;
+              case InvoiceStatus.OVERDUE:
+                statusColor = "bg-red-50 text-red-700 border-red-200";
+                statusIcon = <AlertCircle size={14} />;
+                statusText = "Overdue";
+                break;
+              default:
+                statusColor = "bg-yellow-50 text-yellow-700 border-yellow-200";
+                statusIcon = <AlertCircle size={14} />;
+                statusText = invoice.status;
+            }
+
+            return (
+              <div
+                key={invoice.id}
+                className="bg-white border-2 border-gray-200 rounded-xl p-4 active:bg-gray-50 transition-colors"
+                onClick={() => {
+                  setSelectedInvoice(invoice);
+                  setIsDetailOpen(true);
+                }}
+              >
+                {/* Header */}
+                <div className="flex justify-between items-start mb-3">
+                  <div>
+                    <div className="font-mono font-bold text-gray-500 text-sm">
+                      #{invoice.id}
+                    </div>
+                    <div className="font-bold text-lg text-gray-900 mt-0.5">
+                      {invoice.contract?.room.name}
+                    </div>
+                    <div className="text-xs font-medium text-gray-500 uppercase tracking-wide">
+                      {invoice.contract?.room.building.name}
+                    </div>
+                  </div>
+                  <div
+                    className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg border ${statusColor} font-semibold text-[11px] uppercase`}
+                  >
+                    {statusIcon}
+                    {statusText}
+                  </div>
+                </div>
+
+                {/* Amount Info */}
+                <div className="space-y-2 pt-3 border-t border-gray-200">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-gray-600">Kỳ thu:</span>
+                    <span className="font-mono font-medium text-sm">
+                      {invoice.month}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm font-semibold text-gray-900">
+                      Tổng tiền:
+                    </span>
+                    <span className="font-mono font-bold text-lg text-gray-900">
+                      {formatCurrency(invoice.totalAmount)}
+                    </span>
+                  </div>
+                  {invoice.debtAmount > 0 && (
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-gray-600">Còn nợ:</span>
+                      <span className="font-mono font-bold text-[#C5221F]">
+                        {formatCurrency(invoice.debtAmount)}
+                      </span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Action hint */}
+                <div className="mt-3 pt-3 border-t border-gray-200 flex items-center justify-center gap-2 text-gray-500 text-sm">
+                  <Eye size={14} />
+                  <span>Nhấn để xem chi tiết</span>
+                </div>
+              </div>
+            );
+          })
+        )}
       </div>
 
       {/* Modals */}

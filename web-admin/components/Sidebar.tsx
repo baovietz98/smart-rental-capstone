@@ -14,6 +14,7 @@ import {
   Zap,
   Droplets,
   AlertTriangle,
+  Bell,
 } from "lucide-react";
 
 const menuItems = [
@@ -27,6 +28,7 @@ const menuItems = [
   { name: "Sự cố", href: "/issues", icon: AlertTriangle },
   { name: "Hóa đơn", href: "/invoices", icon: Receipt },
   { name: "Tài chính", href: "/finance", icon: Wallet },
+  { name: "Bảng tin", href: "/notifications", icon: Bell },
 ];
 
 interface SidebarProps {

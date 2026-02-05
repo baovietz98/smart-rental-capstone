@@ -187,38 +187,41 @@ export default function InvoiceDetailModal({
       <Modal
         open={isOpen}
         onCancel={onCancel}
-        width={900}
+        width="90vw"
+        style={{ maxWidth: 900 }}
         footer={null}
         className="gumroad-modal"
         closeIcon={
-          <span className="text-xl font-bold border-2 border-black w-8 h-8 flex items-center justify-center hover:bg-black hover:text-white transition-colors">
+          <span className="text-lg md:text-xl font-bold border-2 border-black w-7 h-7 md:w-8 md:h-8 flex items-center justify-center hover:bg-black hover:text-white transition-colors">
             ✕
           </span>
         }
       >
-        <div className="p-6 relative overflow-hidden">
+        <div className="p-3 md:p-6 relative overflow-hidden">
           {/* STAMP */}
           {isPaid && (
-            <div className="absolute top-10 right-10 transform rotate-12 border-4 border-green-600 text-green-600 text-6xl font-black p-4 opacity-80 pointer-events-none z-10">
-              ĐÃ THANH TOÁN
+            <div className="absolute top-6 md:top-10 right-4 md:right-10 transform rotate-12 border-2 md:border-4 border-green-600 text-green-600 text-2xl md:text-6xl font-black p-2 md:p-4 opacity-80 pointer-events-none z-10">
+              ĐÃ TT
             </div>
           )}
 
           {/* HEADER */}
-          <div className="flex justify-between items-start mb-8 border-b-2 border-black pb-6">
+          <div className="flex flex-col md:flex-row justify-between items-start gap-4 mb-4 md:mb-8 border-b-2 border-black pb-3 md:pb-6">
             <div>
-              <h2 className="text-4xl font-black uppercase tracking-tight mb-2">
+              <h2 className="text-2xl md:text-4xl font-black uppercase tracking-tight mb-1 md:mb-2">
                 Hóa Đơn Tiền Nhà
               </h2>
-              <div className="text-xl font-bold text-gray-600">
+              <div className="text-base md:text-xl font-bold text-gray-600">
                 Tháng {invoice.month}
               </div>
             </div>
-            <div className="text-right">
-              <div className="text-sm font-bold text-gray-500 uppercase">
+            <div className="text-left md:text-right">
+              <div className="text-xs md:text-sm font-bold text-gray-500 uppercase">
                 Mã HĐ
               </div>
-              <div className="text-2xl font-black">#{invoice.id}</div>
+              <div className="text-xl md:text-2xl font-black">
+                #{invoice.id}
+              </div>
               <Tag
                 color={
                   invoice.status === "PAID"
@@ -229,7 +232,7 @@ export default function InvoiceDetailModal({
                         ? "red"
                         : "blue"
                 }
-                className="mt-2 text-lg py-1 px-3 border-2 border-black font-bold"
+                className="mt-1 md:mt-2 text-sm md:text-lg py-0.5 md:py-1 px-2 md:px-3 border-2 border-black font-bold"
               >
                 {invoice.status}
               </Tag>
@@ -237,37 +240,45 @@ export default function InvoiceDetailModal({
           </div>
 
           {/* INFO */}
-          <div className="grid grid-cols-2 gap-8 mb-8">
-            <div className="bg-yellow-50 p-4 border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,0.1)]">
-              <h3 className="font-black uppercase mb-2 border-b-2 border-black inline-block">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-8 mb-4 md:mb-8">
+            <div className="bg-yellow-50 p-3 md:p-4 border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,0.1)]">
+              <h3 className="font-black text-sm md:text-base uppercase mb-2 border-b-2 border-black inline-block">
                 Thông tin phòng
               </h3>
-              <div className="grid grid-cols-[100px_1fr] gap-2 font-mono text-sm">
+              <div className="grid grid-cols-[80px_1fr] md:grid-cols-[100px_1fr] gap-1 md:gap-2 font-mono text-xs md:text-sm">
                 <span className="font-bold text-gray-500">Phòng:</span>
-                <span className="font-bold">{invoice.contract?.room.name}</span>
+                <span className="font-bold truncate">
+                  {invoice.contract?.room.name}
+                </span>
                 <span className="font-bold text-gray-500">Tòa nhà:</span>
-                <span>{invoice.contract?.room.building.name}</span>
+                <span className="truncate">
+                  {invoice.contract?.room.building.name}
+                </span>
                 <span className="font-bold text-gray-500">Khách thuê:</span>
-                <span>{invoice.contract?.tenant.name}</span>
+                <span className="truncate">
+                  {invoice.contract?.tenant.name}
+                </span>
                 <span className="font-bold text-gray-500">SĐT:</span>
-                <span>{invoice.contract?.tenant.phone}</span>
+                <span className="truncate">
+                  {invoice.contract?.tenant.phone}
+                </span>
               </div>
             </div>
-            <div className="bg-blue-50 p-4 border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,0.1)]">
-              <h3 className="font-black uppercase mb-2 border-b-2 border-black inline-block">
+            <div className="bg-blue-50 p-3 md:p-4 border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,0.1)]">
+              <h3 className="font-black text-sm md:text-base uppercase mb-2 border-b-2 border-black inline-block">
                 Thanh toán
               </h3>
-              <div className="grid grid-cols-[100px_1fr] gap-2 font-mono text-sm">
+              <div className="grid grid-cols-[80px_1fr] md:grid-cols-[100px_1fr] gap-1 md:gap-2 font-mono text-xs md:text-sm">
                 <span className="font-bold text-gray-500">Tổng tiền:</span>
-                <span className="font-black text-xl">
+                <span className="font-black text-sm md:text-xl break-all">
                   {invoice.totalAmount.toLocaleString()} đ
                 </span>
                 <span className="font-bold text-gray-500">Đã trả:</span>
-                <span className="text-green-600 font-bold">
+                <span className="text-green-600 font-bold break-all">
                   {invoice.paidAmount.toLocaleString()} đ
                 </span>
                 <span className="font-bold text-gray-500">Còn nợ:</span>
-                <span className="text-red-600 font-black text-lg">
+                <span className="text-red-600 font-black text-sm md:text-lg break-all">
                   {invoice.debtAmount.toLocaleString()} đ
                 </span>
               </div>
@@ -276,44 +287,47 @@ export default function InvoiceDetailModal({
 
           {/* PAYMENT QR (New Section) */}
           {!isPaid && invoice.debtAmount > 0 && (
-            <div className="bg-indigo-50 p-4 border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,0.1)] mb-8 flex gap-6 items-center">
+            <div className="bg-indigo-50 p-3 md:p-4 border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,0.1)] mb-4 md:mb-8 flex flex-col md:flex-row gap-4 md:gap-6 items-center md:items-start">
               <div className="bg-white p-2 border-2 border-black shrink-0">
                 <img
-                  src={`https://img.vietqr.io/image/TCB-1998199815-compact2.png?amount=${invoice.debtAmount}&addInfo=${encodeURIComponent(`THANH TOAN HD T${invoice.month} ${invoice.contract?.room?.name || ""}`)}&accountName=CAMELSTAY`}
+                  src={`https://img.vietqr.io/image/MB-9300131000273-compact2.png?amount=${invoice.debtAmount}&addInfo=${encodeURIComponent(`HD${invoice.id} ${invoice.contract?.room?.name || ""}`)}&accountName=CAMELSTAY`}
                   alt="VietQR"
-                  className="w-32 h-auto"
+                  className="w-24 md:w-32 h-auto"
                 />
               </div>
-              <div>
-                <h3 className="font-black uppercase mb-1 text-indigo-900">
+              <div className="flex-1 min-w-0 w-full">
+                <h3 className="font-black text-sm md:text-base uppercase mb-1 md:mb-2 text-indigo-900">
                   Thông tin chuyển khoản
                 </h3>
-                <div className="font-mono text-sm space-y-1">
+                <div className="font-mono text-xs md:text-sm space-y-0.5 md:space-y-1">
                   <div className="flex gap-2">
-                    <span className="font-bold text-gray-500 w-24">
+                    <span className="font-bold text-gray-500 w-20 md:w-24 flex-shrink-0">
                       Ngân hàng:
                     </span>
-                    <span className="font-bold">TECHCOMBANK</span>
+                    <span className="font-bold break-words">MB BANK</span>
                   </div>
                   <div className="flex gap-2">
-                    <span className="font-bold text-gray-500 w-24">Số TK:</span>
-                    <span className="font-black text-lg tracking-wider">
-                      1998 1998 15
+                    <span className="font-bold text-gray-500 w-20 md:w-24 flex-shrink-0">
+                      Số TK:
+                    </span>
+                    <span className="font-black text-sm md:text-lg tracking-wider">
+                      9300 131 000 273
                     </span>
                   </div>
                   <div className="flex gap-2">
-                    <span className="font-bold text-gray-500 w-24">
+                    <span className="font-bold text-gray-500 w-20 md:w-24 flex-shrink-0">
                       Chủ TK:
                     </span>
-                    <span className="font-bold">CAMELSTAY OWNER</span>
+                    <span className="font-bold break-words">
+                      CAMELSTAY OWNER
+                    </span>
                   </div>
                   <div className="flex gap-2">
-                    <span className="font-bold text-gray-500 w-24">
+                    <span className="font-bold text-gray-500 w-20 md:w-24 flex-shrink-0">
                       Nội dung:
                     </span>
-                    <span className="italic text-indigo-700">
-                      THANH TOAN HD T{invoice.month}{" "}
-                      {invoice.contract?.room?.name}
+                    <span className="italic text-indigo-700 break-words">
+                      HD{invoice.id} {invoice.contract?.room?.name}
                     </span>
                   </div>
                 </div>
@@ -322,14 +336,16 @@ export default function InvoiceDetailModal({
           )}
 
           {/* TABLE */}
-          <div className="mb-8">
+          <div className="mb-4 md:mb-8">
             {isEditing ? (
               <Form
                 form={form}
                 layout="vertical"
-                className="border-2 border-dashed border-black p-4 bg-gray-50"
+                className="border-2 border-dashed border-black p-3 md:p-4 bg-gray-50"
               >
-                <h3 className="font-bold uppercase mb-4">Chỉnh sửa hóa đơn</h3>
+                <h3 className="font-bold text-sm md:text-base uppercase mb-3 md:mb-4">
+                  Chỉnh sửa hóa đơn
+                </h3>
 
                 {/* Extra Charges */}
                 <Form.List name="extraCharges">
@@ -381,7 +397,7 @@ export default function InvoiceDetailModal({
                   )}
                 </Form.List>
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <Form.Item label="Giảm giá" name="discount">
                     <InputNumber
                       className="w-full"
@@ -407,39 +423,74 @@ export default function InvoiceDetailModal({
                 </div>
               </Form>
             ) : (
-              <Table
-                dataSource={displayItems}
-                columns={columns}
-                pagination={false}
-                rowKey={(record) => record.name + record.amount}
-                className="neobrutalism-table border-2 border-black"
-                summary={() => (
-                  <Table.Summary.Row className="bg-gray-100 font-bold">
-                    <Table.Summary.Cell
-                      index={0}
-                      colSpan={3}
-                      className="text-right uppercase"
+              <>
+                {/* DESKTOP TABLE */}
+                <div className="hidden md:block">
+                  <Table
+                    dataSource={displayItems}
+                    columns={columns}
+                    pagination={false}
+                    rowKey={(record) => record.name + record.amount}
+                    className="neobrutalism-table border-2 border-black"
+                    summary={() => (
+                      <Table.Summary.Row className="bg-gray-100 font-bold">
+                        <Table.Summary.Cell
+                          index={0}
+                          colSpan={3}
+                          className="text-right uppercase"
+                        >
+                          Tổng cộng
+                        </Table.Summary.Cell>
+                        <Table.Summary.Cell
+                          index={1}
+                          className="text-right text-lg"
+                        >
+                          {invoice.totalAmount.toLocaleString()}
+                        </Table.Summary.Cell>
+                      </Table.Summary.Row>
+                    )}
+                  />
+                </div>
+
+                {/* MOBILE CARD VIEW */}
+                <div className="md:hidden space-y-2">
+                  {displayItems.map((item, index) => (
+                    <div
+                      key={index}
+                      className="bg-gray-50 border-2 border-black p-3 text-xs"
                     >
-                      Tổng cộng
-                    </Table.Summary.Cell>
-                    <Table.Summary.Cell
-                      index={1}
-                      className="text-right text-lg"
-                    >
+                      <div className="font-bold mb-1">{item.name}</div>
+                      {item.note && (
+                        <div className="text-gray-500 mb-1">{item.note}</div>
+                      )}
+                      <div className="flex justify-between items-center">
+                        <div className="text-gray-600">
+                          {item.quantity} {item.unit} ×{" "}
+                          {item.unitPrice?.toLocaleString()}
+                        </div>
+                        <div className="font-black">
+                          {item.amount?.toLocaleString()}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                  <div className="bg-black text-white border-2 border-black p-3 flex justify-between items-center">
+                    <span className="font-black uppercase">Tổng cộng</span>
+                    <span className="font-black text-lg">
                       {invoice.totalAmount.toLocaleString()}
-                    </Table.Summary.Cell>
-                  </Table.Summary.Row>
-                )}
-              />
+                    </span>
+                  </div>
+                </div>
+              </>
             )}
           </div>
 
           {/* ACTIONS */}
-          <div className="flex justify-between items-center border-t-2 border-black pt-6 print:hidden">
-            <div className="flex gap-2">
+          <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-3 md:gap-0 border-t-2 border-black pt-4 md:pt-6 print:hidden">
+            <div className="flex flex-col sm:flex-row gap-2 order-2 md:order-1">
               <Button
                 icon={<Printer size={16} />}
-                className="gumroad-btn-secondary"
+                className="gumroad-btn-secondary text-sm md:text-base"
                 onClick={() => window.print()}
               >
                 In hóa đơn
@@ -448,7 +499,7 @@ export default function InvoiceDetailModal({
               {/* COPY LINK */}
               <Button
                 icon={<Share2 size={16} />}
-                className="gumroad-btn-secondary"
+                className="gumroad-btn-secondary text-sm md:text-base"
                 onClick={() => {
                   if (!invoice.accessCode) {
                     message.error("Hóa đơn này chưa có mã truy cập (cũ).");
@@ -465,7 +516,7 @@ export default function InvoiceDetailModal({
               {/* ZALO SHARE */}
               <Button
                 icon={<Send size={16} />}
-                className="bg-blue-500 text-white border-2 border-black font-bold hover:bg-blue-600 hover:text-white"
+                className="bg-blue-500 text-white border-2 border-black font-bold hover:bg-blue-600 hover:text-white text-sm md:text-base"
                 onClick={() => {
                   if (!invoice.accessCode) {
                     message.error("Hóa đơn này chưa có mã truy cập (cũ).");
@@ -480,14 +531,14 @@ export default function InvoiceDetailModal({
               </Button>
             </div>
 
-            <div className="flex gap-2">
+            <div className="flex flex-col sm:flex-row gap-2 order-1 md:order-2">
               {isDraft ? (
                 <>
                   {!isEditing && (
                     <Button
                       icon={<Edit size={16} />}
                       onClick={() => setIsEditing(true)}
-                      className="gumroad-btn-secondary"
+                      className="gumroad-btn-secondary text-sm md:text-base"
                       disabled={loading}
                     >
                       Sửa
@@ -499,7 +550,7 @@ export default function InvoiceDetailModal({
                   >
                     <Button
                       icon={<Send size={16} />}
-                      className="bg-[#00E054] text-white border-2 border-black font-bold shadow-[4px_4px_0px_0px_black] hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px] transition-all uppercase px-6 h-10"
+                      className="bg-[#00E054] text-white border-2 border-black font-bold shadow-[4px_4px_0px_0px_black] hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px] transition-all uppercase px-4 md:px-6 h-10 text-sm md:text-base"
                       loading={loading}
                     >
                       Phát hành
@@ -515,7 +566,7 @@ export default function InvoiceDetailModal({
                     >
                       <Button
                         danger
-                        className="border-2 border-red-500 font-bold"
+                        className="border-2 border-red-500 font-bold text-sm md:text-base"
                         loading={loading}
                       >
                         Hủy phát hành
@@ -528,7 +579,7 @@ export default function InvoiceDetailModal({
                       <Button
                         icon={<CheckCircle size={16} />}
                         onClick={() => setIsPaymentOpen(true)}
-                        className="bg-[#00E054] text-white border-2 border-black font-bold shadow-[4px_4px_0px_0px_black] hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px] transition-all uppercase px-6 h-10"
+                        className="bg-[#00E054] text-white border-2 border-black font-bold shadow-[4px_4px_0px_0px_black] hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px] transition-all uppercase px-4 md:px-6 h-10 text-sm md:text-base"
                       >
                         Thanh toán
                       </Button>

@@ -2,39 +2,22 @@
 
 import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import {
-  Card,
-  Typography,
-  Tag,
-  Divider,
-  Descriptions,
-  List,
-  Button,
-  Table,
-  Spin,
-  Empty,
-  Badge,
-} from "antd";
+import { Button, Spin } from "antd";
 import {
   FileText,
   Calendar,
   Home,
-  DollarSign,
-  Users,
-  Clock,
   CheckCircle,
   AlertCircle,
-  Download,
   MapPin,
   ChevronRight,
   ArrowLeft,
 } from "lucide-react";
 import axiosClient from "@/lib/axios-client";
-import { formatCurrency } from "../../../lib/utils";
+import { formatCurrency } from "@/lib/utils";
 import dayjs from "dayjs";
 import Link from "next/link";
-
-const { Title, Text } = Typography;
+import TenantEmptyState from "@/components/tenant/TenantEmptyState";
 
 interface Contract {
   id: number;
@@ -122,20 +105,32 @@ export default function TenantContractsPage() {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] text-center p-6">
         <AlertCircle size={48} className="text-red-500 mb-4" />
-        <Text type="danger" className="text-lg">
-          {error}
-        </Text>
+        <p className="text-lg text-red-500">{error}</p>
       </div>
     );
   }
 
   if (!contract) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[60vh] text-center p-6">
-        <FileText size={64} className="text-gray-300 mb-4" />
-        <Title level={4} className="text-gray-500">
-          Bạn chưa có hợp đồng nào
-        </Title>
+      <div className="min-h-screen bg-[#F9F9F7]">
+        <div className="bg-white/80 backdrop-blur-md px-5 py-4 sticky top-0 z-20 border-b border-slate-100 shadow-sm flex items-center gap-3">
+          <button
+            onClick={() => router.back()}
+            className="w-10 h-10 rounded-full bg-slate-50 hover:bg-slate-100 flex items-center justify-center active:scale-95 transition-all text-slate-600"
+          >
+            <ArrowLeft size={20} />
+          </button>
+          <h1 className="text-xl font-bold text-slate-900 tracking-tight">
+            Hợp đồng thuê
+          </h1>
+        </div>
+        <TenantEmptyState
+          icon={FileText}
+          title="Chưa có hợp đồng"
+          description="Bạn chưa có hợp đồng thuê nào đang hoạt động. Vui lòng liên hệ quản lý để biết thêm chi tiết."
+          actionLabel="Quay lại Trang chủ"
+          actionLink="/tenant"
+        />
       </div>
     );
   }
@@ -332,9 +327,7 @@ export default function TenantContractsPage() {
                 })
             ) : (
               <div className="text-center py-8 bg-white rounded-2xl border border-slate-100 border-dashed">
-                <Text className="text-slate-400 text-sm">
-                  Chưa có hóa đơn nào
-                </Text>
+                <p className="text-slate-400 text-sm">Chưa có hóa đơn nào</p>
               </div>
             )}
           </div>
