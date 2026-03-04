@@ -115,7 +115,7 @@ export default function TenantActivityPage() {
     }
     if (status === "OPEN") return "bg-blue-100 text-blue-700 border-blue-200";
     if (status === "IN_PROGRESS")
-      return "bg-purple-100 text-purple-700 border-purple-200";
+      return "bg-teal-100 text-teal-700 border-teal-200";
     if (status === "RESOLVED" || status === "CLOSED")
       return "bg-gray-100 text-gray-700 border-gray-200";
     return "bg-slate-100 text-slate-700 border-slate-200";

@@ -42,6 +42,19 @@ export class IssuesController {
     return this.issuesService.findAllForUser(user, { status });
   }
 
+  @Get('stats')
+  @Roles('ADMIN', 'TENANT')
+  @ApiOperation({
+    summary: 'Thống kê sự cố',
+    description: 'Lấy thống kê số lượng sự cố theo trạng thái',
+  })
+  @ApiQuery({ name: 'buildingId', required: false, type: Number })
+  getStats(
+    @Query('buildingId') buildingId?: string,
+  ) {
+    return this.issuesService.getStats(buildingId ? parseInt(buildingId) : undefined);
+  }
+
   @Post()
   @Roles('ADMIN', 'TENANT')
   @ApiOperation({

@@ -58,10 +58,22 @@ export class TenantsService {
     }
 
     // 3. Tạo Tenant với userId đã có
+    const { vehicles, ...tenantData } = createTenantDto;
+    
     return this.prisma.tenant.create({
       data: {
-        ...createTenantDto,
+        ...tenantData,
         userId: userId,
+        vehicles: {
+          create:
+            vehicles?.map((v) => ({
+              ...v,
+              type: v.type || 'Xe máy',
+            })) || [],
+        },
+      },
+      include: {
+        vehicles: true,
       },
     });
   }
@@ -85,13 +97,14 @@ export class TenantsService {
         _count: {
           select: { contracts: true },
         },
+        vehicles: true,
       },
       orderBy: { fullName: 'asc' },
     });
   }
 
   /**
-   * Tìm kiếm khách thuê theo tên hoặc số điện thoại
+   * Tìm kiếm khách thuê
    */
   async search(query: string) {
     return this.prisma.tenant.findMany({
@@ -107,15 +120,11 @@ export class TenantsService {
           where: { isActive: true },
           include: {
             room: {
-              include: {
-                building: true,
-              },
+              include: { building: true },
             },
           },
         },
-        _count: {
-          select: { contracts: true },
-        },
+        vehicles: true,
       },
     });
   }
@@ -128,6 +137,7 @@ export class TenantsService {
       where: { id },
       include: {
         user: true, // Include User to get email
+        vehicles: true,
         contracts: {
           include: {
             room: {
@@ -149,7 +159,7 @@ export class TenantsService {
   }
 
   /**
-   * Tìm khách thuê theo số điện thoại
+   * Tìm khách thuê theo SĐT
    */
   async findByPhone(phone: string) {
     const tenant = await this.prisma.tenant.findUnique({
@@ -163,13 +173,13 @@ export class TenantsService {
             },
           },
         },
+        vehicles: true,
+        user: true,
       },
     });
 
     if (!tenant) {
-      throw new NotFoundException(
-        `Không tìm thấy khách thuê với SĐT: ${phone}`,
-      );
+      throw new NotFoundException(`Không tìm thấy khách thuê với SĐT: ${phone}`);
     }
 
     return tenant;
@@ -197,9 +207,36 @@ export class TenantsService {
       }
     }
 
-    return this.prisma.tenant.update({
-      where: { id },
-      data: updateTenantDto,
+    const { vehicles, ...tenantData } = updateTenantDto;
+
+    // Transaction to update tenant and replace vehicles if provided
+    return this.prisma.$transaction(async (prisma) => {
+      // 1. Update Tenant Basic Info
+      const updatedTenant = await prisma.tenant.update({
+        where: { id },
+        data: tenantData,
+      });
+
+      // 2. Update Vehicles (Replace Strategy)
+      if (vehicles) {
+        // Delete all old vehicles
+        await prisma.vehicle.deleteMany({
+          where: { tenantId: id },
+        });
+
+        // Create new vehicles
+        if (vehicles.length > 0) {
+          await prisma.vehicle.createMany({
+            data: vehicles.map((v) => ({
+              ...v,
+              type: v.type || 'Xe máy',
+              tenantId: id,
+            })),
+          });
+        }
+      }
+
+      return updatedTenant;
     });
   }
 

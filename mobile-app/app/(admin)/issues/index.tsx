@@ -196,7 +196,8 @@ export default function IssuesScreen() {
           return (
             <TouchableOpacity
               className="bg-white p-5 mb-4 rounded-2xl border border-gray-100 shadow-sm"
-              onPress={() => handleStatusPress(item)}
+              onPress={() => router.push(`/(admin)/issues/${item.id}` as any)}
+              onLongPress={() => handleStatusPress(item)}
             >
               <View className="flex-row justify-between items-start mb-2">
                 <View className="flex-row items-center gap-2">

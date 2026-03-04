@@ -63,14 +63,22 @@ export class RoomsController {
   @Get()
   @ApiOperation({
     summary: 'Lấy danh sách tất cả phòng',
-    description: 'Trả về danh sách tất cả phòng trong hệ thống',
+    description: 'Trả về danh sách tất cả phòng trong hệ thống, có thể lọc',
   })
+  @ApiQuery({ name: 'buildingId', required: false, type: Number })
+  @ApiQuery({ name: 'status', required: false, enum: RoomStatus })
   @ApiResponse({
     status: 200,
     description: 'Lấy danh sách thành công',
   })
-  findAll() {
-    return this.roomsService.findAll();
+  findAll(
+    @Query('buildingId') buildingId?: string,
+    @Query('status') status?: RoomStatus,
+  ) {
+    return this.roomsService.findAll({
+      buildingId: buildingId ? parseInt(buildingId, 10) : undefined,
+      status,
+    });
   }
 
   @Get('by-building/:buildingId')

@@ -8,208 +8,96 @@
 
 ## 1. Tổng quan dự án
 
-Hệ thống quản lý nhà trọ, căn hộ dịch vụ và chung cư mini.
-Dự án tập trung vào **tính chính xác của dữ liệu tài chính** (hóa đơn, điện nước) và **tự động hóa quy trình quản lý**.
+Hệ thống quản lý nhà trọ, căn hộ dịch vụ và chung cư mini đa nền tảng.
+Dự án tập trung vào **tính chính xác của dữ liệu tài chính** (hóa đơn, điện nước, công nợ, thanh toán từng phần) và **tự động hóa quy trình quản lý**.
 
-### Ràng buộc cốt lõi
+### Trải nghiệm Người dùng (UX/UI Strategy)
 
-* **Unit-based Management:** Quản lý theo **Phòng/Căn hộ (Unit)**. *KHÔNG* quản lý theo Giường/Ký túc xá.
-* **Target Audience:**
+Theo hành vi thực tế, khách thuê thường lười tải ứng dụng riêng. Do đó, hệ thống được thiết kế phân chia nền tảng thông minh:
 
-  * **Admin (Chủ nhà):** Web Admin (quản lý tổng quan) + Mobile App (đi chốt điện nước).
-  * **Tenant (Khách thuê):** Mobile App (xem hóa đơn, thanh toán QR, báo sự cố).
+*   **Web Portal (Responsive Mobile-First):** Phục vụ cho **CẢ ADMIN (Chủ nhà) VÀ TENANT (Khách thuê)**.
+    *   **Admin:** Dashboard Command Center chuyên sâu, biểu đồ, quản lý chi tiết.
+    *   **Tenant:** Đăng nhập qua trình duyệt web trên điện thoại mượt mà như app thật để xem hóa đơn, hợp đồng, báo cáo sự cố (Không cần tải app).
+*   **Mobile App:** Dành **RIÊNG CHO ADMIN**. Tiện lợi để chủ nhà cầm điện thoại đi chốt số điện nước các tầng/vòng, nhận thông báo sự cố tức thời, và kiểm tra nhanh tình trạng khi không ngồi máy tính.
 
 ---
 
 ## 2. Kiến trúc & Tech Stack
 
-### A. System Architecture (Manual Monorepo)
+### A. System Architecture (Monorepo-style)
 
-```
+```text
 quan-ly-nha-tro/
-├── backend/            # NestJS (Node.js) - RESTful API
-│   ├── prisma/         # Schema Database (PostgreSQL)
-│   └── src/            # Source code (Modules, Services, Controllers)
-├── web-admin/          # Next.js 14+ (App Router) - Admin Portal
-│   └── src/app/        # Pages & UI Components
-├── mobile-app/         # Expo (React Native) - Super App (Admin & Tenant)
-└── docker-compose.yml  # Infrastructure (PostgreSQL + PgAdmin)
+├── backend/            # NestJS 11 - RESTful API
+├── web-admin/          # Next.js (App Router) - Admin & Tenant Portal
+├── mobile-app/         # Expo (React Native) - Admin Only App
+└── docker-compose.yml  # PostgreSQL Infrastructure
 ```
 
 ### B. Technology Details
 
-* **Database:** PostgreSQL (Dockerized)
-* **ORM:** Prisma (Schema-first workflow)
-* **Backend:** NestJS, Passport-JWT, Swagger (OpenAPI), class-validator
-* **Frontend (Web):** Next.js, TailwindCSS, Ant Design, Axios
-* **Mobile:** Expo, React Native Paper, Expo Router
+*   **Database:** PostgreSQL
+*   **ORM:** Prisma 6
+*   **Backend:** NestJS 11, Passport-JWT, Swagger (OpenAPI), class-validator, Bcrypt.
+*   **Frontend Web (Admin & Tenant):** Next.js 14/15, TailwindCSS v4, Ant Design, Axios, Lucide React.
+*   **Mobile App (Admin Only):** Expo, React Native, Nativewind (Tailwind), React Navigation, Expo Router, Tanstack Query (React Query).
 
 ---
 
-## 3. Nghiệp vụ (AI phải tuân theo)
+## 3. Core Business Logic & Workflows
 
 ### A. Hierarchy (Cấu trúc dữ liệu)
 
-`Building (Tòa nhà) -> Room (Phòng) -> Contract (Hợp đồng) -> Tenant (Khách)`
+`Building -> Room -> Contract -> Tenant (with User Account)`
 
-### B. Core Workflows (Quy trình chính)
+### B. Quy trình Tính tiền & Hóa đơn (Billing Engine)
 
-#### 1. Quản lý Hợp đồng & Cư trú
+Đây là trái tim của hệ thống.
+*   **Services:** Phân loại `INDEX` (có chỉ số đầu/cuối như Điện, Nước) và `FIXED` (Cố định như Rác, Wifi). Có các cơ chế tính `PER_ROOM`, `PER_PERSON`, `PER_USAGE`.
+*   **Chốt chỉ số (ServiceReadings):** Admin đi chốt số điện nước hàng tháng. Hệ thống tự tính toán lượng tiêu thụ và thành tiền.
+*   **Hóa đơn (Invoices):** 
+    *   Bao gồm: Tiền phòng + Tiền dịch vụ + Nợ cũ (Previous Debt) + Phí phát sinh (Extra Charge) - Giảm giá (Discount).
+    *   Hỗ trợ **Thanh toán từng phần (PARTIAL)**. Khi khách thanh toán chưa đủ, hóa đơn ở trạng thái `PARTIAL`, phần thiếu sẽ cộng dồn thành `debtAmount` hoặc `previousDebt` cho tháng sau.
+    *   Trạng thái Hóa đơn: `DRAFT`, `PUBLISHED`, `PARTIAL`, `PAID`, `OVERDUE`, `CANCELLED`.
+*   **Giao dịch (Transactions):** Bản ghi chi tiết mọi khoản thu/chi (Tiền cọc, thanh toán hóa đơn...).
 
-* Room có trạng thái: `AVAILABLE`, `RENTED`, `MAINTENANCE`.
-* Khi tạo **Contract (isActive = true)** → **Room** tự động chuyển sang `RENTED`.
-* **Tenant:** Một hợp đồng có 1 người đại diện (Representative) và nhiều thành viên ở cùng.
+### C. Quản lý Phòng & Hợp đồng
+*   **Room Status:** `AVAILABLE`, `RENTED`, `MAINTENANCE`.
+*   Khi Contract hết hạn hoặc hủy, phòng tự động trở về `AVAILABLE`.
+*   Hỗ trợ **Move Room Wizard** (Chuyển phòng an toàn, bảo lưu cọc/nợ).
 
-#### 2. Quy trình Tính tiền (Billing Engine) — *Quan trọng nhất*
+### D. Tương tác Khách thuê - Chủ nhà
+*   **Issues/GuestRequests:** Khách thuê tạo ticket/báo cáo sự cố hoặc khách đến chơi từ Web Portal. Admin nhận trên Web/Mobile App và xử lý (`OPEN`, `PROCESSING`, `DONE`).
+*   **Notifications:** Thông báo hệ thống thời gian thực về Hóa đơn mới, thanh toán thành công, cập nhật sự cố.
 
-* **Input:** Chỉ số cũ & Chỉ số mới (Điện/Nước).
-* **Công thức:**
+---
 
-```javascript
-TotalBill = RoomPrice
-          + (ElectricUsage * ElectricPrice)
-          + (WaterUsage * WaterPrice)
-          + FixedServices (Wifi, Rác...)
-          + Debt (Nợ cũ)
-```
+## 4. Database Schema (Prisma)
 
-* **Validation:** Chỉ số mới phải `>=` chỉ số cũ. Nếu nhỏ hơn (do quay vòng đồng hồ), cần cờ (flag) để xác nhận.
+Cấu trúc DB thực tế tham khảo từ `schema.prisma`:
 
-#### 3. Quy trình Sự cố (Issue Tracking)
-
-* Tenant tạo Ticket (có thể kèm ảnh) → Chủ nhà nhận thông báo → Chủ nhà cập nhật trạng thái: `OPEN` → `PROCESSING` → `DONE`.
-
-#### 4. Database Schema (Source of Truth)
-
-*Dưới đây là cấu trúc DB chuẩn dùng cho Prisma. AI hãy dựa vào đây để viết code.*
-
-```prisma
-model Building {
-  id          Int      @id @default(autoincrement())
-  name        String
-  address     String?
-  rooms       Room[]
-  createdAt   DateTime @default(now())
-}
-
-model Room {
-  id          Int        @id @default(autoincrement())
-  name        String     // P.101, P.102
-  price       Float      // Giá thuê cơ bản
-  area        Float?
-  maxTenants  Int        @default(2)
-  status      RoomStatus @default(AVAILABLE)
-  
-  buildingId  Int
-  building    Building   @relation(fields: [buildingId], references: [id])
-  
-  assets      Json?      // Danh sách tài sản trong phòng
-  contracts   Contract[]
-  issues      Issue[]
-}
-
-enum RoomStatus {
-  AVAILABLE
-  RENTED
-  MAINTENANCE
-}
-
-model Tenant {
-  id          Int        @id @default(autoincrement())
-  fullName    String
-  phone       String     @unique
-  cccd        String?
-  info        Json?      // Ảnh CCCD, quê quán
-  contracts   Contract[]
-}
-
-model Contract {
-  id             Int       @id @default(autoincrement())
-  startDate      DateTime
-  endDate        DateTime?
-  deposit        Float
-  price          Float     // Giá thuê chốt tại thời điểm ký
-  isActive       Boolean   @default(true)
-  
-  roomId         Int
-  room           Room      @relation(fields: [roomId], references: [id])
-  
-  tenantId       Int
-  tenant         Tenant    @relation(fields: [tenantId], references: [id])
-  
-  invoices       Invoice[]
-}
-
-model ServiceReading {
-  id          Int      @id @default(autoincrement())
-  roomId      Int
-  month       DateTime // Ngày đầu tháng (VD: 2025-11-01)
-  readings    Json     // { "dien": { "old": 100, "new": 150 }, ... }
-  totalAmount Float
-}
-
-model Invoice {
-  id          Int           @id @default(autoincrement())
-  month       DateTime
-  amount      Float
-  paidAmount  Float         @default(0)
-  status      InvoiceStatus @default(UNPAID)
-  details     Json          // Snapshot chi tiết giá tiền lúc tính
-  
-  contractId  Int
-  contract    Contract      @relation(fields: [contractId], references: [id])
-  createdAt   DateTime      @default(now())
-}
-
-enum InvoiceStatus {
-  UNPAID
-  PARTIAL
-  PAID
-}
-
-model Issue {
-  id          Int      @id @default(autoincrement())
-  title       String
-  description String?
-  status      String   @default("OPEN")
-  roomId      Int
-  room        Room     @relation(fields: [roomId], references: [id])
-  createdAt   DateTime @default(now())
-}
-```
+*   **User & Tenant:** `User` chứa thông tin đăng nhập (Role: `ADMIN`, `TENANT`), link `1-1` với `Tenant` chứa thông tin thuê (CCCD, Xe cộ).
+*   **Contract:** Lưu trữ `price`, `deposit`, `paymentDay`, `startDate`, `endDate`.
+*   **Service & ServiceReading:** `oldIndex`, `newIndex`, `usage`, `totalCost`.
+*   **Invoice:** `roomCharge`, `serviceCharge`, `debtAmount`, `paidAmount`, `status`, `lineItems`.
+*   **Transaction:** `amount`, `type`, `invoiceId`.
 
 ---
 
 ## 5. Development Strategy (Quy tắc cho AI Assistant)
 
 **Nguyên tắc chung:**
+1.  **Backend First:** Viết Schema -> Migration -> RESTful API (DTOs, class-validator) -> Swagger.
+2.  **Shared Types:** Đảm bảo kiểu dữ liệu đồng nhất giữa schema Prisma và giao diện hiển thị.
+3.  **Bảo mật:** Verify kĩ quyền trên Controller (Admin vs Tenant guards). Không leak thông tin phòng khác cho Tenant.
 
-* **Backend First (NestJS + Claude Model):** Luôn ưu tiên viết Logic API trước.
-* **Bắt buộc:** Tạo DTO (ví dụ: `CreateBuildingDto`, `UpdateRoomDto`) và dùng `class-validator` để validate dữ liệu đầu vào.
-* **Sau khi viết Controller:** Thêm Swagger Decorators (`@ApiTags`, `@ApiOperation`) để sinh tài liệu API.
+**Frontend Web (Next.js):**
+*   Lấy API làm gốc. Xử lý Server Components nếu phù hợp hoặc Client Components dùng Axios.
+*   Dùng **Ant Design** kết hợp **Tailwind CSS v4** để dựng UI cao cấp. 
+*   **AESTHETICS CHẤT LƯỢNG CAO:** Đi theo trường phái Command Center / Bento Grid, ưu tiên phối màu tinh tế. Không thiết kế giao diện quê mùa, đơn điệu.
+*   **Responsive Cực Quan Trọng:** Vì Tenant dùng Web trên Mobile. Trải nghiệm lướt web trên điện thoại phải như một Native App thực thụ (Vuốt chạm mượt, nút bấm to rõ, không bị vỡ layout).
 
-**Frontend Follows (Next.js/Expo + Gemini Model):**
-
-* Chỉ bắt đầu code UI khi API (DTO + routes) đã rõ ràng.
-* Dùng **Ant Design** (Web) và **React Native Paper** (Mobile) để dựng UI nhanh.
-* Dùng **axios** để gọi API từ frontend.
-
-**Security & Quality:**
-
-* Luôn validate dữ liệu nhạy cảm (Tiền nong, chỉ số điện nước).
-* Không hard-code password/secret key (sử dụng `.env`).
-
----
-
-## 5. Ghi chú / Checklist nhanh
-
-* [ ] Backend: Prisma schema + Migrations
-* [ ] Backend: DTOs + Controllers + Services (class-validator + Swagger)
-* [ ] Billing Engine: Implement validation cho chỉ số và logic tính tiền
-* [ ] Mobile: Chốt chỉ số (offline-capable), upload ảnh, sync
-* [ ] Web Admin: Dashboard quản lý tòa nhà, phòng, hợp đồng, hóa đơn, ticket
-* [ ] Security: JWT Auth, input sanitization, rate-limiting nếu cần
-* [ ] Testing: Unit tests cho Billing Engine và các validation quan trọng
-
----
-
+**Mobile App (Expo):**
+*   Chỉ phục vụ cho **ADMIN**.
+*   Tối ưu hóa các tính năng dễ dàng thao tác 1 tay (VD: Điền số điện).
+*   Tính năng offline-capable bằng `React Query` persister (Có thể chốt điện nước ngay cả khi dưới tầng hầm không có Wi-Fi/4G, đồng bộ khi có mạng).

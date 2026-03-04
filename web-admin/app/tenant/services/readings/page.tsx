@@ -276,9 +276,9 @@ export default function TenantReadingsPage() {
           >
             <ArrowLeft size={22} />
           </button>
-          <h1 className="text-xl font-bold text-slate-900 tracking-tight">
+          <h2 className="text-xl font-bold text-slate-900 tracking-tight">
             Chốt Điện Nước
-          </h1>
+          </h2>
         </div>
         <span className="text-xs font-bold bg-indigo-50 text-indigo-600 px-3 py-1.5 rounded-full border border-indigo-100 flex items-center gap-1.5">
           <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-pulse"></span>

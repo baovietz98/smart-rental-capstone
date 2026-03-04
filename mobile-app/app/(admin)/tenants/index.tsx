@@ -129,7 +129,7 @@ export default function TenantsScreen() {
         <FlatList
           data={filteredTenants}
           keyExtractor={(item) => item.id.toString()}
-          contentContainerStyle={{ padding: 24, paddingBottom: 100 }}
+          contentContainerStyle={{ padding: 24, paddingBottom: 120 }}
           refreshControl={
             <RefreshControl
               refreshing={isLoading}

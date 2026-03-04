@@ -593,49 +593,77 @@ export default function InvoiceDetailModal({
 
       <style jsx global>{`
         @media print {
-          body > * {
+          /* Hide main app content */
+          body > #__next,
+          body > main,
+          body > div[data-reactroot],
+          .ant-layout {
             display: none !important;
           }
-          .ant-modal-root,
-          .ant-modal-root * {
-            visibility: visible !important;
-            display: block !important;
+
+          /* Force page styling */
+          @page {
+            size: A4;
+            margin: 1cm;
           }
+
+          /* Ensure modal portal is visible */
           .ant-modal-root {
-            position: absolute;
-            left: 0;
-            top: 0;
-            width: 100%;
-            height: 100%;
+            position: absolute !important;
+            top: 0 !important;
+            left: 0 !important;
+            width: 100% !important;
+            height: auto !important;
+            padding: 0 !important;
+            margin: 0 !important;
           }
+
+          /* Hide overlay/mask */
           .ant-modal-mask {
             display: none !important;
           }
+
+          /* Reset modal wrapper positioning */
           .ant-modal-wrap {
-            position: static !important;
-            width: 100%;
-            height: 100%;
+            position: absolute !important;
+            top: 0 !important;
+            left: 0 !important;
+            width: 100% !important;
+            display: block !important;
             overflow: visible !important;
           }
+
+          /* Reset modal to take full page */
           .ant-modal {
-            position: static !important;
-            top: 0 !important;
-            width: 100% !important;
             max-width: 100% !important;
-            margin: 0 !important;
+            width: 100% !important;
+            top: 0 !important;
             padding: 0 !important;
+            margin: 0 !important;
             box-shadow: none !important;
           }
+
+          /* Ensure content is visible and unstyled */
           .ant-modal-content {
             box-shadow: none !important;
             border: none !important;
             padding: 0 !important;
+            background: white !important;
           }
+
+          /* Hide modal close button */
           .ant-modal-close {
             display: none !important;
           }
+
+          /* General hide class for print */
           .print\\:hidden {
             display: none !important;
+          }
+
+          /* Prevent elements from breaking across pages */
+          .break-inside-avoid {
+            break-inside: avoid;
           }
         }
       `}</style>

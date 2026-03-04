@@ -103,15 +103,25 @@ export default function BillList() {
           </Text>
         </View>
 
-        <View className="flex-row items-center bg-gray-50 px-3 py-2 rounded-2xl border border-gray-100">
-          <TouchableOpacity onPress={() => changeMonth(-1)} className="p-1">
-            <FontAwesome5 name="chevron-left" size={10} color="#374151" />
-          </TouchableOpacity>
-          <Text className="mx-3 text-xs font-bold text-gray-700">
-            {currentMonthStr}
-          </Text>
-          <TouchableOpacity onPress={() => changeMonth(1)} className="p-1">
-            <FontAwesome5 name="chevron-right" size={10} color="#374151" />
+        <View className="flex-row items-center gap-3">
+          <View className="flex-row items-center bg-gray-50 px-3 py-2 rounded-2xl border border-gray-100">
+            <TouchableOpacity onPress={() => changeMonth(-1)} className="p-1">
+              <FontAwesome5 name="chevron-left" size={10} color="#374151" />
+            </TouchableOpacity>
+            <Text className="mx-3 text-xs font-bold text-gray-700">
+              {currentMonthStr}
+            </Text>
+            <TouchableOpacity onPress={() => changeMonth(1)} className="p-1">
+              <FontAwesome5 name="chevron-right" size={10} color="#374151" />
+            </TouchableOpacity>
+          </View>
+
+          <TouchableOpacity
+            onPress={() => router.push("/(admin)/bills/new")}
+            className="w-10 h-10 bg-[#DA7756] rounded-2xl items-center justify-center shadow-sm"
+            style={{ elevation: 2 }}
+          >
+            <MaterialCommunityIcons name="plus" size={20} color="white" />
           </TouchableOpacity>
         </View>
       </View>
@@ -156,7 +166,7 @@ export default function BillList() {
           <FlatList
             data={filteredBills}
             keyExtractor={(item) => item.id.toString()}
-            contentContainerStyle={{ padding: 24, paddingBottom: 100 }}
+            contentContainerStyle={{ padding: 24, paddingBottom: 120 }}
             refreshControl={
               <RefreshControl
                 refreshing={isLoading}

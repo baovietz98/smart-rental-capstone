@@ -34,12 +34,13 @@ interface Tenant {
     dob?: string;
     email?: string;
     job?: string;
-    licensePlate?: string;
-    hometown?: string;
-    note?: string;
-    cccdFront?: string;
     cccdBack?: string;
   };
+  vehicles?: {
+    id?: number;
+    plateNumber: string;
+    type: string;
+  }[];
 }
 
 // Sub-component for Uploading CCCD
@@ -478,26 +479,61 @@ export default function TenantsPage() {
                       </span>
                     }
                     name={["info", "hometown"]}
-                    className="md:col-span-2"
                   >
                     <Input
                       className="w-full px-4 py-2 rounded-lg border border-gray-200 focus:border-[#D97757] outline-none"
                       placeholder="Địa chỉ thường trú..."
                     />
                   </Form.Item>
-                  <Form.Item
-                    label={
-                      <span className="font-medium text-gray-700">
-                        Biển số xe
-                      </span>
-                    }
-                    name={["info", "licensePlate"]}
-                  >
-                    <Input
-                      className="w-full px-4 py-2 rounded-lg border border-gray-200 focus:border-[#D97757] outline-none"
-                      placeholder="29A-123.45"
-                    />
-                  </Form.Item>
+
+                  <div className="md:col-span-2">
+                    <label className="font-medium text-gray-700 block mb-2">
+                      Thông tin xe
+                    </label>
+                    <Form.List name="vehicles">
+                      {(fields, { add, remove }) => (
+                        <div className="space-y-2">
+                          {fields.map(({ key, name, ...restField }) => (
+                            <div key={key} className="flex gap-2 items-start">
+                              <Form.Item
+                                {...restField}
+                                name={[name, "plateNumber"]}
+                                rules={[
+                                  {
+                                    required: true,
+                                    message: "Nhập biển số",
+                                  },
+                                ]}
+                                className="mb-0 flex-1"
+                              >
+                                <Input placeholder="Biển số (VD: 29A-123.45)" />
+                              </Form.Item>
+                              <Form.Item
+                                {...restField}
+                                name={[name, "type"]}
+                                className="mb-0 w-32"
+                              >
+                                <Input placeholder="Loại xe" />
+                              </Form.Item>
+                              <button
+                                onClick={() => remove(name)}
+                                className="p-2 text-red-500 hover:bg-red-50 rounded"
+                              >
+                                <Trash2 size={16} />
+                              </button>
+                            </div>
+                          ))}
+                          <button
+                            type="button"
+                            onClick={() => add()}
+                            className="flex items-center gap-1 text-sm text-[#D97757] font-medium hover:underline mt-1"
+                          >
+                            <Plus size={16} /> Thêm xe
+                          </button>
+                        </div>
+                      )}
+                    </Form.List>
+                  </div>
                   <Form.Item
                     label={
                       <span className="font-medium text-gray-700">Ghi chú</span>
@@ -651,13 +687,27 @@ export default function TenantsPage() {
                       {selectedTenantDetail.info?.job || "---"}
                     </p>
                   </div>
-                  <div>
+                  <div className="col-span-2">
                     <label className="block text-xs font-bold text-gray-400 uppercase mb-1">
-                      Biển số xe
+                      Thông tin xe
                     </label>
-                    <p className="font-semibold text-gray-800">
-                      {selectedTenantDetail.info?.licensePlate || "---"}
-                    </p>
+                    {selectedTenantDetail.vehicles &&
+                    selectedTenantDetail.vehicles.length > 0 ? (
+                      <div className="space-y-1">
+                        {selectedTenantDetail.vehicles.map((v, idx) => (
+                          <div key={idx} className="flex gap-2">
+                            <span className="font-bold text-gray-800">
+                              {v.plateNumber}
+                            </span>
+                            <span className="text-gray-500">
+                              ({v.type || "Xe máy"})
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="font-semibold text-gray-800">---</p>
+                    )}
                   </div>
                   <div className="col-span-2">
                     <label className="block text-xs font-bold text-gray-400 uppercase mb-1">

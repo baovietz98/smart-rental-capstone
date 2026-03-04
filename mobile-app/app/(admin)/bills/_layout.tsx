@@ -15,11 +15,22 @@ export default function BillsLayout() {
     >
       <Stack.Screen
         name="index"
-        options={{ title: "Invoices", headerLargeTitle: true }}
+        options={{ title: "Invoices", headerShown: false }}
       />
       <Stack.Screen
         name="[id]"
-        options={{ title: "Bill Details", presentation: "modal" }}
+        options={{
+          title: "Bill Details",
+          presentation: "modal",
+          headerShown: false,
+        }}
+      />
+      <Stack.Screen
+        name="new"
+        options={{
+          presentation: "modal",
+          headerShown: false,
+        }}
       />
     </Stack>
   );

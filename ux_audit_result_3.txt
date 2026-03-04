@@ -1,0 +1,32 @@
+﻿
+[UX AUDIT] 121 files checked
+--------------------------------------------------
+[!] ISSUES (10):
+  - [Color] _layout.tsx: PURPLE DETECTED ('#EDE9FE'). Banned by Maestro rules. Use Teal/Cyan/Emerald instead.
+  - [Color] [id].tsx: PURPLE DETECTED ('purple'). Banned by Maestro rules. Use Teal/Cyan/Emerald instead.
+  - [Hick's Law] index.tsx: 8 nav items (Max 7)
+  - [Color] page.tsx: PURPLE DETECTED ('purple'). Banned by Maestro rules. Use Teal/Cyan/Emerald instead.
+  - [Color] page.tsx: PURPLE DETECTED ('purple'). Banned by Maestro rules. Use Teal/Cyan/Emerald instead.
+  - [Color] page.tsx: PURPLE DETECTED ('purple'). Banned by Maestro rules. Use Teal/Cyan/Emerald instead.
+  - [Color] page.tsx: PURPLE DETECTED ('purple'). Banned by Maestro rules. Use Teal/Cyan/Emerald instead.
+  - [Cognitive Load] ExtensionModal.tsx: Form inputs without labels. Use <label> for accessibility and clarity.
+  - [Cognitive Load] UploadCCCD.tsx: Form inputs without labels. Use <label> for accessibility and clarity.
+  - [Cognitive Load] RoomListView.tsx: Form inputs without labels. Use <label> for accessibility and clarity.
+[*] WARNINGS (830):
+  - [Animation] index.tsx: Routing detected without page transitions. Consider fade/slide for context continuity.
+  - [Animation] modal.tsx: Routing detected without page transitions. Consider fade/slide for context continuity.
+  - [Reflective] _layout.tsx: Long-form content without brand story/values. Add 'About' or 'Why We Exist' section.
+  - [Trust] _layout.tsx: No social proof detected. Consider adding testimonials, ratings, or 'Trusted by' logos.
+  - [Typography] _layout.tsx: No line length constraint (45-75ch). Use max-w-prose or max-w-[65ch].
+  - [Typography] _layout.tsx: Text elements found without line-height. Body: 1.4-1.6, Headings: 1.1-1.3
+  - [Visual] _layout.tsx: Flat design with no depth. Consider shadows or subtle gradients for hierarchy.
+  - [Animation] _layout.tsx: Routing detected without page transitions. Consider fade/slide for context continuity.
+  - [Fitts' Law] dashboard.tsx: Small targets (< 44px)
+  - [Von Restorff] dashboard.tsx: No primary CTA
+  - [Cognitive Load] dashboard.tsx: High visual noise detected. Many colors and borders increase cognitive load.
+  - [Typography] dashboard.tsx: Fixed font sizes without clamp(). Consider fluid typography: clamp(MIN, PREFERRED, MAX)
+  - [Color] dashboard.tsx: 7 distinct colors. Consider 60-30-10 rule: dominant (60%), secondary (30%), accent (10%).
+  - [Color] dashboard.tsx: Possible low-contrast combination detected. Verify WCAG AA (4.5:1 for text).
+  - [Animation] dashboard.tsx: Routing detected without page transitions. Consider fade/slide for context continuity.
+[+] PASSED CHECKS: 55
+STATUS: FAIL

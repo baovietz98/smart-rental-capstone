@@ -108,6 +108,7 @@ export default function ExtensionModal({
             rules={[{ required: true }]}
           >
             <InputNumber
+              aria-label="months"
               className="w-full h-11 border-gray-200 rounded-lg pt-1"
               formatter={(value) =>
                 `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")

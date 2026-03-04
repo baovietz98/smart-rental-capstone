@@ -22,6 +22,7 @@ export function middleware(request: NextRequest) {
         !path.startsWith('/static') &&
         !path.startsWith('/forgot-password') &&
         !path.startsWith('/reset-password') &&
+        !path.startsWith('/bill') && // Cho phép xem hóa đơn public
         !path.includes('.') // file extension like .ico, .png
     ) {
         // Nếu KHÔNG có token -> Redirect về Login

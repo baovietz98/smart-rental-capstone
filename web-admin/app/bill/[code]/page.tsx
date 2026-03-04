@@ -141,9 +141,9 @@ export default function PublicBillPage() {
       <div className="w-full max-w-lg">
         {/* Header */}
         <div className="mb-4 md:mb-6 text-center">
-          <h1 className="text-2xl md:text-3xl font-black mb-2 uppercase tracking-tight md:tracking-tighter">
-            Hóa Đơn Tiền Nhà
-          </h1>
+          <h2 className="text-2xl md:text-3xl font-black mb-2 uppercase tracking-tight md:tracking-tighter">
+            Hóa Đơn #{invoice.id}
+          </h2>
           <div className="inline-block bg-black text-white px-3 md:px-4 py-1 text-sm md:text-base font-bold transform -rotate-2">
             Tháng {invoice.month}
           </div>
@@ -187,6 +187,54 @@ export default function PublicBillPage() {
               <span className="font-mono">{invoice.contract.tenant.phone}</span>
             </div>
           </div>
+
+          {/* PAYMENT QR */}
+          {invoice.status !== "PAID" && invoice.status !== "CANCELLED" && (
+            <div className="bg-indigo-50 border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,0.1)] p-3 md:p-4 mb-4 md:mb-6 rounded-lg flex flex-col sm:flex-row items-center gap-4">
+              <div className="bg-white p-2 border-2 border-black shrink-0">
+                <img
+                  src={`https://img.vietqr.io/image/MB-9300131000273-compact2.png?amount=${invoice.totalAmount}&addInfo=${encodeURIComponent(`HD${invoice.id} ${invoice.contract?.room?.name || ""}`)}&accountName=CAMELSTAY`}
+                  alt="VietQR"
+                  className="w-28 md:w-32 h-auto"
+                />
+              </div>
+              <div className="flex-1 w-full text-center sm:text-left">
+                <h3 className="font-black text-sm md:text-base uppercase mb-2 text-indigo-900">
+                  Thông tin thanh toán
+                </h3>
+                <div className="font-mono text-xs md:text-sm space-y-1">
+                  <div className="flex flex-col sm:flex-row sm:gap-2">
+                    <span className="font-bold text-gray-500 w-20 flex-shrink-0">
+                      Ngân hàng:
+                    </span>
+                    <span className="font-bold">MB BANK</span>
+                  </div>
+                  <div className="flex flex-col sm:flex-row sm:gap-2">
+                    <span className="font-bold text-gray-500 w-20 flex-shrink-0">
+                      Số TK:
+                    </span>
+                    <span className="font-black text-sm md:text-lg tracking-wider">
+                      9300 131 000 273
+                    </span>
+                  </div>
+                  <div className="flex flex-col sm:flex-row sm:gap-2">
+                    <span className="font-bold text-gray-500 w-20 flex-shrink-0">
+                      Chủ TK:
+                    </span>
+                    <span className="font-bold">CAMELSTAY OWNER</span>
+                  </div>
+                  <div className="flex flex-col sm:flex-row sm:gap-2">
+                    <span className="font-bold text-gray-500 w-20 flex-shrink-0">
+                      Nội dung:
+                    </span>
+                    <span className="italic text-indigo-700">
+                      HD{invoice.id} {invoice.contract?.room?.name}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Line Items */}
           <div className="space-y-2 md:space-y-3">

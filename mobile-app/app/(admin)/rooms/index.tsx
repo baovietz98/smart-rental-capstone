@@ -6,18 +6,17 @@ import {
   TextInput,
   RefreshControl,
   ScrollView,
+  ActivityIndicator,
 } from "react-native";
 import { useState, useMemo } from "react";
-import { useRouter } from "expo-router";
+import { Link } from "expo-router";
 import { FontAwesome5, MaterialCommunityIcons } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 
 export default function RoomsScreen() {
-  const router = useRouter();
   const [searchQuery, setSearchQuery] = useState("");
-  const [viewMode, setViewMode] = useState<"GRID" | "LIST">("GRID");
   const [statusFilter, setStatusFilter] = useState("ALL");
   const [buildingFilter, setBuildingFilter] = useState<number | "ALL">("ALL");
 
@@ -67,12 +66,6 @@ export default function RoomsScreen() {
     return { total, available, rented, maintenance };
   }, [rooms]);
 
-  const formatCurrency = (value: number) =>
-    new Intl.NumberFormat("vi-VN", {
-      style: "currency",
-      currency: "VND",
-    }).format(value);
-
   const getStatusColor = (status: string) => {
     switch (status) {
       case "RENTED":
@@ -96,12 +89,12 @@ export default function RoomsScreen() {
       buildings?.find((b: any) => b.id === item.buildingId)?.name ||
       "Unknown Building";
 
-    if (viewMode === "GRID") {
-      return (
+    return (
+      <Link href={`/(admin)/rooms/${item.id}`} asChild>
         <TouchableOpacity
           className="bg-white rounded-[20px] p-4 mb-3 border border-gray-100 shadow-sm flex-1 m-1.5"
           style={{ minHeight: 160 }}
-          onPress={() => router.push(`/(admin)/rooms/${item.id}`)}
+          activeOpacity={0.7}
         >
           <View className="flex-row justify-between items-start mb-2">
             <Text className="text-[10px] font-black text-gray-400 uppercase tracking-widest truncate max-w-[80%]">
@@ -144,35 +137,7 @@ export default function RoomsScreen() {
             </View>
           </View>
         </TouchableOpacity>
-      );
-    }
-
-    // LIST VIEW
-    return (
-      <TouchableOpacity
-        className="bg-white rounded-2xl p-4 mb-3 border border-gray-100 shadow-sm flex-row items-center"
-        onPress={() => router.push(`/(admin)/rooms/${item.id}`)}
-      >
-        <View className="w-12 h-12 bg-gray-50 rounded-xl items-center justify-center mr-4 border border-gray-100">
-          <Text className="font-bold text-gray-700 text-lg">{item.name}</Text>
-        </View>
-        <View className="flex-1">
-          <Text className="font-bold text-[#383838] text-base">
-            {buildingName}
-          </Text>
-          <Text className="text-[#DA7756] font-bold text-sm">
-            {formatCurrency(item.price)}
-          </Text>
-          <Text className="text-gray-400 text-xs mt-0.5">
-            {item.area} m² • {item._count?.contracts || 0} người
-          </Text>
-        </View>
-        <View className={`${status.bg} px-3 py-1 rounded-lg`}>
-          <Text className={`${status.text} text-xs font-bold`}>
-            {status.label}
-          </Text>
-        </View>
-      </TouchableOpacity>
+      </Link>
     );
   };
 
@@ -190,16 +155,15 @@ export default function RoomsScreen() {
             </Text>
           </View>
           <View className="flex-row gap-2">
-            <TouchableOpacity
-              className="w-10 h-10 bg-[#DA7756] rounded-full items-center justify-center shadow-lg shadow-orange-200"
-              onPress={() => router.push("/(admin)/rooms/new" as any)}
-            >
-              <FontAwesome5 name="plus" size={16} color="white" />
-            </TouchableOpacity>
+            <Link href="/(admin)/rooms/new" asChild>
+              <TouchableOpacity className="w-10 h-10 bg-[#DA7756] rounded-full items-center justify-center shadow-lg shadow-orange-200">
+                <FontAwesome5 name="plus" size={16} color="white" />
+              </TouchableOpacity>
+            </Link>
           </View>
         </View>
 
-        {/* SEARCH & TOGGLE VIEW */}
+        {/* SEARCH ONLY (No Toggle) */}
         <View className="flex-row gap-3">
           <View className="flex-1 bg-gray-50 rounded-xl border border-gray-200 flex-row items-center px-4 h-11">
             <FontAwesome5 name="search" size={14} color="#9CA3AF" />
@@ -211,33 +175,53 @@ export default function RoomsScreen() {
               onChangeText={setSearchQuery}
             />
           </View>
-          <View className="flex-row bg-gray-50 rounded-xl border border-gray-200 p-1">
-            <TouchableOpacity
-              className={`p-2 rounded-lg ${
-                viewMode === "GRID" ? "bg-white shadow-sm" : ""
-              }`}
-              onPress={() => setViewMode("GRID")}
-            >
-              <MaterialCommunityIcons
-                name="view-grid"
-                size={20}
-                color={viewMode === "GRID" ? "#DA7756" : "#9CA3AF"}
-              />
-            </TouchableOpacity>
-            <TouchableOpacity
-              className={`p-2 rounded-lg ${
-                viewMode === "LIST" ? "bg-white shadow-sm" : ""
-              }`}
-              onPress={() => setViewMode("LIST")}
-            >
-              <MaterialCommunityIcons
-                name="view-list"
-                size={20}
-                color={viewMode === "LIST" ? "#DA7756" : "#9CA3AF"}
-              />
-            </TouchableOpacity>
-          </View>
         </View>
+      </View>
+
+      {/* BUILDING FILTER (New) */}
+      <View className="px-6 pb-2 bg-white border-b border-gray-100">
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          className="flex-row"
+        >
+          <TouchableOpacity
+            onPress={() => setBuildingFilter("ALL")}
+            className={`mr-3 px-4 py-2 rounded-xl border ${
+              buildingFilter === "ALL"
+                ? "bg-[#DA7756] border-[#DA7756]"
+                : "bg-gray-50 border-gray-200"
+            }`}
+          >
+            <Text
+              className={`text-xs font-bold ${
+                buildingFilter === "ALL" ? "text-white" : "text-gray-500"
+              }`}
+            >
+              Tất cả tòa nhà
+            </Text>
+          </TouchableOpacity>
+
+          {buildings?.map((b: any) => (
+            <TouchableOpacity
+              key={b.id}
+              onPress={() => setBuildingFilter(b.id)}
+              className={`mr-3 px-4 py-2 rounded-xl border ${
+                buildingFilter === b.id
+                  ? "bg-[#DA7756] border-[#DA7756]"
+                  : "bg-gray-50 border-gray-200"
+              }`}
+            >
+              <Text
+                className={`text-xs font-bold ${
+                  buildingFilter === b.id ? "text-white" : "text-gray-500"
+                }`}
+              >
+                {b.name}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
       </View>
 
       {/* FILTERS */}
@@ -294,11 +278,11 @@ export default function RoomsScreen() {
         </View>
       ) : (
         <FlatList
-          key={viewMode} // Force re-render on toggle
+          key="GRID" // Static key
           data={filteredRooms}
           keyExtractor={(item) => item.id.toString()}
-          numColumns={viewMode === "GRID" ? 2 : 1}
-          contentContainerStyle={{ padding: 24, paddingBottom: 100 }}
+          numColumns={2}
+          contentContainerStyle={{ padding: 24, paddingBottom: 120 }}
           refreshControl={
             <RefreshControl
               refreshing={isLoading}

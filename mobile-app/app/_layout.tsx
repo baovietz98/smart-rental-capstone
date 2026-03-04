@@ -10,7 +10,6 @@ import {
   Inter_600SemiBold,
 } from "@expo-google-fonts/inter";
 import { useEffect } from "react";
-import { View } from "react-native";
 import "../global.css";
 
 import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client";
@@ -44,14 +43,17 @@ export default function RootLayout() {
       client={queryClient}
       persistOptions={{ persister }}
     >
-      <View className="flex-1 bg-claude-bg">
-        <Stack screenOptions={{ headerShown: false }}>
-          <Stack.Screen name="index" />
-          <Stack.Screen name="(auth)" />
-          <Stack.Screen name="(admin)" />
-          <Stack.Screen name="(tenant)" />
-        </Stack>
-      </View>
+      <Stack
+        screenOptions={{
+          headerShown: false,
+          contentStyle: { backgroundColor: "#FBF9F6" },
+        }}
+      >
+        <Stack.Screen name="index" />
+        <Stack.Screen name="(auth)" />
+        <Stack.Screen name="(admin)" />
+        <Stack.Screen name="(tenant)" />
+      </Stack>
     </PersistQueryClientProvider>
   );
 }

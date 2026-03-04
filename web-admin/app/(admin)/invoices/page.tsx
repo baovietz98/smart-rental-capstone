@@ -53,6 +53,62 @@ export default function InvoicesPage() {
       currency: "VND",
     }).format(amount);
 
+  // Handle Export Excel
+  const handleExportExcel = () => {
+    if (!invoices || invoices.length === 0) {
+      message.warning("Không có dữ liệu để xuất bá cáo");
+      return;
+    }
+
+    // Prepare data
+    const headers = [
+      "Mã Hóa Đơn",
+      "Phòng",
+      "Tòa Nhà",
+      "Khách Thuê",
+      "SĐT",
+      "Kỳ Thu",
+      "Tổng Tiền",
+      "Đã Trả",
+      "Còn Nợ",
+      "Trạng Thái",
+      "Ngày Lập",
+    ];
+
+    // Convert data to CSV format
+    const csvContent = [
+      headers.join(","),
+      ...invoices.map((inv) => {
+        return [
+          `HD${inv.id}`,
+          `"${inv.contract?.room.name || ""}"`,
+          `"${inv.contract?.room.building.name || ""}"`,
+          `"${inv.contract?.tenant.fullName || ""}"`,
+          `"${inv.contract?.tenant.phone || ""}"`,
+          `"${inv.month}"`,
+          inv.totalAmount,
+          inv.paidAmount,
+          inv.debtAmount,
+          `"${inv.status}"`,
+          `"${dayjs(inv.createdAt).format("DD/MM/YYYY")}"`,
+        ].join(",");
+      }),
+    ].join("\n");
+
+    // Add BOM for UTF-8 Excel support
+    const blob = new Blob(["\ufeff" + csvContent], {
+      type: "text/csv;charset=utf-8;",
+    });
+    const link = document.createElement("a");
+    const url = URL.createObjectURL(blob);
+    link.setAttribute("href", url);
+    link.setAttribute("download", `Bao_Cao_Hoa_Don_${filters.month}.csv`);
+    link.style.visibility = "hidden";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   const columns = [
     {
       title: "MÃ HÓA ĐƠN",
@@ -197,7 +253,10 @@ export default function InvoicesPage() {
           </p>
         </div>
         <div className="flex flex-col sm:flex-row gap-2 md:gap-3">
-          <button className="claude-btn-secondary flex items-center justify-center gap-2 text-sm md:text-base w-full sm:w-auto">
+          <button
+            onClick={handleExportExcel}
+            className="claude-btn-secondary flex items-center justify-center gap-2 text-sm md:text-base w-full sm:w-auto"
+          >
             <Download size={16} className="md:w-[18px] md:h-[18px]" />
             <span>Xuất báo cáo</span>
           </button>
@@ -242,7 +301,10 @@ export default function InvoicesPage() {
           allowClear
           value={filters.status}
           className="w-40 md:w-48 h-9 md:h-10 text-sm md:text-base"
-          onChange={(val) => setFilters((prev) => ({ ...prev, status: val }))}
+          popupClassName="[&_.ant-select-item-option-content]:!text-slate-800 [&_.ant-select-item-option-active]:!bg-gray-100"
+          onChange={(val) =>
+            setFilters((prev) => ({ ...prev, status: val || undefined }))
+          }
           options={Object.values(InvoiceStatus).map((status) => ({
             label: status === InvoiceStatus.PAID ? "Đã Thanh Toán" : status,
             value: status,

@@ -66,7 +66,7 @@ export default function PatrolScreen() {
       if (!result.granted) {
         Alert.alert(
           "Permission Required",
-          "Camera permission is needed for flashlight"
+          "Camera permission is needed for flashlight",
         );
         return;
       }
@@ -76,6 +76,7 @@ export default function PatrolScreen() {
   };
 
   const handleNext = async () => {
+    if (!oldIndex) return;
     if (!reading.electric || !reading.water) {
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       Alert.alert("Missing Data", "Please enter both readings.");
@@ -94,7 +95,7 @@ export default function PatrolScreen() {
             style: "destructive",
             onPress: () => processSave(),
           },
-        ]
+        ],
       );
       return;
     }
@@ -131,6 +132,12 @@ export default function PatrolScreen() {
           enableTorch={true}
           facing="back"
         />
+      )}
+
+      {isLoading && (
+        <View className="flex-1 items-center justify-center bg-black/50 absolute inset-0 z-50">
+          <ActivityIndicator size="large" color="#DA7756" />
+        </View>
       )}
 
       <SafeAreaView className="flex-1">
@@ -181,7 +188,7 @@ export default function PatrolScreen() {
                     Old Index
                   </Text>
                   <Text className="text-2xl font-sans text-gray-600 font-medium">
-                    {oldIndex.electric}
+                    {oldIndex?.electric || 0}
                   </Text>
                 </View>
                 <View className="flex-1 ml-6">
@@ -218,7 +225,7 @@ export default function PatrolScreen() {
                     Old Index
                   </Text>
                   <Text className="text-2xl font-sans text-gray-600 font-medium">
-                    {oldIndex.water}
+                    {oldIndex?.water || 0}
                   </Text>
                 </View>
                 <View className="flex-1 ml-6">

@@ -23,12 +23,16 @@ export default function RoomDetailModal({
   onCancel,
   onCreateContract,
   onMaintenanceAction,
+  onMoveRoom,
+  onViewContract,
 }: {
   open: boolean;
   roomId: number | null;
   onCancel: () => void;
   onCreateContract?: (room: any) => void;
   onMaintenanceAction?: (room: any) => void;
+  onMoveRoom?: (room: any) => void;
+  onViewContract?: (room: any) => void;
 }) {
   const [loading, setLoading] = useState(false);
   const [room, setRoom] = useState<any>(null);
@@ -84,6 +88,24 @@ export default function RoomDetailModal({
               className="h-10 px-6 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold flex items-center gap-2 shadow-lg shadow-emerald-100 transition-all hover:-translate-y-0.5"
             >
               <UserOutlined /> Tạo Hợp Đồng
+            </button>
+          )}
+
+          {room?.status === "RENTED" && onViewContract && (
+            <button
+              onClick={() => onViewContract(room)}
+              className="h-10 px-6 rounded-xl border border-[#D97757] text-[#D97757] hover:bg-orange-50 font-bold flex items-center gap-2 transition-all"
+            >
+              <CalendarOutlined /> Chi tiết Hợp đồng
+            </button>
+          )}
+
+          {room?.status === "RENTED" && onMoveRoom && (
+            <button
+              onClick={() => onMoveRoom(room)}
+              className="h-10 px-6 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold flex items-center gap-2 shadow-lg shadow-indigo-100 transition-all hover:-translate-y-0.5"
+            >
+              <UserOutlined /> Chuyển phòng
             </button>
           )}
 

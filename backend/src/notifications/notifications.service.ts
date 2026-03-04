@@ -36,4 +36,27 @@ export class NotificationsService {
       orderBy: { createdAt: 'desc' },
     });
   }
+
+  async findOne(id: number) {
+    const notification = await this.prisma.notification.findUnique({
+      where: { id },
+    });
+    if (!notification) {
+      throw new Error(`Notification with ID ${id} not found`);
+    }
+    return notification;
+  }
+
+  async markAsRead(id: number) {
+    return this.prisma.notification.update({
+      where: { id },
+      data: { isRead: true },
+    });
+  }
+
+  async remove(id: number) {
+    return this.prisma.notification.delete({
+      where: { id },
+    });
+  }
 }

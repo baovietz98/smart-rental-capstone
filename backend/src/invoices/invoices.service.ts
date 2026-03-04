@@ -86,44 +86,32 @@ export class InvoicesService {
       note: rentNote,
     });
 
-    // ===== TÍNH DỊCH VỤ BIẾN ĐỔI (ĐIỆN/NƯỚC) =====
     // Check readings exist?
-    const readings = await this.prisma.serviceReading.findMany({
+    console.log('DEBUG: Querying readings for contract:', dto.contractId, 'month:', dto.month);
+    
+    // TEMPORARY DEBUG: Remove isBilled filter to see if they exist at all
+    const allReadings = await this.prisma.serviceReading.findMany({
       where: {
         contractId: dto.contractId,
         month: dto.month,
-        isBilled: false, // Chưa lên hóa đơn
       },
       include: { service: true },
     });
+    console.log('DEBUG: Found TOTAL readings:', allReadings.length);
+    console.log('DEBUG: Readings details:', JSON.stringify(allReadings, null, 2));
 
-    // Nếu không có readings nào cho tháng này -> Cảnh báo hoặc Lỗi
-    // Tuy nhiên có thể tháng này không dùng điện nước? (Hiếm)
-    // Lozido yêu cầu "Chốt số" trước.
-    // Ta sẽ check xem có service nào type=INDEX mà chưa có reading không.
+    const readings = allReadings.filter(r => !r.isBilled);
+    console.log('DEBUG: Filtered unbilled readings:', readings.length);
+
+    // Logic: Nếu có service INDEX mà không tìm thấy reading tương ứng -> Báo lỗi
     const indexServices = await this.prisma.service.findMany({
       where: { type: 'INDEX', isActive: true },
     });
 
-    // Logic đơn giản: Nếu có service INDEX mà không tìm thấy reading tương ứng -> Báo lỗi
-    // (Cần tối ưu hơn: chỉ check service nào contract đang dùng, nhưng hiện tại contract chưa link service cụ thể, mặc định dùng all active services)
-
-    if (indexServices.length > 0 && readings.length === 0) {
-      // Có thể chưa chốt
-      // Nhưng cũng có thể đã chốt nhưng isBilled = true (đã tạo hóa đơn khác?)
-      // Check kỹ hơn
-      const existingReadings = await this.prisma.serviceReading.findMany({
-        where: {
-          contractId: dto.contractId,
-          month: dto.month,
-        },
-      });
-
-      if (existingReadings.length === 0) {
-        throw new BadRequestException(
-          `Chưa chốt điện/nước tháng ${dto.month}. Vui lòng chốt số trước khi lập hóa đơn.`,
-        );
-      }
+    if (indexServices.length > 0 && allReadings.length === 0) {
+         throw new BadRequestException(
+           `Chưa chốt điện/nước tháng ${dto.month}. Vui lòng chốt số trước khi lập hóa đơn.`,
+         );
     }
 
     let serviceCharge = 0;
@@ -788,8 +776,9 @@ export class InvoicesService {
     status?: InvoiceStatus;
     month?: string;
     buildingId?: number;
+    contractId?: number;
   }) {
-    const where: Prisma.InvoiceWhereInput = {};
+    const where: any = {};
 
     if (filters?.status) {
       where.status = filters.status;
@@ -797,6 +786,10 @@ export class InvoicesService {
 
     if (filters?.month) {
       where.month = filters.month;
+    }
+
+    if (filters?.contractId) {
+      where.contractId = filters.contractId;
     }
 
     if (filters?.buildingId) {
@@ -843,10 +836,28 @@ export class InvoicesService {
    * Thống kê hóa đơn theo tháng
    */
   async getMonthlyStats(month: string, buildingId?: number) {
-    const invoices = await this.findByMonth(month, buildingId);
+    const where: Prisma.InvoiceWhereInput = { month };
+    if (buildingId) {
+      where.contract = {
+        room: { buildingId },
+      };
+    }
+
+    const previousMonth = this.getPreviousMonth(month);
+
+    const [invoices, prevInvoices] = await Promise.all([
+      this.prisma.invoice.findMany({ where }),
+      this.prisma.invoice.findMany({
+        where: {
+          ...where,
+          month: previousMonth,
+        },
+      }),
+    ]);
 
     const stats = {
       month,
+      previousMonth,
       totalInvoices: invoices.length,
       byStatus: {
         draft: 0,
@@ -856,9 +867,15 @@ export class InvoicesService {
         overdue: 0,
         cancelled: 0,
       },
-      totalAmount: 0,
-      totalPaid: 0,
-      totalDebt: 0,
+      totalAmount: 0, // Tổng doanh thu dự kiến (là tổng giá trị hóa đơn)
+      totalPaid: 0,   // Thực thu
+      totalDebt: 0,   // Còn nợ
+      breakdown: {
+        rent: 0,
+        services: 0,
+        other: 0,
+      },
+      growth: 0,
     };
 
     for (const inv of invoices) {
@@ -869,9 +886,37 @@ export class InvoicesService {
       stats.totalAmount += inv.totalAmount;
       stats.totalPaid += inv.paidAmount;
       stats.totalDebt += inv.debtAmount;
+
+      stats.breakdown.rent += inv.roomCharge || 0;
+      stats.breakdown.services += inv.serviceCharge || 0;
+      stats.breakdown.other += (inv.extraCharge || 0) + (inv.previousDebt || 0);
+    }
+
+    // Calculate Growth
+    let prevTotal = 0;
+    for (const inv of prevInvoices) {
+      prevTotal += inv.totalAmount;
+    }
+
+    if (prevTotal > 0) {
+      stats.growth = ((stats.totalAmount - prevTotal) / prevTotal) * 100;
+    } else if (stats.totalAmount > 0) {
+      stats.growth = 100; // Tăng trưởng từ 0 lên có doanh thu
     }
 
     return stats;
+  }
+
+  private getPreviousMonth(month: string): string {
+    if (!month) return '';
+    const [m, y] = month.split('-').map(Number);
+    let prevM = m - 1;
+    let prevY = y;
+    if (prevM === 0) {
+      prevM = 12;
+      prevY = y - 1;
+    }
+    return `${String(prevM).padStart(2, '0')}-${prevY}`;
   }
 
   /**

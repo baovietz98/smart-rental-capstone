@@ -67,12 +67,19 @@ export default function TenantDetailScreen() {
         <Text className="text-xl font-bold text-gray-900 font-serif">
           Hồ sơ cư dân
         </Text>
-        <View className="w-10" />
+        <View className="w-10 h-10" />
       </View>
 
       <ScrollView contentContainerStyle={{ padding: 24 }}>
         {/* PROFILE CARD */}
-        <View className="bg-white rounded-[24px] p-6 shadow-sm border border-gray-100 mb-6 items-center">
+        <View className="bg-white rounded-[24px] p-6 shadow-sm border border-gray-100 mb-6 items-center relative">
+          <TouchableOpacity
+            className="absolute top-4 right-4 w-9 h-9 bg-gray-50 rounded-full items-center justify-center border border-gray-200 shadow-sm z-10"
+            onPress={() => router.push(`/(admin)/tenants/edit?id=${id}` as any)}
+          >
+            <FontAwesome5 name="pen" size={12} color="#6B7280" />
+          </TouchableOpacity>
+
           <View className="w-24 h-24 bg-[#F5F5F0] rounded-full items-center justify-center border-4 border-white shadow-sm mb-4">
             <Text className="text-4xl font-black text-[#DA7756] font-serif">
               {tenant.fullName.charAt(0).toUpperCase()}
@@ -141,6 +148,36 @@ export default function TenantDetailScreen() {
                 {tenant.user?.email || tenant.info?.email || "---"}
               </Text>
             </View>
+          </View>
+        </View>
+
+        {/* VEHICLES */}
+        <View className="bg-white rounded-[24px] overflow-hidden shadow-sm border border-gray-100 mb-6">
+          <View className="p-4 bg-gray-50 border-b border-gray-100">
+            <Text className="font-bold text-gray-900 uppercase text-xs tracking-wider">
+              Thông tin xe
+            </Text>
+          </View>
+          <View className="p-4 space-y-4">
+            {tenant.vehicles && tenant.vehicles.length > 0 ? (
+              tenant.vehicles.map((v: any, index: number) => (
+                <View
+                  key={index}
+                  className="flex-row justify-between border-b border-gray-50 pb-3 last:border-0"
+                >
+                  <Text className="text-gray-500 font-medium">
+                    {v.type || "Xe máy"}
+                  </Text>
+                  <Text className="text-gray-900 font-bold">
+                    {v.plateNumber}
+                  </Text>
+                </View>
+              ))
+            ) : (
+              <Text className="text-gray-400 text-sm italic py-2 text-center">
+                Chưa có thông tin xe
+              </Text>
+            )}
           </View>
         </View>
 

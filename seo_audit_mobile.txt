@@ -1,0 +1,23 @@
+﻿
+============================================================
+  SEO CHECKER - Search Engine Optimization Audit
+============================================================
+Project: C:\Users\Admin\quan-ly-nha-tro\mobile-app
+Time: 2026-03-02 01:18:16
+------------------------------------------------------------
+Found 49 page files to analyze
+
+============================================================
+SEO ANALYSIS RESULTS
+============================================================
+
+[OK] No SEO issues found!
+
+{
+  "script": "seo_checker",
+  "project": "C:\\Users\\Admin\\quan-ly-nha-tro\\mobile-app",
+  "files_checked": 49,
+  "files_with_issues": 0,
+  "issues_found": 0,
+  "passed": true
+}

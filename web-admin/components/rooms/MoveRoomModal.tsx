@@ -93,7 +93,7 @@ export default function MoveRoomModal({
   const daysInMonth = moveDate.daysInMonth();
   const daysAtOldRoom = moveDate.date() - 1;
   const proRataRent = Math.round(
-    (daysAtOldRoom / daysInMonth) * currentRoomPrice
+    (daysAtOldRoom / daysInMonth) * currentRoomPrice,
   );
   const totalUtilityCost = meterReadings.reduce((sum, r) => sum + r.cost, 0);
 
@@ -155,7 +155,7 @@ export default function MoveRoomModal({
   const updateMeterReading = (
     serviceId: number,
     field: "closingIndex" | "openingIndex",
-    value: number
+    value: number,
   ) => {
     setMeterReadings((prev) =>
       prev.map((r) => {
@@ -168,7 +168,7 @@ export default function MoveRoomModal({
           return updated;
         }
         return r;
-      })
+      }),
     );
   };
 
@@ -204,7 +204,7 @@ export default function MoveRoomModal({
     } catch (error: any) {
       console.error(error);
       message.error(
-        error.response?.data?.message || "Có lỗi xảy ra khi chuyển phòng"
+        error.response?.data?.message || "Có lỗi xảy ra khi chuyển phòng",
       );
     } finally {
       setLoading(false);
@@ -368,7 +368,7 @@ export default function MoveRoomModal({
                         <div className="mt-1 pl-1">
                           <span className="bg-[#F5F2EE] text-[#5c554a] text-xs font-medium px-2 py-1 rounded-md border border-[#E5E0D8]">
                             {new Intl.NumberFormat("vi-VN").format(
-                              currentRoomPrice
+                              currentRoomPrice,
                             )}{" "}
                             đ/tháng
                           </span>
@@ -396,7 +396,7 @@ export default function MoveRoomModal({
                           {selectedRoom ? (
                             <span className="bg-[#FFF4F0] text-[#D97757] text-xs font-medium px-2 py-1 rounded-md border border-[#F5E6E0]">
                               {new Intl.NumberFormat("vi-VN").format(
-                                selectedRoom.price
+                                selectedRoom.price,
                               )}{" "}
                               đ/tháng
                             </span>
@@ -410,11 +410,11 @@ export default function MoveRoomModal({
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-x-6 gap-y-6">
+                  <div className="grid grid-cols-1 md:grid-cols-12 gap-x-6 gap-y-6">
                     {/* Select Room */}
-                    <div className="col-span-2">
-                      <label className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-gray-500 mb-2">
-                        <span className="w-5 h-5 rounded-full bg-black text-white flex items-center justify-center text-[10px]">
+                    <div className="md:col-span-12">
+                      <label className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-[#2D2D2C] mb-2">
+                        <span className="w-5 h-5 rounded-full bg-[#D97757] text-white flex items-center justify-center text-[10px]">
                           1
                         </span>
                         Chọn phòng mới
@@ -431,16 +431,16 @@ export default function MoveRoomModal({
                         options={availableRooms.map((r) => ({
                           value: r.id,
                           label: `${r.name} - ${new Intl.NumberFormat(
-                            "vi-VN"
-                          ).format(r.price)}`,
+                            "vi-VN",
+                          ).format(r.price)} ₫/tháng`,
                         }))}
                       />
                     </div>
 
                     {/* Date */}
-                    <div>
-                      <label className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-gray-500 mb-2">
-                        <span className="w-5 h-5 rounded-full bg-black text-white flex items-center justify-center text-[10px]">
+                    <div className="md:col-span-6">
+                      <label className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-[#2D2D2C] mb-2">
+                        <span className="w-5 h-5 rounded-full bg-[#D97757] text-white flex items-center justify-center text-[10px]">
                           2
                         </span>
                         Ngày chuyển
@@ -455,9 +455,9 @@ export default function MoveRoomModal({
                     </div>
 
                     {/* New Price */}
-                    <div>
-                      <label className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-gray-500 mb-2">
-                        <span className="w-5 h-5 rounded-full bg-black text-white flex items-center justify-center text-[10px]">
+                    <div className="md:col-span-6">
+                      <label className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-[#2D2D2C] mb-2">
+                        <span className="w-5 h-5 rounded-full bg-[#D97757] text-white flex items-center justify-center text-[10px]">
                           3
                         </span>
                         Giá thuê mới
@@ -465,23 +465,22 @@ export default function MoveRoomModal({
                       <InputNumber
                         value={newRentPrice}
                         onChange={(v) => setNewRentPrice(v || 0)}
-                        className="w-full font-medium"
+                        className="font-medium text-lg text-[#D97757]"
+                        style={{ width: "100%", height: "50px" }}
                         formatter={(v) =>
                           `${v}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")
                         }
-                        parser={(v) =>
-                          v?.replace(/\$\s?|(,*)/g, "") as unknown as number
+                        prefix={
+                          <span className="text-gray-400 mr-2 text-sm">₫</span>
                         }
-                        style={{ height: 50 }}
-                        prefix={<span className="text-gray-400 mr-2">₫</span>}
                       />
                     </div>
                   </div>
 
                   {/* Old Room Status */}
                   <div>
-                    <label className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-gray-500 mb-2">
-                      <span className="w-5 h-5 rounded-full bg-black text-white flex items-center justify-center text-[10px]">
+                    <label className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-[#2D2D2C] mb-2">
+                      <span className="w-5 h-5 rounded-full bg-[#D97757] text-white flex items-center justify-center text-[10px]">
                         4
                       </span>
                       Xử lý phòng cũ
@@ -492,13 +491,13 @@ export default function MoveRoomModal({
                           key={status}
                           onClick={() =>
                             setOldRoomStatus(
-                              status as "MAINTENANCE" | "AVAILABLE"
+                              status as "MAINTENANCE" | "AVAILABLE",
                             )
                           }
-                          className={`flex-1 py-3 px-4 rounded-lg text-sm font-semibold transition-all duration-200 ${
+                          className={`flex-1 py-3 px-4 rounded-lg text-sm font-bold transition-all duration-200 ${
                             oldRoomStatus === status
-                              ? "bg-white text-black shadow-sm ring-1 ring-black/5"
-                              : "text-gray-500 hover:text-gray-700 hover:bg-white/50"
+                              ? "bg-white text-[#D97757] shadow-sm ring-1 ring-black/5"
+                              : "text-gray-500 hover:text-gray-700 hover:bg-white/60"
                           }`}
                         >
                           {status === "MAINTENANCE"
@@ -548,7 +547,7 @@ export default function MoveRoomModal({
                           </span>
                           <span className="text-xs font-mono bg-white border border-gray-200 px-2 py-1 rounded text-gray-500">
                             {new Intl.NumberFormat("vi-VN").format(
-                              reading.unitPrice
+                              reading.unitPrice,
                             )}{" "}
                             đ/số
                           </span>
@@ -570,7 +569,7 @@ export default function MoveRoomModal({
                                   updateMeterReading(
                                     reading.serviceId,
                                     "closingIndex",
-                                    v || 0
+                                    v || 0,
                                   )
                                 }
                                 className="w-full"
@@ -587,7 +586,7 @@ export default function MoveRoomModal({
                               </span>
                               <span className="font-mono font-bold text-[#D97757]">
                                 {new Intl.NumberFormat("vi-VN").format(
-                                  reading.cost
+                                  reading.cost,
                                 )}{" "}
                                 đ
                               </span>
@@ -609,7 +608,7 @@ export default function MoveRoomModal({
                                   updateMeterReading(
                                     reading.serviceId,
                                     "openingIndex",
-                                    v || 0
+                                    v || 0,
                                   )
                                 }
                                 className="w-full"
@@ -653,7 +652,7 @@ export default function MoveRoomModal({
                           {new Intl.NumberFormat("vi-VN").format(
                             proRataRent +
                               totalUtilityCost +
-                              Math.max(0, depositDifference)
+                              Math.max(0, depositDifference),
                           )}{" "}
                           đ
                         </div>
@@ -689,7 +688,7 @@ export default function MoveRoomModal({
                         </div>
                         <span className="font-mono font-bold">
                           {new Intl.NumberFormat("vi-VN").format(
-                            totalUtilityCost
+                            totalUtilityCost,
                           )}{" "}
                           đ
                         </span>
@@ -714,7 +713,7 @@ export default function MoveRoomModal({
                           >
                             {depositDifference > 0 ? "+" : ""}
                             {new Intl.NumberFormat("vi-VN").format(
-                              depositDifference
+                              depositDifference,
                             )}{" "}
                             đ
                           </span>

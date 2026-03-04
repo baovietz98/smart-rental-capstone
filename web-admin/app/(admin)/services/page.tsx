@@ -106,7 +106,7 @@ export default function ServicesPage() {
     if (n.includes("nước"))
       return <Droplets size={20} className="text-blue-600" />;
     if (n.includes("wifi") || n.includes("internet"))
-      return <Wifi size={20} className="text-purple-600" />;
+      return <Wifi size={20} className="text-teal-600" />;
     return <Box size={20} className="text-gray-600" />;
   };
 
@@ -115,7 +115,7 @@ export default function ServicesPage() {
     if (n.includes("điện")) return "bg-yellow-50 border-yellow-200";
     if (n.includes("nước")) return "bg-blue-50 border-blue-200";
     if (n.includes("wifi") || n.includes("internet"))
-      return "bg-purple-50 border-purple-200";
+      return "bg-teal-50 border-teal-200";
     return "bg-gray-50 border-gray-200";
   };
 
@@ -220,7 +220,7 @@ export default function ServicesPage() {
                     </span>
                     {service.type === ServiceType.FIXED &&
                       service.calculationType && (
-                        <span className="px-2.5 py-1 rounded-lg text-xs font-bold border bg-purple-50 text-purple-700 border-purple-100">
+                        <span className="px-2.5 py-1 rounded-lg text-xs font-bold border bg-teal-50 text-teal-700 border-teal-100">
                           {service.calculationType === CalculationType.PER_ROOM
                             ? "Theo phòng"
                             : "Theo người"}

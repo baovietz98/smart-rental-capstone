@@ -5,7 +5,10 @@ import {
   IsOptional,
   IsPhoneNumber,
   Length,
+  IsArray,
+  ValidateNested,
 } from 'class-validator';
+import { Type } from 'class-transformer';
 
 export class CreateTenantDto {
   @ApiProperty({
@@ -44,4 +47,31 @@ export class CreateTenantDto {
   })
   @IsOptional()
   info?: any;
+
+  @ApiPropertyOptional({
+    description: 'Danh sách xe',
+    example: [{ plateNumber: '29A-123.45', type: 'Xe máy' }],
+  })
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => CreateVehicleDto)
+  vehicles?: CreateVehicleDto[];
+}
+
+export class CreateVehicleDto {
+  @ApiProperty({ description: 'Biển số xe', example: '29A-123.45' })
+  @IsString()
+  @IsNotEmpty()
+  plateNumber: string;
+
+  @ApiPropertyOptional({ description: 'Loại xe', example: 'Xe máy' })
+  @IsString()
+  @IsOptional()
+  type?: string;
+
+  @ApiPropertyOptional({ description: 'Ảnh xe', example: 'url' })
+  @IsString()
+  @IsOptional()
+  image?: string;
 }

@@ -66,8 +66,8 @@ export default function TenantServicesPage() {
               title="Hợp đồng"
               desc="Thông tin thuê phòng"
               icon={<FileText size={24} />}
-              bg="bg-purple-50"
-              iconColor="text-purple-600"
+              bg="bg-teal-50"
+              iconColor="text-teal-600"
               onClick={() => router.push("/tenant/contracts")}
             />
           </div>

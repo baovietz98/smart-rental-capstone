@@ -164,7 +164,7 @@ export default function Login() {
                   onPress={() =>
                     Alert.alert(
                       "Quên mật khẩu",
-                      "Vui lòng liên hệ quản trị viên hệ thống để đặt lại mật khẩu của bạn."
+                      "Vui lòng liên hệ quản trị viên hệ thống để đặt lại mật khẩu của bạn.",
                     )
                   }
                 >
@@ -187,7 +187,6 @@ export default function Login() {
                   </Text>
                 )}
               </TouchableOpacity>
-            </View>
             </View>
           </View>
 

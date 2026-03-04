@@ -61,8 +61,13 @@ export class RoomsService {
   /**
    * Lấy danh sách tất cả phòng
    */
-  async findAll() {
+  async findAll(filters?: { buildingId?: number; status?: RoomStatus }) {
+    const where: any = {};
+    if (filters?.buildingId) where.buildingId = filters.buildingId;
+    if (filters?.status) where.status = filters.status;
+
     return this.prisma.room.findMany({
+      where,
       include: {
         building: {
           select: { id: true, name: true },

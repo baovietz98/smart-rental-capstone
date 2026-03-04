@@ -1,0 +1,30 @@
+﻿
+============================================================
+  SEO CHECKER - Search Engine Optimization Audit
+============================================================
+Project: C:\Users\Admin\quan-ly-nha-tro\web-admin
+Time: 2026-03-02 01:21:23
+------------------------------------------------------------
+Found 32 page files to analyze
+
+============================================================
+SEO ANALYSIS RESULTS
+============================================================
+
+Issue Summary:
+  [1] Multiple H1 tags (2)
+  [1] Missing meta description
+  [1] Missing Open Graph tags
+
+Affected files (2):
+  - page.tsx
+  - page.tsx
+
+{
+  "script": "seo_checker",
+  "project": "C:\\Users\\Admin\\quan-ly-nha-tro\\web-admin",
+  "files_checked": 32,
+  "files_with_issues": 2,
+  "issues_found": 3,
+  "passed": false
+}

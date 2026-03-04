@@ -2,8 +2,9 @@ import axios from 'axios';
 import * as SecureStore from 'expo-secure-store';
 import { } from 'react-native';
 
-// 192.168.1.14 is your computer's current LAN IP
-const DEV_API_URL = 'http://192.168.1.14:4000';
+// For Android Emulator, use 10.0.2.2
+// If using physical device, replace with your LAN IP (e.g. 192.168.x.x)
+const DEV_API_URL = 'http://10.0.2.2:4000';
 
 export const api = axios.create({
   baseURL: DEV_API_URL,

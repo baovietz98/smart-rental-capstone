@@ -1,0 +1,32 @@
+﻿
+[UX AUDIT] 247 files checked
+--------------------------------------------------
+[!] ISSUES (275):
+  - [Hick's Law] index.html: 35 nav items (Max 7)
+  - [Cognitive Load] index.html: Form inputs without labels. Use <label> for accessibility and clarity.
+  - [Hick's Law] app.controller.ts.html: 19 nav items (Max 7)
+  - [Cognitive Load] app.controller.ts.html: Form inputs without labels. Use <label> for accessibility and clarity.
+  - [Hick's Law] app.module.ts.html: 65 nav items (Max 7)
+  - [Cognitive Load] app.module.ts.html: Form inputs without labels. Use <label> for accessibility and clarity.
+  - [Hick's Law] app.service.ts.html: 15 nav items (Max 7)
+  - [Cognitive Load] app.service.ts.html: Form inputs without labels. Use <label> for accessibility and clarity.
+  - [Hick's Law] index.html: 9 nav items (Max 7)
+  - [Cognitive Load] index.html: Form inputs without labels. Use <label> for accessibility and clarity.
+[*] WARNINGS (2133):
+  - [Fitts' Law] base.css: Small targets (< 44px)
+  - [Cognitive Load] base.css: High visual noise detected. Many colors and borders increase cognitive load.
+  - [Typography] base.css: Fixed font sizes without clamp(). Consider fluid typography: clamp(MIN, PREFERRED, MAX)
+  - [Typography] base.css: Font sizes may not follow modular scale (ratio: 1.43). Consider consistent ratio like 1.25 (Major Third).
+  - [Color] base.css: 9 distinct colors. Consider 60-30-10 rule: dominant (60%), secondary (30%), accent (10%).
+  - [Serial Position] index.html: Last nav item may not be important. Place key actions at start/end.
+  - [Visceral] index.html: Hero section lacks visual appeal. Consider gradients or subtle animations.
+  - [Reflective] index.html: Long-form content without brand story/values. Add 'About' or 'Why We Exist' section.
+  - [Trust] index.html: No social proof detected. Consider adding testimonials, ratings, or 'Trusted by' logos.
+  - [Typography] index.html: No line length constraint (45-75ch). Use max-w-prose or max-w-[65ch].
+  - [Typography] index.html: Text elements found without line-height. Body: 1.4-1.6, Headings: 1.1-1.3
+  - [Visual] index.html: Hero section without visual interest. Consider gradient for depth.
+  - [Visual] index.html: Text over image without overlay. Add gradient overlay for readability.
+  - [Visual] index.html: Flat design with no depth. Consider shadows or subtle gradients for hierarchy.
+  - [Animation] index.html: Interactive elements without hover/focus states. Add micro-interactions for feedback.
+[+] PASSED CHECKS: 68
+STATUS: FAIL

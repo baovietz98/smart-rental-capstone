@@ -42,21 +42,6 @@ export default function RoomDetailScreen() {
     },
   });
 
-  const handleDelete = () => {
-    Alert.alert(
-      "Xác nhận xóa",
-      "Bạn có chắc chắn muốn xóa phòng này không? Hành động này không thể hoàn tác.",
-      [
-        { text: "Hủy", style: "cancel" },
-        {
-          text: "Xóa",
-          style: "destructive",
-          onPress: () => deleteMutation.mutate(),
-        },
-      ],
-    );
-  };
-
   const formatCurrency = (value: number) =>
     new Intl.NumberFormat("vi-VN", {
       style: "currency",
@@ -87,8 +72,10 @@ export default function RoomDetailScreen() {
         <TouchableOpacity
           className="w-10 h-10 bg-gray-50 rounded-full items-center justify-center border border-gray-100"
           onPress={() => {
-            // Edit logic here (navigate to edit screen)
-            Alert.alert("Thông báo", "Chức năng chỉnh sửa đang cập nhật");
+            router.push({
+              pathname: "/(admin)/rooms/edit",
+              params: { id },
+            });
           }}
         >
           <FontAwesome5 name="pen" size={14} color="#374151" />
@@ -134,7 +121,8 @@ export default function RoomDetailScreen() {
             </View>
           </View>
 
-          <View className="flex-row gap-4 mb-6">
+          {/* Price & Area Grid */}
+          <View className="flex-row gap-4 mb-4">
             <View className="flex-1 bg-gray-50 p-3 rounded-xl">
               <Text className="text-gray-400 text-[10px] font-bold uppercase">
                 Giá thuê
@@ -153,6 +141,19 @@ export default function RoomDetailScreen() {
             </View>
           </View>
 
+          {/* Deposit */}
+          {room.depositPrice && (
+            <View className="bg-[#FFF7ED] p-3 rounded-xl mb-6 border border-[#FFEDD5] flex-row justify-between items-center">
+              <Text className="text-[#9A3412] font-medium text-xs">
+                Tiền cọc yêu cầu:
+              </Text>
+              <Text className="text-[#C2410C] font-bold">
+                {formatCurrency(room.depositPrice)}
+              </Text>
+            </View>
+          )}
+
+          {/* Details List */}
           <View className="space-y-3">
             <View className="flex-row items-center justify-between">
               <View className="flex-row items-center gap-2">
@@ -165,6 +166,7 @@ export default function RoomDetailScreen() {
               </View>
               <Text className="text-gray-900 font-bold">{room.floor}</Text>
             </View>
+
             <View className="flex-row items-center justify-between">
               <View className="flex-row items-center gap-2">
                 <FontAwesome5 name="users" size={14} color="#9CA3AF" />
@@ -176,7 +178,65 @@ export default function RoomDetailScreen() {
                 {room.maxTenants} người
               </Text>
             </View>
+
+            <View className="flex-row items-center justify-between">
+              <View className="flex-row items-center gap-2">
+                <FontAwesome5 name="venus-mars" size={14} color="#9CA3AF" />
+                <Text className="text-gray-600 font-medium">Giới tính</Text>
+              </View>
+              <Text className="text-gray-900 font-bold">
+                {room.gender === "ALL"
+                  ? "Tất cả"
+                  : room.gender === "MALE"
+                    ? "Nam"
+                    : "Nữ"}
+              </Text>
+            </View>
           </View>
+
+          {/* Amenities */}
+          {room.assets && room.assets.length > 0 && (
+            <View className="mt-6 pt-4 border-t border-gray-100">
+              <Text className="text-xs font-bold text-gray-500 uppercase mb-3">
+                Tiện ích
+              </Text>
+              <View className="flex-row flex-wrap gap-2">
+                {room.assets.map((asset: string) => (
+                  <View
+                    key={asset}
+                    className="bg-gray-100 px-3 py-1.5 rounded-lg flex-row items-center gap-1.5"
+                  >
+                    <FontAwesome5
+                      name="check-circle"
+                      size={10}
+                      color="#374151"
+                    />
+                    <Text className="text-xs font-medium text-gray-700 capitalize">
+                      {asset === "wifi"
+                        ? "Wifi"
+                        : asset === "ac"
+                          ? "Điều hòa"
+                          : asset === "heater"
+                            ? "Nóng lạnh"
+                            : asset === "bed"
+                              ? "Giường"
+                              : asset === "wardrobe"
+                                ? "Tủ đồ"
+                                : asset === "fridge"
+                                  ? "Tủ lạnh"
+                                  : asset === "parking"
+                                    ? "Để xe"
+                                    : asset === "kitchen"
+                                      ? "Bếp"
+                                      : asset === "washing"
+                                        ? "Máy giặt"
+                                        : asset}
+                    </Text>
+                  </View>
+                ))}
+              </View>
+            </View>
+          )}
         </View>
 
         {/* TENANTS SECTION */}
@@ -185,11 +245,10 @@ export default function RoomDetailScreen() {
             Cư dân hiện tại
           </Text>
           {room.contracts && room.contracts.length > 0 ? (
-            room.contracts.map((contract: any, index: number) => (
+            room.contracts.map((contract: any) => (
               <TouchableOpacity
                 key={contract.id}
                 className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm flex-row items-center gap-4 mb-3"
-                // Navigate to Tenant Detail
                 onPress={() =>
                   router.push(`/(admin)/tenants/${contract.tenantId}` as any)
                 }
@@ -216,9 +275,23 @@ export default function RoomDetailScreen() {
             </View>
           )}
 
-          {/* ACTIONS - Create Contract if Available */}
+          {/* Create Contract if Available */}
           {room.status === "AVAILABLE" && (
-            <TouchableOpacity className="mt-2 bg-[#DA7756] py-3 rounded-xl items-center shadow-lg shadow-orange-200">
+            <TouchableOpacity
+              className="mt-2 bg-[#DA7756] py-3 rounded-xl items-center shadow-lg shadow-orange-200"
+              onPress={() =>
+                router.push({
+                  pathname: "/(admin)/contracts/new",
+                  params: {
+                    roomId: room.id,
+                    roomName: room.name,
+                    buildingId: room.buildingId,
+                    roomPrice: room.price,
+                    depositPrice: room.depositPrice,
+                  },
+                } as any)
+              }
+            >
               <Text className="text-white font-bold">Tạo hợp đồng mới</Text>
             </TouchableOpacity>
           )}
@@ -229,14 +302,105 @@ export default function RoomDetailScreen() {
           <Text className="text-lg font-bold text-gray-900 font-serif mb-3">
             Thao tác nhanh
           </Text>
-          <View className="flex-row gap-3">
+          <View className="flex-row flex-wrap gap-3">
+            {/* Move Room - only when RENTED */}
+            {room.status === "RENTED" && room.contracts?.[0] && (
+              <TouchableOpacity
+                className="bg-white p-4 rounded-xl border border-gray-100 items-center justify-center gap-2"
+                style={{ width: "47%" }}
+                onPress={() =>
+                  router.push({
+                    pathname: "/(admin)/rooms/move-room",
+                    params: {
+                      contractId: room.contracts[0].id,
+                      roomName: room.name,
+                      roomPrice: room.price,
+                      deposit:
+                        room.contracts[0].paidDeposit || room.depositPrice || 0,
+                    },
+                  } as any)
+                }
+              >
+                <View className="w-10 h-10 bg-blue-50 rounded-full items-center justify-center">
+                  <FontAwesome5 name="exchange-alt" size={16} color="#3B82F6" />
+                </View>
+                <Text className="text-xs font-bold text-gray-700">
+                  Chuyển phòng
+                </Text>
+              </TouchableOpacity>
+            )}
+
+            {/* Maintenance Toggle */}
+            {room.status !== "RENTED" && (
+              <TouchableOpacity
+                className="bg-white p-4 rounded-xl border border-gray-100 items-center justify-center gap-2"
+                style={{ width: "47%" }}
+                onPress={() => {
+                  const newStatus =
+                    room.status === "MAINTENANCE" ? "AVAILABLE" : "MAINTENANCE";
+                  const label =
+                    newStatus === "MAINTENANCE" ? "Bảo trì" : "Trống";
+                  Alert.alert(
+                    "Cập nhật trạng thái",
+                    `Chuyển phòng sang trạng thái "${label}"?`,
+                    [
+                      { text: "Hủy", style: "cancel" },
+                      {
+                        text: "Xác nhận",
+                        onPress: async () => {
+                          try {
+                            await api.patch(`/rooms/${id}/status`, {
+                              status: newStatus,
+                            });
+                            queryClient.invalidateQueries({
+                              queryKey: ["room", id],
+                            });
+                            queryClient.invalidateQueries({
+                              queryKey: ["rooms"],
+                            });
+                            Alert.alert(
+                              "Thành công",
+                              `Phòng đã chuyển sang "${label}"`,
+                            );
+                          } catch (err: any) {
+                            Alert.alert(
+                              "Lỗi",
+                              err.response?.data?.message ||
+                                "Không thể cập nhật",
+                            );
+                          }
+                        },
+                      },
+                    ],
+                  );
+                }}
+              >
+                <View className="w-10 h-10 bg-yellow-50 rounded-full items-center justify-center">
+                  <FontAwesome5
+                    name={
+                      room.status === "MAINTENANCE" ? "check-circle" : "tools"
+                    }
+                    size={16}
+                    color={
+                      room.status === "MAINTENANCE" ? "#22C55E" : "#F59E0B"
+                    }
+                  />
+                </View>
+                <Text className="text-xs font-bold text-gray-700">
+                  {room.status === "MAINTENANCE" ? "Mở phòng" : "Bảo trì"}
+                </Text>
+              </TouchableOpacity>
+            )}
+
+            {/* Report Issue */}
             <TouchableOpacity
-              className="flex-1 bg-white p-4 rounded-xl border border-gray-100 items-center justify-center gap-2"
+              className="bg-white p-4 rounded-xl border border-gray-100 items-center justify-center gap-2"
+              style={{ width: "47%" }}
               onPress={() =>
-                Alert.alert(
-                  "Thông báo",
-                  "Tính năng báo cáo sự cố đang phát triển",
-                )
+                router.push({
+                  pathname: "/(admin)/issues/new",
+                  params: { roomId: id },
+                })
               }
             >
               <View className="w-10 h-10 bg-red-50 rounded-full items-center justify-center">
@@ -249,9 +413,49 @@ export default function RoomDetailScreen() {
               <Text className="text-xs font-bold text-gray-700">Báo sự cố</Text>
             </TouchableOpacity>
 
+            {/* Delete Room */}
             <TouchableOpacity
-              className="flex-1 bg-white p-4 rounded-xl border border-gray-100 items-center justify-center gap-2"
-              onPress={handleDelete}
+              className={`bg-white p-4 rounded-xl border items-center justify-center gap-2 ${
+                room.status === "RENTED"
+                  ? "border-gray-200 opacity-50"
+                  : "border-gray-100"
+              }`}
+              style={{ width: "47%" }}
+              onPress={() => {
+                // Pre-check: block if room has active contracts
+                const hasActiveContracts =
+                  room.contracts && room.contracts.some((c: any) => c.isActive);
+
+                if (room.status === "RENTED" || hasActiveContracts) {
+                  Alert.alert(
+                    "⛔ Không thể xóa",
+                    "Phòng đang có hợp đồng thuê (trạng thái: Đang ở).\n\n" +
+                      "Để xóa phòng, bạn cần:\n" +
+                      "1. Thanh lý hợp đồng hiện tại\n" +
+                      "2. Chờ phòng chuyển về trạng thái Trống\n" +
+                      "3. Sau đó mới xóa được",
+                    [{ text: "Đã hiểu", style: "default" }],
+                  );
+                  return;
+                }
+
+                Alert.alert(
+                  "⚠️ Xác nhận xóa phòng",
+                  `Bạn có chắc chắn muốn xóa phòng "${room.name}"?\n\n` +
+                    "Hành động này sẽ:\n" +
+                    "• Xóa vĩnh viễn phòng khỏi hệ thống\n" +
+                    "• Xóa toàn bộ lịch sử hợp đồng cũ\n" +
+                    "• Không thể hoàn tác",
+                  [
+                    { text: "Hủy", style: "cancel" },
+                    {
+                      text: "Xóa vĩnh viễn",
+                      style: "destructive",
+                      onPress: () => deleteMutation.mutate(),
+                    },
+                  ],
+                );
+              }}
             >
               <View className="w-10 h-10 bg-gray-50 rounded-full items-center justify-center">
                 <FontAwesome5 name="trash" size={16} color="#6B7280" />

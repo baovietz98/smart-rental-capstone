@@ -6,17 +6,23 @@ import {
   TextInput,
   Alert,
   ActivityIndicator,
+  Image,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { FontAwesome5 } from "@expo/vector-icons";
+import { FontAwesome5, MaterialCommunityIcons } from "@expo/vector-icons";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
-import { Controller, useForm } from "react-hook-form";
+import { Controller, useForm, useFieldArray } from "react-hook-form";
+import * as ImagePicker from "expo-image-picker";
+import { useState } from "react";
 
 export default function AddTenantScreen() {
   const router = useRouter();
   const queryClient = useQueryClient();
+  const [frontImage, setFrontImage] = useState<string | null>(null);
+  const [backImage, setBackImage] = useState<string | null>(null);
+
   const {
     control,
     handleSubmit,
@@ -29,11 +35,56 @@ export default function AddTenantScreen() {
       email: "",
       job: "",
       hometown: "",
+      vehicles: [] as { plateNumber: string; type: string }[],
     },
   });
 
+  const { fields, append, remove } = useFieldArray({
+    control,
+    name: "vehicles",
+  });
+
+  const pickImage = async (type: "front" | "back") => {
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [3, 2],
+      quality: 0.8,
+    });
+
+    if (!result.canceled) {
+      if (type === "front") setFrontImage(result.assets[0].uri);
+      else setBackImage(result.assets[0].uri);
+    }
+  };
+
+  const uploadImage = async (uri: string) => {
+    const formData = new FormData();
+    formData.append("file", {
+      uri,
+      name: "image.jpg",
+      type: "image/jpeg",
+    } as any);
+
+    const res = await api.post("/upload/image/tenants", formData, {
+      headers: { "Content-Type": "multipart/form-data" },
+    });
+    return res.data.data.url;
+  };
+
   const createMutation = useMutation({
     mutationFn: async (data: any) => {
+      let cccdFrontUrl = "";
+      let cccdBackUrl = "";
+
+      // Upload images first if exist
+      if (frontImage) {
+        cccdFrontUrl = await uploadImage(frontImage);
+      }
+      if (backImage) {
+        cccdBackUrl = await uploadImage(backImage);
+      }
+
       // Construct paylaod matching backend DTO
       const payload = {
         fullName: data.fullName,
@@ -43,7 +94,10 @@ export default function AddTenantScreen() {
           email: data.email,
           job: data.job,
           hometown: data.hometown,
+          cccdFront: cccdFrontUrl,
+          cccdBack: cccdBackUrl,
         },
+        vehicles: data.vehicles,
       };
       await api.post("/tenants", payload);
     },
@@ -81,12 +135,59 @@ export default function AddTenantScreen() {
         </Text>
       </View>
 
-      <ScrollView contentContainerStyle={{ padding: 24 }}>
+      <ScrollView contentContainerStyle={{ padding: 24, paddingBottom: 100 }}>
         <View className="bg-white p-6 rounded-[24px] shadow-sm border border-gray-100 space-y-4">
+          {/* CCCD Images */}
+          <View>
+            <Text className="text-xs font-bold text-gray-500 uppercase mb-2">
+              Ảnh CCCD/CMND
+            </Text>
+            <View className="flex-row gap-4 h-28">
+              <TouchableOpacity
+                className="flex-1 border border-dashed border-gray-300 rounded-xl items-center justify-center overflow-hidden bg-gray-50"
+                onPress={() => pickImage("front")}
+              >
+                {frontImage ? (
+                  <Image
+                    source={{ uri: frontImage }}
+                    className="w-full h-full"
+                    resizeMode="cover"
+                  />
+                ) : (
+                  <View className="items-center">
+                    <FontAwesome5 name="camera" size={20} color="#9CA3AF" />
+                    <Text className="text-[10px] font-bold text-gray-400 mt-1 uppercase">
+                      Mặt trước
+                    </Text>
+                  </View>
+                )}
+              </TouchableOpacity>
+              <TouchableOpacity
+                className="flex-1 border border-dashed border-gray-300 rounded-xl items-center justify-center overflow-hidden bg-gray-50"
+                onPress={() => pickImage("back")}
+              >
+                {backImage ? (
+                  <Image
+                    source={{ uri: backImage }}
+                    className="w-full h-full"
+                    resizeMode="cover"
+                  />
+                ) : (
+                  <View className="items-center">
+                    <FontAwesome5 name="camera" size={20} color="#9CA3AF" />
+                    <Text className="text-[10px] font-bold text-gray-400 mt-1 uppercase">
+                      Mặt sau
+                    </Text>
+                  </View>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+
           {/* Full Name */}
           <View>
             <Text className="text-xs font-bold text-gray-500 uppercase mb-2">
-              Họ và tên
+              Họ và tên <Text className="text-red-500">*</Text>
             </Text>
             <Controller
               control={control}
@@ -111,7 +212,7 @@ export default function AddTenantScreen() {
           {/* Phone */}
           <View>
             <Text className="text-xs font-bold text-gray-500 uppercase mb-2">
-              Số điện thoại
+              Số điện thoại <Text className="text-red-500">*</Text>
             </Text>
             <Controller
               control={control}
@@ -212,6 +313,75 @@ export default function AddTenantScreen() {
                 )}
               />
             </View>
+          </View>
+
+          {/* Vehicles Section */}
+          <View className="pt-4 border-t border-gray-100 mt-2">
+            <View className="flex-row justify-between items-center mb-3">
+              <Text className="text-xs font-bold text-gray-500 uppercase">
+                Thông tin xe
+              </Text>
+              <TouchableOpacity
+                onPress={() => append({ plateNumber: "", type: "" })}
+                className="flex-row items-center gap-1.5 bg-orange-50 px-3 py-1.5 rounded-full"
+              >
+                <FontAwesome5 name="plus" size={10} color="#DA7756" />
+                <Text className="text-[#DA7756] text-xs font-bold">
+                  Thêm xe
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            {fields.map((field, index) => (
+              <View key={field.id} className="flex-row items-end gap-3 mb-3">
+                <View className="flex-[2]">
+                  <Text className="text-[10px] font-bold text-gray-400 mb-1 uppercase">
+                    Biển số
+                  </Text>
+                  <Controller
+                    control={control}
+                    name={`vehicles.${index}.plateNumber`}
+                    rules={{ required: true }}
+                    render={({ field: { onChange, value } }) => (
+                      <TextInput
+                        className="bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 text-sm font-medium text-gray-900"
+                        placeholder="29A1-12345"
+                        value={value}
+                        onChangeText={onChange}
+                      />
+                    )}
+                  />
+                </View>
+                <View className="flex-1">
+                  <Text className="text-[10px] font-bold text-gray-400 mb-1 uppercase">
+                    Loại xe
+                  </Text>
+                  <Controller
+                    control={control}
+                    name={`vehicles.${index}.type`}
+                    render={({ field: { onChange, value } }) => (
+                      <TextInput
+                        className="bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 text-sm font-medium text-gray-900"
+                        placeholder="Xe máy"
+                        value={value}
+                        onChangeText={onChange}
+                      />
+                    )}
+                  />
+                </View>
+                <TouchableOpacity
+                  onPress={() => remove(index)}
+                  className="w-9 h-9 bg-red-50 rounded-xl items-center justify-center mb-[1px]"
+                >
+                  <FontAwesome5 name="trash-alt" size={12} color="#EF4444" />
+                </TouchableOpacity>
+              </View>
+            ))}
+            {fields.length === 0 && (
+              <Text className="text-gray-400 text-xs italic text-center py-2">
+                Chưa có thông tin xe
+              </Text>
+            )}
           </View>
         </View>
 

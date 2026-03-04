@@ -144,15 +144,27 @@ export class InvoicesController {
     required: false,
     description: 'Lọc theo tòa nhà',
   })
+  @ApiQuery({
+    name: 'contractId',
+    required: false,
+    description: 'Lọc theo hợp đồng',
+  })
+  @ApiQuery({
+    name: 'contractId',
+    required: false,
+    description: 'Lọc theo hợp đồng',
+  })
   findAll(
     @Query('status') status?: InvoiceStatus,
     @Query('month') month?: string,
     @Query('buildingId') buildingId?: string,
+    @Query('contractId') contractId?: string,
   ) {
     return this.invoicesService.findAll({
       status,
       month,
       buildingId: buildingId ? parseInt(buildingId, 10) : undefined,
+      contractId: contractId ? parseInt(contractId, 10) : undefined,
     });
   }
 

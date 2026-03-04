@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Query, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Body, Query, Patch, Delete, Param, ParseIntPipe } from '@nestjs/common';
 import { NotificationsService } from './notifications.service';
 import { CreateNotificationDto } from './dto/create-notification.dto';
 import { ApiTags, ApiOperation } from '@nestjs/swagger';
@@ -25,5 +25,23 @@ export class NotificationsController {
   @ApiOperation({ summary: 'Lấy thông báo mới nhất' })
   findLatest() {
     return this.notificationsService.findLatest();
+  }
+
+  @Get(':id')
+  @ApiOperation({ summary: 'Chi tiết thông báo' })
+  findOne(@Param('id', ParseIntPipe) id: number) {
+    return this.notificationsService.findOne(id);
+  }
+
+  @Patch(':id/read')
+  @ApiOperation({ summary: 'Đánh dấu đã đọc' })
+  markAsRead(@Param('id', ParseIntPipe) id: number) {
+    return this.notificationsService.markAsRead(id);
+  }
+
+  @Delete(':id')
+  @ApiOperation({ summary: 'Xóa thông báo' })
+  remove(@Param('id', ParseIntPipe) id: number) {
+    return this.notificationsService.remove(id);
   }
 }

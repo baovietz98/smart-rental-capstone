@@ -1107,6 +1107,44 @@ export default function AllRoomsPage() {
           setMaintenanceRoom(room);
           setDetailRoomId(null);
         }}
+        onMoveRoom={async (room) => {
+          // Find the active contract for this room
+          try {
+            const res = await axios.get(`/contracts/room/${room.id}`);
+            const contracts = res.data;
+            const active = contracts.find((c: any) => c.isActive);
+            if (active) {
+              setMoveContractId(active.id);
+              setIsMoveRoomModalOpen(true);
+            } else {
+              message.warning(
+                "Không tìm thấy hợp đồng đang hoạt động cho phòng này!",
+              );
+            }
+          } catch (error) {
+            console.error(error);
+            message.error("Lỗi khi tải thông tin hợp đồng.");
+          }
+          setDetailRoomId(null);
+        }}
+        onViewContract={async (room) => {
+          try {
+            const res = await axios.get(`/contracts/room/${room.id}`);
+            const contracts = res.data;
+            const active = contracts.find((c: any) => c.isActive);
+            if (active) {
+              setDetailRoomId(null);
+              router.push(`/contracts?view=${active.id}`);
+            } else {
+              message.warning(
+                "Không tìm thấy hợp đồng đang hoạt động cho phòng này!",
+              );
+            }
+          } catch (error) {
+            console.error(error);
+            message.error("Lỗi khi tải thông tin hợp đồng.");
+          }
+        }}
       />
 
       <Modal

@@ -15,7 +15,7 @@ export default function ReadingsLayout() {
     >
       <Stack.Screen
         name="index"
-        options={{ title: "Select Zone", headerLargeTitle: true }}
+        options={{ title: "Chọn khu vực", headerLargeTitle: true }}
       />
       <Stack.Screen name="patrol/[roomId]" options={{ headerShown: false }} />
     </Stack>

@@ -16,70 +16,50 @@ export interface PrepareReadingResponse {
   servicePrice: number;
   month: string;
   oldIndex: number;
-  isFirstReading: boolean; // Lần đầu chốt (lấy từ bàn giao)
+  isFirstReading?: boolean; // <--- Added this
+  isBilled: boolean; // Trạng thái đã lên hóa đơn
   existingReading?: {
     // Nếu tháng này đã chốt rồi
     id: number;
     newIndex: number;
     usage: number;
     totalCost: number;
+    invoiceId?: number;
   };
 }
 
 @Injectable()
 export class ReadingsService {
-  constructor(private prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService) {}
 
   /**
-   * API QUAN TRỌNG: Chuẩn bị dữ liệu cho form chốt số
-   * Logic: Tự động lấy chỉ số cũ từ tháng trước hoặc bàn giao
+   * Chuẩn bị thông tin cho việc chốt số
+   * - Tìm chỉ số cũ (tháng trước hoặc chỉ số bàn giao)
+   * - Kiểm tra xem tháng này đã chốt chưa
    */
   async prepareReading(
     contractId: number,
     serviceId: number,
     month: string,
   ): Promise<PrepareReadingResponse> {
-    console.log(
-      `Preparing reading for Contract ${contractId}, Service ${serviceId}, Month ${month}`,
-    );
-
-    // 1. Validate format tháng (MM-YYYY)
+    // 1. Validate format tháng
     if (!/^\d{2}-\d{4}$/.test(month)) {
-      throw new BadRequestException(
-        'Format tháng không hợp lệ. Phải là MM-YYYY (VD: 11-2025)',
-      );
+      throw new BadRequestException('Format tháng không hợp lệ (MM-YYYY)');
     }
 
-    // 2. Kiểm tra hợp đồng tồn tại và đang active
+    // 2. Lấy thông tin Hợp đồng & Dịch vụ
     const contract = await this.prisma.contract.findUnique({
       where: { id: contractId },
       include: { room: true },
     });
+    if (!contract) throw new NotFoundException('Hợp đồng không tồn tại');
 
-    if (!contract) {
-      throw new NotFoundException(`Không tìm thấy hợp đồng ID: ${contractId}`);
-    }
-
-    if (!contract.isActive) {
-      throw new BadRequestException('Hợp đồng đã kết thúc, không thể chốt số');
-    }
-
-    // 3. Kiểm tra dịch vụ tồn tại
     const service = await this.prisma.service.findUnique({
       where: { id: serviceId },
     });
+    if (!service) throw new NotFoundException('Dịch vụ không tồn tại');
 
-    if (!service) {
-      throw new NotFoundException(`Không tìm thấy dịch vụ ID: ${serviceId}`);
-    }
-
-    if (service.type !== 'INDEX') {
-      throw new BadRequestException(
-        `Dịch vụ "${service.name}" là loại cố định, không cần chốt chỉ số`,
-      );
-    }
-
-    // 4. Kiểm tra xem tháng này đã chốt chưa
+    // 3. Kiểm tra xem tháng này đã chốt chưa
     const existingReading = await this.prisma.serviceReading.findUnique({
       where: {
         contractId_serviceId_month: {
@@ -101,11 +81,13 @@ export class ReadingsService {
         month,
         oldIndex: existingReading.oldIndex,
         isFirstReading: false,
+        isBilled: existingReading.isBilled,
         existingReading: {
           id: existingReading.id,
           newIndex: existingReading.newIndex,
           usage: existingReading.usage,
           totalCost: existingReading.totalCost,
+          invoiceId: existingReading.invoiceId ?? undefined, // <--- Fix type error
         },
       };
     }
@@ -151,6 +133,7 @@ export class ReadingsService {
       month,
       oldIndex,
       isFirstReading,
+      isBilled: false,
     };
   }
 
@@ -558,15 +541,44 @@ export class ReadingsService {
 
     for (const reading of readings) {
       try {
-        const result = await this.create({
-          contractId: reading.contractId,
-          serviceId: reading.serviceId,
-          month,
-          newIndex: reading.newIndex,
-          oldIndex: reading.oldIndex,
-          isMeterReset: reading.isMeterReset,
+        // Check if exists
+        const existing = await this.prisma.serviceReading.findUnique({
+          where: {
+            contractId_serviceId_month: {
+              contractId: reading.contractId,
+              serviceId: reading.serviceId,
+              month,
+            },
+          },
         });
-        results.push({ success: true, data: result });
+
+        if (existing) {
+            if (existing.isBilled) {
+                 results.push({
+                    success: false,
+                    serviceId: reading.serviceId,
+                    error: `Dịch vụ này đã được lên hóa đơn, không thể cập nhật.`,
+                 });
+                 continue;
+            }
+            // Update
+            const updated = await this.update(existing.id, {
+                newIndex: reading.newIndex,
+                oldIndex: reading.oldIndex,
+            });
+             results.push({ success: true, data: updated as any });
+        } else {
+             // Create
+            const result = await this.create({
+                contractId: reading.contractId,
+                serviceId: reading.serviceId,
+                month,
+                newIndex: reading.newIndex,
+                oldIndex: reading.oldIndex,
+                isMeterReset: reading.isMeterReset,
+            });
+            results.push({ success: true, data: result });
+        }
       } catch (error) {
         results.push({
           success: false,

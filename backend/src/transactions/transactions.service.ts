@@ -471,12 +471,15 @@ export class TransactionsService {
     // 4. Update Invoice Status
     const newPaidAmount = invoice.paidAmount + payload.transferAmount;
     let newStatus = invoice.status;
+    let newDebtAmount = invoice.totalAmount - newPaidAmount;
 
     if (newPaidAmount >= invoice.totalAmount) {
       newStatus = 'PAID';
+      newDebtAmount = 0;
     } else if (payload.content.toUpperCase().includes('DEMO')) {
       // DEMO MODE: Treat as full payment regardless of amount
       newStatus = 'PAID';
+      newDebtAmount = 0;
     } else if (newPaidAmount > 0) {
       newStatus = 'PARTIAL';
     }
@@ -485,6 +488,7 @@ export class TransactionsService {
       where: { id: invoice.id },
       data: {
         paidAmount: newPaidAmount,
+        debtAmount: Math.max(0, newDebtAmount),
         status: newStatus,
       },
     });

@@ -21,10 +21,12 @@ import dayjs from "dayjs";
 import LiquidationModal from "@/components/contracts/LiquidationModal";
 import ExtensionModal from "@/components/contracts/ExtensionModal";
 import ContractDetailModal from "@/components/contracts/ContractDetailModal";
+import { useSearchParams } from "next/navigation";
 
 import CreateContractWizard from "@/components/contracts/CreateContractWizard";
 
 export default function ContractsPage() {
+  const searchParams = useSearchParams();
   const [contracts, setContracts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -83,6 +85,20 @@ export default function ContractsPage() {
     fetchServices();
   }, []);
 
+  // --- HANDLE URL PARAMS TO AUTO-OPEN MODAL ---
+  useEffect(() => {
+    const viewId = searchParams.get("view");
+    if (viewId && contracts.length > 0) {
+      const target = contracts.find((c) => c.id === Number(viewId));
+      if (target) {
+        setSelectedContract(target);
+        setDetailModalOpen(true);
+        // Clean up URL to avoid re-opening on manual refresh later
+        window.history.replaceState(null, "", "/contracts");
+      }
+    }
+  }, [searchParams, contracts]);
+
   // --- FILTER LOGIC ---
   const filteredContracts = useMemo(() => {
     return contracts.filter((contract) => {
@@ -129,7 +145,7 @@ export default function ContractsPage() {
       message.success(
         `Đã thanh lý hợp đồng. Hoàn lại khách: ${(
           (selectedContract.deposit || 0) - (values.deductions || 0)
-        ).toLocaleString()}đ`
+        ).toLocaleString()}đ`,
       );
       setLiquidationModalOpen(false);
       fetchContracts();
@@ -184,6 +200,7 @@ export default function ContractsPage() {
         <div className="mb-8 grid grid-cols-1 md:grid-cols-4 gap-4">
           <Select
             className="w-full h-11"
+            popupClassName="!bg-white [&_.ant-select-item-option-content]:!text-slate-800 [&_.ant-select-item-option-selected]:!bg-indigo-50 [&_.ant-select-item-option-selected_.ant-select-item-option-content]:!text-indigo-700"
             value={filterStatus}
             onChange={setFilterStatus}
             options={[
@@ -195,6 +212,7 @@ export default function ContractsPage() {
           />
           <Select
             className="w-full h-11"
+            popupClassName="!bg-white [&_.ant-select-item-option-content]:!text-slate-800 [&_.ant-select-item-option-selected]:!bg-indigo-50 [&_.ant-select-item-option-selected_.ant-select-item-option-content]:!text-indigo-700"
             placeholder="Lọc theo tòa nhà"
             allowClear
             onChange={setFilterBuilding}

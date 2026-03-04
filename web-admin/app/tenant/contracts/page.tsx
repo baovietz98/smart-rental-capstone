@@ -151,9 +151,9 @@ export default function TenantContractsPage() {
           >
             <ArrowLeft size={20} />
           </button>
-          <h1 className="text-xl font-bold text-slate-900 tracking-tight">
+          <h2 className="text-xl font-bold text-slate-900 tracking-tight">
             Hợp đồng thuê
-          </h1>
+          </h2>
         </div>
 
         {contract.isActive ? (

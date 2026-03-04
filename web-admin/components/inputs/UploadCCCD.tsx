@@ -48,6 +48,7 @@ export const UploadCCCD = ({
   return (
     <div className="border border-dashed border-gray-300 rounded-lg p-4 text-center cursor-pointer hover:bg-gray-50 hover:border-[#D97757] transition-all relative h-32 flex items-center justify-center group bg-white">
       <input
+        aria-label="cccd-upload"
         type="file"
         accept="image/*"
         onChange={handleUpload}
