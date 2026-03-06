@@ -132,6 +132,7 @@ export class TransactionsService {
     invoiceId?: number;
     fromDate?: string;
     toDate?: string;
+    month?: string;
   }) {
     const where: any = {};
 
@@ -147,13 +148,30 @@ export class TransactionsService {
       where.invoiceId = filters.invoiceId;
     }
 
-    if (filters?.fromDate || filters?.toDate) {
+    if (filters?.fromDate || filters?.toDate || filters?.month) {
       where.date = {};
-      if (filters.fromDate) {
-        where.date.gte = new Date(filters.fromDate);
-      }
-      if (filters.toDate) {
-        where.date.lte = new Date(filters.toDate);
+      
+      if (filters?.month) {
+        const [mStr, yStr] = filters.month.split('-');
+        if (mStr && yStr) {
+          const m = parseInt(mStr, 10) - 1; // 0-indexed
+          const y = parseInt(yStr, 10);
+          
+          const startDate = new Date(y, m, 1);
+          const endDate = new Date(y, m + 1, 0, 23, 59, 59, 999);
+          
+          where.date = {
+            gte: startDate,
+            lte: endDate,
+          };
+        }
+      } else {
+        if (filters.fromDate) {
+          where.date.gte = new Date(filters.fromDate);
+        }
+        if (filters.toDate) {
+          where.date.lte = new Date(filters.toDate);
+        }
       }
     }
 
@@ -295,13 +313,30 @@ export class TransactionsService {
     });
   }
 
-  async getStats(fromDate?: string, toDate?: string) {
+  async getStats(fromDate?: string, toDate?: string, month?: string) {
     const where: any = {};
 
-    if (fromDate || toDate) {
+    if (fromDate || toDate || month) {
       where.date = {};
-      if (fromDate) where.date.gte = new Date(fromDate);
-      if (toDate) where.date.lte = new Date(toDate);
+      
+      if (month) {
+        const [mStr, yStr] = month.split('-');
+        if (mStr && yStr) {
+          const m = parseInt(mStr, 10) - 1; // 0-indexed
+          const y = parseInt(yStr, 10);
+          
+          const startDate = new Date(y, m, 1);
+          const endDate = new Date(y, m + 1, 0, 23, 59, 59, 999);
+          
+          where.date = {
+            gte: startDate,
+            lte: endDate,
+          };
+        }
+      } else {
+        if (fromDate) where.date.gte = new Date(fromDate);
+        if (toDate) where.date.lte = new Date(toDate);
+      }
     }
 
     const [totalDeposit, totalPayment, totalExpense, totalOther] =

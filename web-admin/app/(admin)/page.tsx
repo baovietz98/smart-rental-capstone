@@ -174,7 +174,7 @@ export default function Dashboard() {
             if (inv.status !== "PAID") {
               unpaidList.push({
                 id: inv.id,
-                roomName: inv.room?.name,
+                roomName: inv.contract?.room?.name,
                 tenantName: inv.contract?.tenant?.name,
                 amount: inv.totalAmount || 0,
                 paidAmount: inv.paidAmount || 0,
@@ -332,10 +332,12 @@ export default function Dashboard() {
                   title: `Thanh toán ${new Intl.NumberFormat("vi-VN", {
                     style: "currency",
                     currency: "VND",
-                  }).format(inv.amount)}`,
-                  roomName: inv.room?.name ? `Phòng ${inv.room.name}` : "Khách",
+                  }).format(inv.totalAmount)}`,
+                  roomName: inv.contract?.room?.name
+                    ? `Phòng ${inv.contract.room.name}`
+                    : "Khách",
                   date: new Date(inv.updatedAt || inv.createdAt).toISOString(),
-                  amount: inv.amount,
+                  amount: inv.totalAmount,
                 });
               });
           }

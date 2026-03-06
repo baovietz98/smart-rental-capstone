@@ -19,6 +19,7 @@ import {
   Filter,
   Check,
   Loader2,
+  AlertTriangle,
 } from "lucide-react";
 import { readingsApi } from "@/lib/api/readings";
 import { servicesApi } from "@/lib/api/services";
@@ -45,6 +46,12 @@ export default function ReadingsPage() {
   const [month, setMonth] = useState(dayjs().format("MM-YYYY"));
   const [selectedService, setSelectedService] = useState<number | null>(null);
 
+  // Unread rooms alert
+  const [unreadRooms, setUnreadRooms] = useState<
+    { contractId: number; roomName: string; buildingName: string }[]
+  >([]);
+  const [unreadAlertDismissed, setUnreadAlertDismissed] = useState(false);
+
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalLoading, setModalLoading] = useState(false);
@@ -52,16 +59,20 @@ export default function ReadingsPage() {
 
   const fetchData = async () => {
     setLoading(true);
+    setUnreadAlertDismissed(false);
     try {
-      const [serviceData, buildingRes, readingData] = await Promise.all([
-        servicesApi.getByType(ServiceType.INDEX),
-        axios.get("/buildings"),
-        readingsApi.findAll(month, selectedService || undefined),
-      ]);
+      const [serviceData, buildingRes, readingData, unreadData] =
+        await Promise.all([
+          servicesApi.getByType(ServiceType.INDEX),
+          axios.get("/buildings"),
+          readingsApi.findAll(month, selectedService || undefined),
+          readingsApi.getUnreadRooms(month).catch(() => []),
+        ]);
 
       setServices(serviceData);
       setBuildings(buildingRes.data);
       setReadings(readingData);
+      setUnreadRooms(unreadData);
     } catch (error) {
       console.error(error);
       message.error("Lỗi tải dữ liệu");
@@ -370,6 +381,57 @@ export default function ReadingsPage() {
             options={services.map((s) => ({ label: s.name, value: s.id }))}
           />
         </div>
+
+        {/* UNREAD ROOMS ALERT BANNER */}
+        {unreadRooms.length > 0 && !unreadAlertDismissed && (
+          <div className="mb-6 bg-amber-50 border-2 border-amber-200 rounded-2xl overflow-hidden">
+            {/* Banner Header */}
+            <div className="flex items-center justify-between px-5 py-3 bg-amber-100 border-b border-amber-200">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-full bg-amber-400 flex items-center justify-center flex-shrink-0">
+                  <AlertTriangle size={16} className="text-white" />
+                </div>
+                <div>
+                  <p className="font-bold text-amber-900 text-base leading-tight">
+                    Chưa chốt điện nước tháng{" "}
+                    <span className="text-amber-600">{month}</span>
+                  </p>
+                  <p className="text-amber-700 text-xs mt-0.5">
+                    Có{" "}
+                    <span className="font-bold text-amber-800">
+                      {unreadRooms.length} phòng
+                    </span>{" "}
+                    chưa được ghi nhận chỉ số
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setUnreadAlertDismissed(true)}
+                className="w-7 h-7 rounded-full flex items-center justify-center text-amber-500 hover:bg-amber-200 hover:text-amber-700 transition-colors flex-shrink-0"
+                title="Ẩn thông báo"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Room chips */}
+            <div className="px-5 py-3 flex flex-wrap gap-2">
+              {unreadRooms.map((r) => (
+                <div
+                  key={r.contractId}
+                  className="flex items-stretch rounded-xl overflow-hidden border border-amber-200 bg-white shadow-sm"
+                >
+                  <span className="flex items-center px-3 py-1.5 bg-amber-500 text-white font-bold text-sm">
+                    {r.roomName}
+                  </span>
+                  <span className="flex items-center px-3 py-1.5 text-amber-700 text-xs font-medium">
+                    {r.buildingName}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* CONTENT */}
         {/* DESKTOP TABLE */}

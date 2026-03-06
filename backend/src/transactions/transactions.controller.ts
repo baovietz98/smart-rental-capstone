@@ -87,6 +87,7 @@ export class TransactionsController {
     @Query('invoiceId') invoiceId?: string,
     @Query('fromDate') fromDate?: string,
     @Query('toDate') toDate?: string,
+    @Query('month') month?: string,
   ) {
     return this.transactionsService.findAll({
       type,
@@ -94,6 +95,7 @@ export class TransactionsController {
       invoiceId: invoiceId ? parseInt(invoiceId, 10) : undefined,
       fromDate,
       toDate,
+      month,
     });
   }
 
@@ -117,8 +119,9 @@ export class TransactionsController {
   getStats(
     @Query('fromDate') fromDate?: string,
     @Query('toDate') toDate?: string,
+    @Query('month') month?: string,
   ) {
-    return this.transactionsService.getStats(fromDate, toDate);
+    return this.transactionsService.getStats(fromDate, toDate, month);
   }
 
   @Get('contract/:contractId')

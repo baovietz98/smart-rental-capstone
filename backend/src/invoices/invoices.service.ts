@@ -4,6 +4,7 @@ import {
   BadRequestException,
   ConflictException,
   Logger,
+  OnModuleInit,
 } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { PrismaService } from '../prisma/prisma.service';
@@ -17,11 +18,17 @@ import {
 } from './dto';
 
 @Injectable()
-export class InvoicesService {
+export class InvoicesService implements OnModuleInit {
   private readonly logger = new Logger(InvoicesService.name);
 
   constructor(private prisma: PrismaService) {}
 
+  /**
+   * Chạy ngay khi module khởi động để cập nhật hóa đơn quá hạn
+   */
+  onModuleInit() {
+    void this.checkOverdueInvoices();
+  }
   /**
    * BƯỚC 1: Xem trước hóa đơn (Preview)
    * - Kiểm tra readings
@@ -54,6 +61,20 @@ export class InvoicesService {
     if (!contract.isActive) {
       throw new BadRequestException(
         'Hợp đồng đã kết thúc, không thể tạo hóa đơn',
+      );
+    }
+
+    // 2.5 Kiểm tra xem đã có hóa đơn tháng này chưa
+    const existingInvoice = await this.prisma.invoice.findFirst({
+      where: {
+        contractId: dto.contractId,
+        month: dto.month,
+      },
+    });
+
+    if (existingInvoice) {
+      throw new ConflictException(
+        `Phòng này đã có hóa đơn tháng ${dto.month}. Bấm Xóa hóa đơn cũ trước khi lập lại.`,
       );
     }
 
@@ -367,7 +388,40 @@ export class InvoicesService {
       );
     }
 
-    let lineItems = invoice.lineItems as unknown as InvoiceLineItem[];
+    let lineItems = (invoice.lineItems as unknown as InvoiceLineItem[]) || [];
+
+    // Fallback: Nếu lineItems rỗng (do data cũ/seed), ta phục hồi lại Tiền phòng và Dịch vụ
+    if (lineItems.length === 0) {
+      if (invoice.roomCharge > 0) {
+        lineItems.push({
+          type: 'RENT',
+          name: 'Tiền phòng',
+          amount: invoice.roomCharge,
+          quantity: 1,
+          unit: 'tháng',
+          unitPrice: invoice.roomCharge,
+        });
+      }
+      if (invoice.serviceCharge > 0) {
+        lineItems.push({
+          type: 'FIXED', // Gộp chung dịch vụ
+          name: 'Dịch vụ & Phí khác',
+          amount: invoice.serviceCharge,
+          quantity: 1,
+          unit: 'gói',
+          unitPrice: invoice.serviceCharge,
+        });
+      }
+      if (invoice.previousDebt > 0) {
+        lineItems.push({
+          type: 'DEBT',
+          name: 'Nợ cũ',
+          amount: invoice.previousDebt,
+          quantity: 1,
+          unitPrice: invoice.previousDebt,
+        });
+      }
+    }
     let roomCharge = invoice.roomCharge;
     let serviceCharge = invoice.serviceCharge;
     let extraCharge = invoice.extraCharge;
@@ -975,16 +1029,34 @@ export class InvoicesService {
     const now = new Date();
 
     try {
+      // Bước 1: Khôi phục các hóa đơn OVERDUE có trả 1 phần về PARTIAL
+      // (trường hợp bị đánh nhầm OVERDUE khi đã có thanh toán 1 phần)
+      const restored = await this.prisma.invoice.updateMany({
+        where: {
+          status: InvoiceStatus.OVERDUE,
+          paidAmount: { gt: 0 },
+          debtAmount: { gt: 0 },
+        },
+        data: {
+          status: InvoiceStatus.PARTIAL,
+        },
+      });
+
+      if (restored.count > 0) {
+        this.logger.warn(`Đã khôi phục ${restored.count} hóa đơn bị đánh nhầm OVERDUE về PARTIAL.`);
+      }
+
+      // Bước 2: Chỉ đánh OVERDUE các hóa đơn PUBLISHED (chưa trả đồng nào) đã quá hạn
       const result = await this.prisma.invoice.updateMany({
         where: {
           status: {
-            in: [InvoiceStatus.PUBLISHED, InvoiceStatus.PARTIAL],
+            in: [InvoiceStatus.PUBLISHED], // PARTIAL không tính quá hạn - nợ chuyển qua tháng sau
           },
           debtAmount: {
             gt: 0,
           },
           dueDate: {
-            lt: now, // Ngày hạn chót nhỏ hơn thời điểm hiện tại
+            lt: now,
           },
         },
         data: {

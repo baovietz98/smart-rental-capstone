@@ -84,15 +84,28 @@ async function main() {
     await prisma.invoice.create({
         data: {
             contractId: c1.id, month: '01-2026', status: InvoiceStatus.PAID,
-            totalAmount: 5500000, paidAmount: 5500000, debtAmount: 0,
-            roomCharge: 5000000, serviceCharge: 500000,
+            totalAmount: 5595000, paidAmount: 5595000, debtAmount: 0,
+            roomCharge: 5000000, serviceCharge: 595000,
             lineItems: [
                 { name: 'Tiền phòng T01/2026', amount: 5000000, quantity: 1, unit: 'tháng', unitPrice: 5000000, type: 'ROOM' },
                 { name: 'Điện (CS cũ: 100 - CS mới: 150)', amount: 175000, quantity: 50, unit: 'kWh', unitPrice: 3500, type: 'SERVICE', note: 'Chỉ số cũ: 100 - Mới: 150' },
                 { name: 'Nước (CS cũ: 10 - CS mới: 20)', amount: 200000, quantity: 10, unit: 'm3', unitPrice: 20000, type: 'SERVICE', note: 'Chỉ số cũ: 10 - Mới: 20' },
-                { name: 'Rác, Internet, Dịch vụ khác', amount: 125000, quantity: 1, unit: 'gói', unitPrice: 125000, type: 'SERVICE' }
+                { name: 'Internet', amount: 100000, quantity: 1, unit: 'tháng', unitPrice: 100000, type: 'SERVICE' },
+                { name: 'Rác', amount: 20000, quantity: 1, unit: 'tháng', unitPrice: 20000, type: 'SERVICE' },
+                { name: 'Gửi xe', amount: 100000, quantity: 1, unit: 'chiếc', unitPrice: 100000, type: 'SERVICE' }
             ]
         }
+    });
+    // Service Readings for Invoice 1
+    await prisma.serviceReading.createMany({
+        data: [
+            { contractId: c1.id, serviceId: elec.id, month: '01-2026', oldIndex: 100, newIndex: 150, usage: 50, unitPrice: 3500, totalCost: 175000, isBilled: true, invoiceId: 1, readingDate: new Date('2026-01-25') },
+            { contractId: c1.id, serviceId: water.id, month: '01-2026', oldIndex: 10, newIndex: 20, usage: 10, unitPrice: 20000, totalCost: 200000, isBilled: true, invoiceId: 1, readingDate: new Date('2026-01-25') }
+        ]
+    });
+    // Vehicle for Tenant 1
+    await prisma.vehicle.create({
+        data: { plateNumber: '59P1-123.45', type: 'Honda AirBlade', tenantId: t1.id }
     });
 
     // 6. TENANT 2: ISSUES & OVERDUE (The Problem Tenant)
@@ -110,17 +123,19 @@ async function main() {
             initialIndexes: { [elec.id]: 500, [water.id]: 50 }
         }
     });
-    // Invoice 1 (Overdue)
+    // Invoice 2 (Overdue)
     await prisma.invoice.create({
         data: {
             contractId: c2.id, month: '01-2026', status: InvoiceStatus.OVERDUE,
-            totalAmount: 6000000, paidAmount: 0, debtAmount: 6000000,
-            roomCharge: 5500000, serviceCharge: 500000,
+            totalAmount: 6170000, paidAmount: 0, debtAmount: 6170000,
+            roomCharge: 5500000, serviceCharge: 670000,
             lineItems: [
                 { name: 'Tiền phòng T01/2026', amount: 5500000, quantity: 1, unit: 'tháng', unitPrice: 5500000, type: 'ROOM' },
                 { name: 'Điện (CS cũ: 500 - CS mới: 600)', amount: 350000, quantity: 100, unit: 'kWh', unitPrice: 3500, type: 'SERVICE', note: 'Chỉ số cũ: 500 - Mới: 600' },
                 { name: 'Nước (CS cũ: 50 - CS mới: 55)', amount: 100000, quantity: 5, unit: 'm3', unitPrice: 20000, type: 'SERVICE', note: 'Chỉ số cũ: 50 - Mới: 55' },
-                { name: 'Rác, Internet', amount: 50000, quantity: 1, unit: 'gói', unitPrice: 50000, type: 'SERVICE' }
+                { name: 'Internet', amount: 100000, quantity: 1, unit: 'tháng', unitPrice: 100000, type: 'SERVICE' },
+                { name: 'Rác', amount: 20000, quantity: 1, unit: 'tháng', unitPrice: 20000, type: 'SERVICE' },
+                { name: 'Gửi ô tô', amount: 100000, quantity: 1, unit: 'chiếc', unitPrice: 100000, type: 'SERVICE' }
             ], dueDate: new Date('2026-01-10')
         }
     });
@@ -136,6 +151,17 @@ async function main() {
         data: {
             title: 'Nhắc nhở đóng tiền', content: 'Bạn có hóa đơn quá hạn T1/2026. Vui lòng thanh toán gấp.', type: 'PAYMENT', tenantId: t2.id
         }
+    });
+    // Service Readings for Tenant 2
+    await prisma.serviceReading.createMany({
+        data: [
+            { contractId: c2.id, serviceId: elec.id, month: '01-2026', oldIndex: 500, newIndex: 600, usage: 100, unitPrice: 3500, totalCost: 350000, isBilled: true, invoiceId: 2, readingDate: new Date('2026-01-25') },
+            { contractId: c2.id, serviceId: water.id, month: '01-2026', oldIndex: 50, newIndex: 55, usage: 5, unitPrice: 20000, totalCost: 100000, isBilled: true, invoiceId: 2, readingDate: new Date('2026-01-25') }
+        ]
+    });
+    // Vehicle for Tenant 2
+    await prisma.vehicle.create({
+        data: { plateNumber: '29A-678.90', type: 'Toyota Vios', tenantId: t2.id }
     });
 
     // 7. TENANT 3: EXPIRING / EDGE CASE
@@ -162,6 +188,13 @@ async function main() {
             roomCharge: 4500000, serviceCharge: 300000,
             lineItems: [], dueDate: new Date('2026-02-15')
         }
+    });
+    // Service Readings for Tenant 3 (Pending Bill)
+    await prisma.serviceReading.createMany({
+        data: [
+            { contractId: c3.id, serviceId: elec.id, month: '02-2026', oldIndex: 1000, newIndex: 1050, usage: 50, unitPrice: 3500, totalCost: 175000, isBilled: true, invoiceId: 3, readingDate: new Date('2026-02-10') },
+            { contractId: c3.id, serviceId: water.id, month: '02-2026', oldIndex: 100, newIndex: 106, usage: 6, unitPrice: 20000, totalCost: 120000, isBilled: true, invoiceId: 3, readingDate: new Date('2026-02-10') }
+        ]
     });
 
     // 8. GENERAL NOTIFICATIONS
@@ -200,15 +233,29 @@ async function main() {
     await prisma.invoice.create({
         data: {
             contractId: c4.id, month: '01-2026', status: InvoiceStatus.PAID,
-            // Room 10tr + Elec 1tr + Water 400k + Service 500k = 11.9tr
+            // Room 10tr + Elec 1.050tr + Water 400k + Int 100k + Trash 20k + Park 100k + Gym 230k
             roomCharge: 10000000, serviceCharge: 1900000, totalAmount: 11900000, paidAmount: 11900000, debtAmount: 0,
             lineItems: [
                 { name: 'Tiền phòng T01/2026 (VIP)', amount: 10000000, quantity: 1, unit: 'tháng', unitPrice: 10000000, type: 'ROOM' },
                 { name: 'Điện (CS cũ: 2000 - CS mới: 2300)', amount: 1050000, quantity: 300, unit: 'kWh', unitPrice: 3500, type: 'SERVICE', note: 'Chỉ số cũ: 2000 - Mới: 2300' },
                 { name: 'Nước (CS cũ: 200 - CS mới: 220)', amount: 400000, quantity: 20, unit: 'm3', unitPrice: 20000, type: 'SERVICE', note: 'Chỉ số cũ: 200 - Mới: 220' },
-                { name: 'Phí quản lý & Gym/Pool', amount: 450000, quantity: 1, unit: 'gói', unitPrice: 450000, type: 'SERVICE' }
+                { name: 'Internet', amount: 100000, quantity: 1, unit: 'tháng', unitPrice: 100000, type: 'SERVICE' },
+                { name: 'Rác', amount: 20000, quantity: 1, unit: 'tháng', unitPrice: 20000, type: 'SERVICE' },
+                { name: 'Gửi ô tô VIP', amount: 100000, quantity: 1, unit: 'chiếc', unitPrice: 100000, type: 'SERVICE' },
+                { name: 'Phí quản lý & Gym/Pool', amount: 230000, quantity: 1, unit: 'gói', unitPrice: 230000, type: 'EXTRA' }
             ]
         }
+    });
+    // Service Readings for VIP
+    await prisma.serviceReading.createMany({
+        data: [
+            { contractId: c4.id, serviceId: elec.id, month: '01-2026', oldIndex: 2000, newIndex: 2300, usage: 300, unitPrice: 3500, totalCost: 1050000, isBilled: true, invoiceId: 4, readingDate: new Date('2026-01-28') },
+            { contractId: c4.id, serviceId: water.id, month: '01-2026', oldIndex: 200, newIndex: 220, usage: 20, unitPrice: 20000, totalCost: 400000, isBilled: true, invoiceId: 4, readingDate: new Date('2026-01-28') }
+        ]
+    });
+    // Vehicle for VIP
+    await prisma.vehicle.create({
+        data: { plateNumber: '30K-999.99', type: 'Mercedes G63', tenantId: t4.id }
     });
 
     // Tenant 5: Newbie (Just moved in, partial payment)
@@ -225,16 +272,22 @@ async function main() {
     await prisma.invoice.create({
         data: {
             contractId: c5.id, month: '01-2026', status: InvoiceStatus.PARTIAL,
-            // Half room (4tr) + Deposit (8tr) + Service (200k) = 12.2tr
-            // User paid Deposit (8tr) + Room (4tr) = 12tr, owes 200k service
-            roomCharge: 4000000, serviceCharge: 200000, totalAmount: 4200000, paidAmount: 4000000, debtAmount: 200000,
+            roomCharge: 4000000, serviceCharge: 285000, totalAmount: 4285000, paidAmount: 4000000, debtAmount: 285000,
             lineItems: [
                 { name: 'Tiền phòng T01/2026 (15 ngày)', amount: 4000000, quantity: 0.5, unit: 'tháng', unitPrice: 8000000, type: 'ROOM', note: 'Vào ở từ 15/01' },
                 { name: 'Điện (CS cũ: 0 - CS mới: 30)', amount: 105000, quantity: 30, unit: 'kWh', unitPrice: 3500, type: 'SERVICE' },
                 { name: 'Nước (CS cũ: 0 - CS mới: 3)', amount: 60000, quantity: 3, unit: 'm3', unitPrice: 20000, type: 'SERVICE' },
-                { name: 'Rác', amount: 35000, quantity: 1, unit: 'tháng', unitPrice: 35000, type: 'SERVICE' }
+                { name: 'Internet', amount: 100000, quantity: 1, unit: 'tháng', unitPrice: 100000, type: 'SERVICE' },
+                { name: 'Rác', amount: 20000, quantity: 1, unit: 'tháng', unitPrice: 20000, type: 'SERVICE' }
             ], dueDate: new Date('2026-01-20')
         }
+    });
+    // Service Readings for Newbie
+    await prisma.serviceReading.createMany({
+        data: [
+            { contractId: c5.id, serviceId: elec.id, month: '01-2026', oldIndex: 0, newIndex: 30, usage: 30, unitPrice: 3500, totalCost: 105000, isBilled: true, invoiceId: 5, readingDate: new Date('2026-01-28') },
+            { contractId: c5.id, serviceId: water.id, month: '01-2026', oldIndex: 0, newIndex: 3, usage: 3, unitPrice: 20000, totalCost: 60000, isBilled: true, invoiceId: 5, readingDate: new Date('2026-01-28') }
+        ]
     });
 
     // Issue for Maintenance Room
@@ -307,7 +360,7 @@ async function main() {
     await prisma.transaction.create({
         data: {
             code: 'PT-0006',
-            amount: 5800000,
+            amount: 5595000,
             type: 'INVOICE_PAYMENT',
             date: new Date('2026-01-05'),
             note: 'Thanh toán hóa đơn T01/2026 - Phòng 101',

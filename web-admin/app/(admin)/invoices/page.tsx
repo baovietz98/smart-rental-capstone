@@ -209,12 +209,21 @@ export default function InvoicesPage() {
             icon = <AlertCircle size={14} />;
         }
 
+        const statusLabel: Record<string, string> = {
+          PAID: "Đã Thanh Toán",
+          PARTIAL: "Trả 1 Phần",
+          OVERDUE: "Quá Hạn",
+          PUBLISHED: "Chưa Thanh Toán",
+          DRAFT: "Bản Nháp",
+          CANCELLED: "Đã Hủy",
+        };
+
         return (
           <div
             className={`flex items-center justify-center gap-1.5 px-3 py-1 rounded-md border ${colorClass} font-semibold text-xs uppercase w-fit mx-auto`}
           >
             {icon}
-            {status === InvoiceStatus.PAID ? "Đã Thanh Toán" : status}
+            {statusLabel[status] ?? status}
           </div>
         );
       },

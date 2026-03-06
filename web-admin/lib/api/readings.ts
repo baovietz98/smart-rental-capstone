@@ -47,9 +47,9 @@ export const readingsApi = {
         return response.data;
     },
 
-    getUnreadRooms: async (month: string, serviceId: number) => {
+    getUnreadRooms: async (month: string, buildingId?: number) => {
         const response = await axiosClient.get<any[]>('/readings/unread', {
-            params: { month, serviceId },
+            params: { month, buildingId },
         });
         return response.data;
     },

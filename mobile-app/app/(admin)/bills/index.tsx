@@ -63,6 +63,13 @@ export default function BillList() {
           text: "text-red-600",
           icon: "alert-circle",
         };
+      case "PARTIAL":
+        return {
+          label: "Thanh toán 1 phần",
+          bg: "bg-amber-50",
+          text: "text-amber-600",
+          icon: "clock-outline",
+        };
       case "DRAFT":
         return {
           label: "Bản nháp",
@@ -133,6 +140,7 @@ export default function BillList() {
             { id: "ALL", label: "Tất cả" },
             { id: "DRAFT", label: "Nháp" },
             { id: "PUBLISHED", label: "Đã phát hành" },
+            { id: "PARTIAL", label: "Trả 1 phần" },
             { id: "PAID", label: "Đã thu" },
             { id: "OVERDUE", label: "Quá hạn" },
           ].map((f) => (

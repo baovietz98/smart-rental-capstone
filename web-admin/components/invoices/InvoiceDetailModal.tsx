@@ -112,6 +112,21 @@ export default function InvoiceDetailModal({
     }
   };
 
+  const handleDelete = async () => {
+    try {
+      setLoading(true);
+      await invoicesApi.delete(invoice.id);
+      message.success("Đã xóa hóa đơn! 🗑️");
+      onUpdate();
+      onCancel();
+    } catch (error) {
+      console.error(error);
+      message.error("Lỗi khi xóa hóa đơn");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // ... existing code ...
   const displayItems =
     invoice.lineItems && invoice.lineItems.length > 0
@@ -534,6 +549,23 @@ export default function InvoiceDetailModal({
             <div className="flex flex-col sm:flex-row gap-2 order-1 md:order-2">
               {isDraft ? (
                 <>
+                  <Popconfirm
+                    title="Xóa hóa đơn này?"
+                    description="Hành động này không thể hoàn tác."
+                    onConfirm={handleDelete}
+                    okButtonProps={{ danger: true }}
+                    cancelText="Hủy"
+                    okText="Xóa"
+                  >
+                    <Button
+                      icon={<Trash2 size={16} />}
+                      danger
+                      className="gumroad-btn-secondary border-red-500 text-red-500 hover:bg-red-50 text-sm md:text-base mr-2"
+                      disabled={loading || isEditing}
+                    >
+                      Xóa
+                    </Button>
+                  </Popconfirm>
                   {!isEditing && (
                     <Button
                       icon={<Edit size={16} />}

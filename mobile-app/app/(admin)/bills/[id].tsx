@@ -470,15 +470,48 @@ export default function BillDetail() {
           </View>
 
           {/* Status Badge */}
-          <View
-            className={`py-3 items-center ${bill.status === "PAID" ? "bg-green-100" : "bg-orange-100"}`}
-          >
-            <Text
-              className={`font-black uppercase tracking-widest text-xs ${bill.status === "PAID" ? "text-green-700" : "text-orange-700"}`}
-            >
-              {bill.status === "PAID" ? "ĐÃ THANH TOÁN" : "CHƯA THANH TOÁN"}
-            </Text>
-          </View>
+          {(() => {
+            const statusMap: Record<
+              string,
+              { bg: string; text: string; label: string }
+            > = {
+              PAID: {
+                bg: "bg-green-100",
+                text: "text-green-700",
+                label: "ĐÃ THANH TOÁN",
+              },
+              PARTIAL: {
+                bg: "bg-amber-100",
+                text: "text-amber-700",
+                label: "THANH TOÁN 1 PHẦN",
+              },
+              OVERDUE: {
+                bg: "bg-red-100",
+                text: "text-red-700",
+                label: "QUÁ HẠN",
+              },
+              DRAFT: {
+                bg: "bg-gray-100",
+                text: "text-gray-600",
+                label: "BẢN NHÁP",
+              },
+              PUBLISHED: {
+                bg: "bg-orange-100",
+                text: "text-orange-700",
+                label: "CHƯA THANH TOÁN",
+              },
+            };
+            const s = statusMap[bill.status] ?? statusMap["PUBLISHED"];
+            return (
+              <View className={`py-3 items-center ${s.bg}`}>
+                <Text
+                  className={`font-black uppercase tracking-widest text-xs ${s.text}`}
+                >
+                  {s.label}
+                </Text>
+              </View>
+            );
+          })()}
         </View>
 
         {/* VIETQR SECTION - SEPARATE CARD */}
