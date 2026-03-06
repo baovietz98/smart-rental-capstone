@@ -10,12 +10,11 @@ import {
   Platform,
 } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { SafeAreaView } from "react-native-safe-area-context";
 import {
-  FontAwesome5,
-  Ionicons,
-  MaterialCommunityIcons,
-} from "@expo/vector-icons";
+  SafeAreaView,
+  useSafeAreaInsets,
+} from "react-native-safe-area-context";
+import { FontAwesome5, Ionicons } from "@expo/vector-icons";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { useState, useEffect, useMemo } from "react";
@@ -34,10 +33,11 @@ interface MeterReading {
 }
 
 // ── Helpers ──
-const formatCurrency = (value: number) =>
-  new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(
-    value,
-  );
+// Unused
+// const formatCurrency = (value: number) =>
+//   new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(
+//     value,
+//   );
 
 const formatShortCurrency = (value: number) =>
   new Intl.NumberFormat("vi-VN").format(value);
@@ -55,6 +55,7 @@ export default function MoveRoomScreen() {
   }>();
   const router = useRouter();
   const queryClient = useQueryClient();
+  const insets = useSafeAreaInsets();
 
   // ── Wizard state ──
   const [step, setStep] = useState(0);
@@ -109,6 +110,7 @@ export default function MoveRoomScreen() {
         }));
       setMeterReadings(initial);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [services]);
 
   // ── Selected room ──
@@ -452,8 +454,19 @@ export default function MoveRoomScreen() {
                       key={status}
                       onPress={() => setOldRoomStatus(status)}
                       className={`flex-1 py-3 px-3 rounded-xl items-center ${
-                        oldRoomStatus === status ? "bg-white shadow-sm" : ""
+                        oldRoomStatus === status ? "bg-white" : ""
                       }`}
+                      style={
+                        oldRoomStatus === status
+                          ? {
+                              shadowColor: "#000",
+                              shadowOffset: { width: 0, height: 1 },
+                              shadowOpacity: 0.05,
+                              shadowRadius: 2,
+                              elevation: 1,
+                            }
+                          : undefined
+                      }
                     >
                       <Text
                         className={`text-sm font-bold ${
@@ -702,9 +715,20 @@ export default function MoveRoomScreen() {
                       onPress={() => setSettlementOption("IMMEDIATE")}
                       className={`flex-1 p-3 rounded-xl border ${
                         settlementOption === "IMMEDIATE"
-                          ? "bg-white border-gray-900 shadow-sm"
+                          ? "bg-white border-gray-900"
                           : "bg-white border-gray-200"
                       }`}
+                      style={
+                        settlementOption === "IMMEDIATE"
+                          ? {
+                              shadowColor: "#000",
+                              shadowOffset: { width: 0, height: 1 },
+                              shadowOpacity: 0.05,
+                              shadowRadius: 2,
+                              elevation: 1,
+                            }
+                          : undefined
+                      }
                     >
                       <Text className="font-bold text-sm text-gray-900">
                         🧾 Tạo HĐ ngay
@@ -717,9 +741,20 @@ export default function MoveRoomScreen() {
                       onPress={() => setSettlementOption("DEFER")}
                       className={`flex-1 p-3 rounded-xl border ${
                         settlementOption === "DEFER"
-                          ? "bg-white border-gray-900 shadow-sm"
+                          ? "bg-white border-gray-900"
                           : "bg-white border-gray-200"
                       }`}
+                      style={
+                        settlementOption === "DEFER"
+                          ? {
+                              shadowColor: "#000",
+                              shadowOffset: { width: 0, height: 1 },
+                              shadowOpacity: 0.05,
+                              shadowRadius: 2,
+                              elevation: 1,
+                            }
+                          : undefined
+                      }
                     >
                       <Text className="font-bold text-sm text-gray-900">
                         📅 Cộng dồn
@@ -739,7 +774,7 @@ export default function MoveRoomScreen() {
       {/* FOOTER */}
       <View
         className="absolute bottom-0 left-0 right-0 bg-white border-t border-gray-200 px-6 py-4 flex-row justify-between items-center"
-        style={{ paddingBottom: Platform.OS === "ios" ? 34 : 16 }}
+        style={{ paddingBottom: Math.max(insets.bottom + 90, 110) }}
       >
         {step > 0 ? (
           <TouchableOpacity
@@ -766,10 +801,19 @@ export default function MoveRoomScreen() {
             onPress={() => setStep(step + 1)}
             disabled={step === 0 && !canProceedStep1}
             className={`px-6 py-3.5 rounded-xl flex-row items-center gap-2 ${
-              step === 0 && !canProceedStep1
-                ? "bg-gray-200"
-                : "bg-[#1f1f1f] shadow-lg"
+              step === 0 && !canProceedStep1 ? "bg-gray-200" : "bg-[#1f1f1f]"
             }`}
+            style={
+              !(step === 0 && !canProceedStep1)
+                ? {
+                    shadowColor: "#000",
+                    shadowOffset: { width: 0, height: 4 },
+                    shadowOpacity: 0.3,
+                    shadowRadius: 6,
+                    elevation: 4,
+                  }
+                : undefined
+            }
           >
             <Text
               className={`font-bold text-sm uppercase tracking-wide ${

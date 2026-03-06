@@ -1,4 +1,5 @@
 import { Tabs, useRouter } from "expo-router";
+import * as SecureStore from "expo-secure-store";
 import { Ionicons } from "@expo/vector-icons";
 import { Platform, View, TouchableOpacity, Text, Modal } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -66,9 +67,16 @@ function CustomTabBar({ state, descriptors, navigation }: any) {
       color: "#3B82F6",
       bgColor: "#DBEAFE",
     },
+    {
+      label: "Tài khoản",
+      icon: "person-circle",
+      route: "profile",
+      color: "#64748B",
+      bgColor: "#F1F5F9",
+    },
   ];
 
-  const onNavigate = (routeName: string) => {
+  const onNavigate = async (routeName: string) => {
     setMenuOpen(false);
 
     // Avoid Raw React Navigation APIs to prevent Context Orphan bugs on re-renders.

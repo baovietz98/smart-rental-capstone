@@ -82,7 +82,7 @@ export default function RoomDetailScreen() {
         </TouchableOpacity>
       </View>
 
-      <ScrollView contentContainerStyle={{ padding: 24, paddingBottom: 100 }}>
+      <ScrollView contentContainerStyle={{ padding: 24, paddingBottom: 150 }}>
         {/* ROOM CARD */}
         <View className="bg-white rounded-[24px] p-6 shadow-sm border border-gray-100 mb-6">
           <View className="flex-row justify-between items-start mb-4">
@@ -416,11 +416,12 @@ export default function RoomDetailScreen() {
             {/* Delete Room */}
             <TouchableOpacity
               className={`bg-white p-4 rounded-xl border items-center justify-center gap-2 ${
-                room.status === "RENTED"
-                  ? "border-gray-200 opacity-50"
-                  : "border-gray-100"
+                room.status === "RENTED" ? "border-gray-200" : "border-gray-100"
               }`}
-              style={{ width: "47%" }}
+              style={[
+                { width: "47%" },
+                room.status === "RENTED" ? { opacity: 0.5 } : undefined,
+              ]}
               onPress={() => {
                 // Pre-check: block if room has active contracts
                 const hasActiveContracts =

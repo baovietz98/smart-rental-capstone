@@ -66,25 +66,7 @@ export default function RoomsScreen() {
     return { total, available, rented, maintenance };
   }, [rooms]);
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "RENTED":
-        return { bg: "bg-pink-100", text: "text-pink-700", label: "Đang ở" };
-      case "AVAILABLE":
-        return { bg: "bg-green-100", text: "text-green-700", label: "Trống" };
-      case "MAINTENANCE":
-        return {
-          bg: "bg-yellow-100",
-          text: "text-yellow-700",
-          label: "Bảo trì",
-        };
-      default:
-        return { bg: "bg-gray-100", text: "text-gray-700", label: status };
-    }
-  };
-
   const renderRoomCard = ({ item }: { item: any }) => {
-    const status = getStatusColor(item.status);
     const buildingName =
       buildings?.find((b: any) => b.id === item.buildingId)?.name ||
       "Unknown Building";
@@ -282,7 +264,7 @@ export default function RoomsScreen() {
           data={filteredRooms}
           keyExtractor={(item) => item.id.toString()}
           numColumns={2}
-          contentContainerStyle={{ padding: 24, paddingBottom: 120 }}
+          contentContainerStyle={{ padding: 24, paddingBottom: 150 }}
           refreshControl={
             <RefreshControl
               refreshing={isLoading}

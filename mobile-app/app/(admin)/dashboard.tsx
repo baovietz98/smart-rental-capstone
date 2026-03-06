@@ -12,7 +12,7 @@ import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useState } from "react";
-import clsx from "clsx";
+import { clsx } from "clsx";
 
 export default function Dashboard() {
   const router = useRouter();
@@ -83,7 +83,7 @@ export default function Dashboard() {
             .catch(() => ({ data: [] })),
           api
             .get("/readings/unread", {
-              params: { ...params, month: currentMonth, serviceId: 1 },
+              params: { ...params, month: currentMonth },
             })
             .catch(() => ({ data: [] })),
         ]);
@@ -107,7 +107,7 @@ export default function Dashboard() {
 
         // Readings Actions
         unreadReadingsRes.data
-          .slice(0, 3)
+          .slice(0, 10)
           .forEach((room: any, index: number) => {
             const uniqueId = room.roomId
               ? `reading-${room.roomId}`
@@ -123,12 +123,12 @@ export default function Dashboard() {
               iconColor: "text-amber-500",
               iconBg: "bg-amber-50",
               actionText: "Chốt số",
-              route: `/(admin)/bills/new`,
+              route: `/(admin)/readings/${room.buildingId || selectedBuilding?.id || ""}?month=${currentMonth}`,
             });
           });
 
         // Payment Actions
-        overdueList.slice(0, 3).forEach((inv: any, index: number) => {
+        overdueList.slice(0, 10).forEach((inv: any, index: number) => {
           const uniqueId = inv.id
             ? `overdue-${inv.id}`
             : `overdue-fallback-${index}`;
@@ -158,7 +158,7 @@ export default function Dashboard() {
             amount: badDebtTotal,
             count: overdueList.length,
           },
-          actions: actions.slice(0, 5),
+          actions: actions.slice(0, 20),
         };
       } catch (err) {
         console.error("Dashboard Stats Fetch Panic:", err);
@@ -266,9 +266,20 @@ export default function Dashboard() {
             className={clsx(
               "px-5 py-2 rounded-full mr-2 border transition-all",
               !selectedBuilding
-                ? "bg-slate-800 border-slate-800 shadow-md shadow-slate-300"
+                ? "bg-slate-800 border-slate-800"
                 : "bg-white border-slate-200",
             )}
+            style={
+              !selectedBuilding
+                ? {
+                    shadowColor: "#cbd5e1",
+                    shadowOffset: { width: 0, height: 4 },
+                    shadowOpacity: 0.3,
+                    shadowRadius: 6,
+                    elevation: 4,
+                  }
+                : undefined
+            }
           >
             <Text
               className={clsx(
@@ -286,9 +297,20 @@ export default function Dashboard() {
               className={clsx(
                 "px-5 py-2 rounded-full mr-2 border",
                 selectedBuilding?.id === b.id
-                  ? "bg-slate-800 border-slate-800 shadow-md shadow-slate-300"
+                  ? "bg-slate-800 border-slate-800"
                   : "bg-white border-slate-200",
               )}
+              style={
+                selectedBuilding?.id === b.id
+                  ? {
+                      shadowColor: "#cbd5e1",
+                      shadowOffset: { width: 0, height: 4 },
+                      shadowOpacity: 0.3,
+                      shadowRadius: 6,
+                      elevation: 4,
+                    }
+                  : undefined
+              }
             >
               <Text
                 className={clsx(
@@ -307,7 +329,7 @@ export default function Dashboard() {
 
       <ScrollView
         className="flex-1"
-        contentContainerStyle={{ padding: 20, paddingBottom: 110 }}
+        contentContainerStyle={{ padding: 20, paddingBottom: 150 }}
         refreshControl={
           <RefreshControl
             refreshing={isLoading}
@@ -317,23 +339,27 @@ export default function Dashboard() {
         }
         showsVerticalScrollIndicator={false}
       >
-        {/* REVENUE CARD - V3 (No Donut, Big Numbers) */}
-        <View className="bg-white rounded-[28px] p-6 shadow-[0_8px_30px_-8px_rgba(0,0,0,0.04)] mb-6 border border-slate-50">
-          <View className="flex-row justify-between items-start mb-6">
+        {/* REVENUE CARD - V3 (Pro Max Hero) */}
+        <View className="bg-slate-900 rounded-[32px] p-6 shadow-2xl shadow-indigo-500/20 mb-6 relative overflow-hidden">
+          {/* Decorative background glow */}
+          <View className="absolute -top-10 -right-10 w-40 h-40 bg-indigo-500 rounded-full opacity-20 blur-3xl" />
+          <View className="absolute -bottom-10 -left-10 w-40 h-40 bg-blue-500 rounded-full opacity-20 blur-3xl" />
+
+          <View className="flex-row justify-between items-start mb-6 z-10">
             <View>
-              <Text className="text-slate-400 text-[11px] font-bold uppercase tracking-wider mb-2">
+              <Text className="text-slate-400 text-[11px] font-black uppercase tracking-widest mb-2">
                 Tổng doanh thu
               </Text>
               <View className="flex-row items-baseline">
                 <Text
                   className={clsx(
-                    "text-3xl font-bold text-slate-800 mr-2",
+                    "text-[32px] font-black text-white mr-1.5",
                     Platform.OS === "ios" ? "font-[Menlo]" : "font-monospace",
                   )}
                 >
                   {formatCurrency(totalAmount)}
                 </Text>
-                <Text className="text-sm font-medium text-slate-400">đ</Text>
+                <Text className="text-sm font-bold text-slate-400">đ</Text>
               </View>
 
               {/* Growth Badge */}
@@ -372,53 +398,55 @@ export default function Dashboard() {
 
             {/* Collected Amount - Big & Bold */}
             <View className="items-end">
-              <Text className="text-[10px] font-bold text-indigo-500 uppercase tracking-wider mb-1">
+              <Text className="text-[10px] font-black text-emerald-400 uppercase tracking-widest mb-1">
                 Đã thực thu
               </Text>
               <Text
                 className={clsx(
-                  "text-xl font-black text-indigo-600",
+                  "text-xl font-black text-white",
                   Platform.OS === "ios" ? "font-[Menlo]" : "font-monospace",
                 )}
               >
                 {formatCurrency(totalPaid)}
-                <Text className="text-xs font-medium text-indigo-400">đ</Text>
+                <Text className="text-xs font-bold text-slate-400 ml-0.5">
+                  đ
+                </Text>
               </Text>
-              <Text className="text-[10px] font-bold text-slate-400 mt-1">
+              <Text className="text-[10px] font-bold text-emerald-500/80 mt-1">
                 Đạt {progressPercent.toFixed(1)}%
               </Text>
             </View>
           </View>
 
           {/* Progress Bar Line */}
-          <View className="h-2 w-full bg-slate-100 rounded-full mb-5 overflow-hidden">
+          <View className="h-2.5 w-full bg-slate-800 rounded-full mb-6 overflow-hidden">
             <View
-              className="h-full bg-indigo-500 rounded-full"
+              className="h-full bg-gradient-to-r from-indigo-500 to-emerald-400 rounded-full"
               style={{ width: `${Math.min(progressPercent, 100)}%` }}
             />
           </View>
 
           {/* Breakdown */}
-          <View className="flex-row">
-            <View className="flex-1 pr-4 border-r border-slate-50">
-              <View className="flex-row items-center mb-1">
-                <View className="w-1.5 h-1.5 rounded-full bg-indigo-500 mr-2" />
-                <Text className="text-xs font-medium text-slate-500">
+          <View className="flex-row bg-slate-800/50 rounded-2xl p-4 border border-slate-700/50 backdrop-blur-md">
+            <View className="flex-1 pr-4 border-r border-slate-700/50">
+              <View className="flex-row items-center mb-1.5">
+                <View className="w-1.5 h-1.5 rounded-full bg-indigo-400 mr-2" />
+                <Text className="text-xs font-medium text-slate-400">
                   Tiền phòng
                 </Text>
               </View>
-              <Text className="text-sm font-bold text-slate-800 ml-3.5">
+              <Text className="text-[15px] font-bold text-white ml-3.5">
                 {formatCurrency(finance?.breakdown?.rent || 0)}
               </Text>
             </View>
             <View className="flex-1 pl-4">
-              <View className="flex-row items-center mb-1">
+              <View className="flex-row items-center mb-1.5">
                 <View className="w-1.5 h-1.5 rounded-full bg-amber-400 mr-2" />
-                <Text className="text-xs font-medium text-slate-500">
+                <Text className="text-xs font-medium text-slate-400">
                   Dịch vụ
                 </Text>
               </View>
-              <Text className="text-sm font-bold text-slate-800 ml-3.5">
+              <Text className="text-[15px] font-bold text-white ml-3.5">
                 {formatCurrency(finance?.breakdown?.services || 0)}
               </Text>
             </View>
@@ -428,17 +456,29 @@ export default function Dashboard() {
         {/* STATUS & BAD DEBT CARDS */}
         <View className="flex-row gap-4 mb-6">
           {/* Rooms Status */}
-          <View className="flex-1 bg-white p-5 rounded-[24px] shadow-[0_8px_30px_-8px_rgba(0,0,0,0.04)] border border-slate-50">
-            <View className="flex-row items-center gap-2 mb-4">
-              <View className="w-8 h-8 rounded-full bg-slate-50 items-center justify-center">
-                <Ionicons name="business-outline" size={16} color="#64748B" />
+          <TouchableOpacity
+            activeOpacity={0.8}
+            onPress={() => router.push("/(admin)/rooms" as any)}
+            className="flex-1 bg-white p-5 rounded-[28px] border border-slate-100"
+            style={{
+              shadowColor: "#94a3b8",
+              shadowOffset: { width: 0, height: 8 },
+              shadowOpacity: 0.1,
+              shadowRadius: 16,
+              elevation: 4,
+            }}
+          >
+            <View className="flex-row justify-between items-center mb-4">
+              <View className="w-10 h-10 rounded-2xl bg-indigo-50 items-center justify-center">
+                <Ionicons name="business" size={20} color="#4F46E5" />
               </View>
-              <Text className="text-xs font-bold text-slate-700">
-                Trạng thái phòng
-              </Text>
             </View>
 
-            <View className="space-y-3">
+            <Text className="text-[11px] font-black text-slate-400 uppercase tracking-widest mb-3">
+              Phòng & Hợp đồng
+            </Text>
+
+            <View className="space-y-4">
               <View className="flex-row justify-between items-center">
                 <Text className="text-xs text-slate-500 font-medium">
                   Đang thuê
@@ -461,123 +501,155 @@ export default function Dashboard() {
                   </Text>
                 </View>
               </View>
-            </View>
-          </View>
-
-          {/* Bad Debt - Clean with accent */}
-          <View className="flex-1 bg-white p-5 rounded-[24px] shadow-[0_8px_30px_-8px_rgba(0,0,0,0.04)] border border-rose-100/50">
-            <View className="flex-row items-center gap-2 mb-4">
-              <View className="w-8 h-8 rounded-full bg-rose-50 items-center justify-center">
-                <Ionicons
-                  name="alert-circle-outline"
-                  size={18}
-                  color="#F43F5E"
+              <View className="h-1 w-full flex-row rounded-full overflow-hidden bg-slate-100 mt-2">
+                <View
+                  className="h-full bg-emerald-500"
+                  style={{
+                    width: `${contracts?.totalRooms ? (contracts.active / contracts.totalRooms) * 100 : 0}%`,
+                  }}
                 />
               </View>
-              <Text className="text-xs font-bold text-rose-600">
-                Nợ cần thu
-              </Text>
+            </View>
+          </TouchableOpacity>
+
+          {/* Bad Debt - Clean with accent */}
+          <TouchableOpacity
+            activeOpacity={0.8}
+            onPress={() => router.push("/(admin)/bills" as any)}
+            className="flex-1 bg-[#FFF1F2] p-5 rounded-[28px] border border-[#FECDD3]"
+            style={{
+              shadowColor: "#F43F5E",
+              shadowOffset: { width: 0, height: 8 },
+              shadowOpacity: 0.15,
+              shadowRadius: 16,
+              elevation: 4,
+            }}
+          >
+            <View className="flex-row justify-between items-center mb-4">
+              <View className="w-10 h-10 rounded-2xl bg-white/80 items-center justify-center">
+                <Ionicons name="warning" size={20} color="#E11D48" />
+              </View>
             </View>
 
-            <Text className="text-xl font-bold text-slate-800">
-              {formatCurrency(badDebt.amount)}
-              <Text className="text-xs text-slate-400 font-normal">đ</Text>
-            </Text>
-            <Text className="text-[10px] text-slate-400 mt-1 mb-3">
-              Từ {badDebt.count} phòng chưa đóng
+            <Text className="text-[11px] font-black text-rose-500 uppercase tracking-widest mb-1">
+              Nợ cần xử lý
             </Text>
 
-            <TouchableOpacity
-              className="flex-row items-center justify-center py-2 bg-rose-50 rounded-xl"
-              onPress={() => router.push("/(admin)/bills" as any)}
-            >
-              <Text className="text-[10px] font-bold text-rose-600 mr-1">
+            <Text className="text-2xl font-black text-rose-700 tracking-tight">
+              {formatCurrency(badDebt.amount)}
+              <Text className="text-sm text-rose-400 font-bold ml-0.5">đ</Text>
+            </Text>
+            <Text className="text-[11px] font-medium text-rose-500/80 mt-1 mb-3">
+              Từ {badDebt.count} hóa đơn đen
+            </Text>
+
+            <View className="flex-row items-center mt-auto">
+              <Text className="text-[11px] font-bold text-rose-600 mr-1">
                 Xem chi tiết
               </Text>
-              <Ionicons name="arrow-forward" size={10} color="#E11D48" />
-            </TouchableOpacity>
-          </View>
+              <Ionicons name="arrow-forward" size={12} color="#E11D48" />
+            </View>
+          </TouchableOpacity>
         </View>
 
         {/* TASKS LIST - Elegant & Light */}
-        <View className="bg-white rounded-[28px] px-5 py-6 shadow-[0_8px_30px_-8px_rgba(0,0,0,0.04)] border border-slate-50">
+        <View
+          className="bg-white rounded-[28px] px-5 py-6 border border-slate-100"
+          style={{
+            shadowColor: "#94a3b8",
+            shadowOffset: { width: 0, height: 4 },
+            shadowOpacity: 0.05,
+            shadowRadius: 12,
+            elevation: 2,
+          }}
+        >
           <View className="flex-row justify-between items-center mb-5">
-            <Text className="text-base font-bold text-slate-800">
-              Cần xử lý hôm nay
+            <Text className="text-lg font-black text-slate-800">
+              Việc cần xử lý hôm nay
             </Text>
-            <View className="bg-slate-100 px-2.5 py-1 rounded-lg">
-              <Text className="text-[10px] font-extrabold text-slate-600">
-                {actions.length}
+            <View className="bg-rose-100 px-3 py-1 rounded-full items-center justify-center">
+              <Text className="text-[11px] font-black text-rose-600">
+                {actions.length} Tồn đọng
               </Text>
             </View>
           </View>
 
           {actions.length > 0 ? (
-            <View className="space-y-1">
+            <View className="space-y-3">
               {actions.map((action: any, index: number) => (
-                <TouchableOpacity
-                  key={action.id}
-                  onPress={() => router.push(action.route)}
-                  activeOpacity={0.7}
-                  className={clsx(
-                    "flex-row items-center p-3 rounded-2xl border border-transparent transition-all",
-                    // Alternate background for striped effect or just hover? Let's keep it simple white with active state
-                    "active:bg-slate-50 bg-white mb-2 shadow-sm border-slate-100",
-                  )}
-                >
-                  {/* Icon Box */}
-                  <View
-                    className={clsx(
-                      "w-10 h-10 rounded-[14px] items-center justify-center mr-3.5",
-                      action.iconBg || "bg-slate-100",
-                    )}
+                <View key={action.id} className="relative">
+                  {/* Custom Action Card Design */}
+                  <TouchableOpacity
+                    onPress={() => router.push(action.route)}
+                    activeOpacity={0.7}
+                    className="flex-row items-center p-3.5 bg-slate-50/80 rounded-[20px] border border-slate-100"
                   >
-                    <Ionicons
-                      name={action.icon || "ellipse"}
-                      size={20}
-                      className={action.iconColor || "text-slate-500"}
-                      color={
-                        (action.iconColor || "").includes("amber")
-                          ? "#F59E0B"
-                          : "#F43F5E"
-                      }
-                    />
-                  </View>
+                    {/* Icon Box */}
+                    <View
+                      className={clsx(
+                        "w-12 h-12 rounded-[16px] items-center justify-center mr-4",
+                        action.iconBg || "bg-white",
+                      )}
+                      style={{
+                        shadowColor: "#cbd5e1",
+                        shadowOpacity: 0.2,
+                        shadowRadius: 4,
+                        shadowOffset: { width: 0, height: 2 },
+                      }}
+                    >
+                      <Ionicons
+                        name={action.icon || "ellipse"}
+                        size={22}
+                        className={action.iconColor || "text-slate-500"}
+                        color={
+                          (action.iconColor || "").includes("amber")
+                            ? "#F59E0B"
+                            : "#E11D48"
+                        }
+                      />
+                    </View>
 
-                  {/* Text Info */}
-                  <View className="flex-1">
-                    <View className="flex-row justify-between items-center">
-                      <Text className="text-sm font-bold text-slate-800">
+                    {/* Text Info */}
+                    <View className="flex-1">
+                      <Text className="text-[15px] font-bold text-slate-800 mb-0.5">
                         {action.title}
                       </Text>
-                      {/* Action Link Text instead of Button */}
-                      <View className="flex-row items-center">
-                        <Text className="text-[10px] font-bold text-indigo-600 mr-0.5">
-                          {action.actionText}
-                        </Text>
-                        <Ionicons
-                          name="chevron-forward"
-                          size={10}
-                          color="#4F46E5"
-                        />
-                      </View>
+                      <Text className="text-xs font-medium text-slate-500">
+                        {action.subtitle}
+                      </Text>
                     </View>
-                    <Text className="text-xs text-slate-400 mt-0.5">
-                      {action.subtitle}
-                    </Text>
-                  </View>
-                </TouchableOpacity>
+
+                    {/* The Action Button inside */}
+                    <View
+                      className={clsx(
+                        "px-3 py-2 rounded-xl",
+                        (action.iconColor || "").includes("amber")
+                          ? "bg-amber-100"
+                          : "bg-rose-600",
+                      )}
+                    >
+                      <Text
+                        className={clsx(
+                          "text-[11px] font-black uppercase tracking-wide",
+                          (action.iconColor || "").includes("amber")
+                            ? "text-amber-700"
+                            : "text-white",
+                        )}
+                      >
+                        {action.actionText}
+                      </Text>
+                    </View>
+                  </TouchableOpacity>
+                </View>
               ))}
             </View>
           ) : (
-            <View className="items-center py-10 opacity-60">
-              <Ionicons
-                name="checkmark-circle-outline"
-                size={48}
-                color="#CBD5E1"
-              />
-              <Text className="text-sm text-slate-500 mt-3 font-medium">
-                Tuyệt vời! Đã xong hết việc.
+            <View className="items-center py-10 bg-slate-50/50 rounded-3xl border border-slate-100 border-dashed">
+              <View className="w-16 h-16 bg-emerald-50 rounded-full items-center justify-center mb-3">
+                <Ionicons name="checkmark-done" size={32} color="#10B981" />
+              </View>
+              <Text className="text-sm text-slate-500 font-bold">
+                Tuyệt vời! Đã xong hết việc hôm nay.
               </Text>
             </View>
           )}

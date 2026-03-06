@@ -233,7 +233,7 @@ export default function ServicesList() {
           data={services}
           keyExtractor={(item) => item.id.toString()}
           renderItem={renderItem}
-          contentContainerStyle={{ paddingVertical: 16, paddingBottom: 100 }}
+          contentContainerStyle={{ paddingVertical: 16, paddingBottom: 150 }}
           refreshControl={
             <RefreshControl refreshing={isRefetching} onRefresh={refetch} />
           }
@@ -304,8 +304,19 @@ export default function ServicesList() {
                   key={st.key}
                   onPress={() => setType(st.key as any)}
                   className={`flex-1 py-3 rounded-xl items-center flex-row justify-center gap-2 ${
-                    type === st.key ? "bg-white shadow-sm" : ""
+                    type === st.key ? "bg-white" : ""
                   }`}
+                  style={
+                    type === st.key
+                      ? {
+                          shadowColor: "#000",
+                          shadowOffset: { width: 0, height: 1 },
+                          shadowOpacity: 0.05,
+                          shadowRadius: 2,
+                          elevation: 1,
+                        }
+                      : undefined
+                  }
                 >
                   <Ionicons
                     name={st.icon as any}

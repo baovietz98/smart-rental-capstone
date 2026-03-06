@@ -144,7 +144,7 @@ export default function ContractDetail() {
         </View>
       </View>
 
-      <ScrollView contentContainerStyle={{ padding: 20, paddingBottom: 120 }}>
+      <ScrollView contentContainerStyle={{ padding: 20, paddingBottom: 150 }}>
         {/* Contract ID */}
         <View className="bg-white rounded-2xl p-5 border border-gray-100 mb-4">
           <View className="flex-row items-center justify-between mb-4">

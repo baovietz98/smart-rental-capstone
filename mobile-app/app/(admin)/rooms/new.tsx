@@ -124,7 +124,7 @@ export default function AddRoomScreen() {
         </Text>
       </View>
 
-      <ScrollView contentContainerStyle={{ padding: 24, paddingBottom: 100 }}>
+      <ScrollView contentContainerStyle={{ padding: 24, paddingBottom: 150 }}>
         <View className="bg-white p-6 rounded-[24px] shadow-sm border border-gray-100 space-y-4">
           {/* Building Selection */}
           <View>
@@ -349,7 +349,14 @@ export default function AddRoomScreen() {
         </View>
 
         <TouchableOpacity
-          className="bg-[#DA7756] p-4 rounded-xl mt-6 items-center shadow-lg shadow-orange-200"
+          className="bg-[#DA7756] p-4 rounded-xl mt-6 items-center"
+          style={{
+            elevation: 4,
+            shadowColor: "#DA7756",
+            shadowOpacity: 0.3,
+            shadowRadius: 8,
+            shadowOffset: { width: 0, height: 4 },
+          }}
           onPress={handleSubmit(onSubmit)}
           disabled={createMutation.isPending}
         >

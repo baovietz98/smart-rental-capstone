@@ -10,7 +10,12 @@ import { FontAwesome5, MaterialCommunityIcons } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
-import React from "react";
+import dayjs from "dayjs";
+import relativeTime from "dayjs/plugin/relativeTime";
+import "dayjs/locale/vi";
+
+dayjs.extend(relativeTime);
+dayjs.locale("vi");
 
 export default function NotificationsScreen() {
   const router = useRouter();
@@ -50,7 +55,14 @@ export default function NotificationsScreen() {
           </View>
         </View>
         <TouchableOpacity
-          className="w-10 h-10 bg-[#DA7756] rounded-full items-center justify-center shadow-lg shadow-orange-200"
+          className="w-10 h-10 bg-[#DA7756] rounded-full items-center justify-center"
+          style={{
+            elevation: 4,
+            shadowColor: "#DA7756",
+            shadowOpacity: 0.3,
+            shadowRadius: 8,
+            shadowOffset: { width: 0, height: 4 },
+          }}
           onPress={() => router.push("/(admin)/notifications/new" as any)}
         >
           <FontAwesome5 name="plus" size={16} color="white" />
@@ -61,7 +73,7 @@ export default function NotificationsScreen() {
       <FlatList
         data={notifications}
         keyExtractor={(item) => item.id.toString()}
-        contentContainerStyle={{ padding: 20, paddingBottom: 100 }}
+        contentContainerStyle={{ padding: 20, paddingBottom: 150 }}
         refreshControl={
           <RefreshControl
             refreshing={isLoading}
@@ -85,52 +97,72 @@ export default function NotificationsScreen() {
         }
         renderItem={({ item }) => (
           <TouchableOpacity
-            className={`bg-white p-4 mb-3 rounded-2xl border border-gray-100 shadow-sm flex-row gap-4 ${!item.isRead ? "bg-orange-50/30" : ""}`}
+            className={`p-4 mb-3 rounded-[20px] border flex-row gap-4 ${
+              !item.isRead
+                ? "bg-[#FFF6F3] border-[#FDE1D9]"
+                : "bg-white border-gray-100"
+            }`}
+            style={{
+              shadowColor: "#000",
+              shadowOffset: { width: 0, height: 2 },
+              shadowOpacity: 0.03,
+              shadowRadius: 8,
+              elevation: 1,
+            }}
             onPress={() =>
               router.push(`/(admin)/notifications/${item.id}` as any)
             }
           >
             <View
-              className={`w-10 h-10 rounded-full items-center justify-center ${
+              className={`w-12 h-12 rounded-full items-center justify-center ${
                 item.type === "ISSUE"
-                  ? "bg-red-100"
+                  ? "bg-red-50"
                   : item.type === "PAYMENT"
-                    ? "bg-green-100"
-                    : "bg-blue-100"
+                    ? "bg-emerald-50"
+                    : "bg-blue-50"
               }`}
             >
               <FontAwesome5
                 name={
                   item.type === "ISSUE"
-                    ? "exclamation-circle"
+                    ? "exclamation-triangle"
                     : item.type === "PAYMENT"
-                      ? "money-bill-wave"
-                      : "info"
+                      ? "file-invoice-dollar"
+                      : "bell"
                 }
-                size={16}
+                size={18}
                 color={
                   item.type === "ISSUE"
                     ? "#DC2626"
                     : item.type === "PAYMENT"
-                      ? "#16A34A"
+                      ? "#059669"
                       : "#2563EB"
                 }
               />
+              {!item.isRead && (
+                <View className="absolute top-0 right-0 w-3.5 h-3.5 bg-red-500 rounded-full border-2 border-white" />
+              )}
             </View>
-            <View className="flex-1">
-              <View className="flex-row justify-between items-start">
-                <Text className="font-bold text-gray-900 text-sm flex-1 mr-2">
+            <View className="flex-1 justify-center">
+              <View className="flex-row justify-between items-start mb-1 gap-2">
+                <Text
+                  className={`flex-1 text-[15px] ${
+                    !item.isRead
+                      ? "font-black text-gray-900"
+                      : "font-bold text-gray-700"
+                  }`}
+                  numberOfLines={1}
+                >
                   {item.title}
                 </Text>
-                <Text className="text-[10px] text-gray-400 font-medium">
-                  {new Date(item.createdAt).toLocaleDateString("vi-VN", {
-                    day: "2-digit",
-                    month: "2-digit",
-                  })}
+                <Text className="text-[10px] text-gray-400 font-bold uppercase mt-0.5 whitespace-nowrap">
+                  {dayjs(item.createdAt).fromNow()}
                 </Text>
               </View>
               <Text
-                className="text-gray-500 text-xs mt-1 leading-relaxed"
+                className={`text-[13px] leading-relaxed ${
+                  !item.isRead ? "text-gray-700 font-medium" : "text-gray-500"
+                }`}
                 numberOfLines={2}
               >
                 {item.message}

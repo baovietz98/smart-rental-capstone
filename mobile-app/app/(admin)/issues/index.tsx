@@ -5,7 +5,6 @@ import {
   TouchableOpacity,
   RefreshControl,
   ScrollView,
-  ActivityIndicator,
   Alert,
 } from "react-native";
 import { useState, useMemo } from "react";
@@ -169,7 +168,7 @@ export default function IssuesScreen() {
       <FlatList
         data={filteredIssues}
         keyExtractor={(item) => item.id.toString()}
-        contentContainerStyle={{ padding: 24, paddingBottom: 100 }}
+        contentContainerStyle={{ padding: 24, paddingBottom: 150 }}
         refreshControl={
           <RefreshControl
             refreshing={isLoading}

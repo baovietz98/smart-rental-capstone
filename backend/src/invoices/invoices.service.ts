@@ -3,7 +3,9 @@ import {
   NotFoundException,
   BadRequestException,
   ConflictException,
+  Logger,
 } from '@nestjs/common';
+import { Cron, CronExpression } from '@nestjs/schedule';
 import { PrismaService } from '../prisma/prisma.service';
 import { InvoiceStatus, CalculationType, Prisma } from '@prisma/client';
 import {
@@ -16,6 +18,8 @@ import {
 
 @Injectable()
 export class InvoicesService {
+  private readonly logger = new Logger(InvoicesService.name);
+
   constructor(private prisma: PrismaService) {}
 
   /**
@@ -959,5 +963,42 @@ export class InvoicesService {
       failed: results.filter((r) => !r.success).length,
       details: results,
     };
+  }
+
+  /**
+   * Tự động kiểm tra và cập nhật hóa đơn quá hạn (Chạy mỗi ngày lúc nửa đêm)
+   */
+  @Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT)
+  async checkOverdueInvoices() {
+    this.logger.log('Bắt đầu chạy Cron Job kiểm tra Hóa đơn quá hạn...');
+
+    const now = new Date();
+
+    try {
+      const result = await this.prisma.invoice.updateMany({
+        where: {
+          status: {
+            in: [InvoiceStatus.PUBLISHED, InvoiceStatus.PARTIAL],
+          },
+          debtAmount: {
+            gt: 0,
+          },
+          dueDate: {
+            lt: now, // Ngày hạn chót nhỏ hơn thời điểm hiện tại
+          },
+        },
+        data: {
+          status: InvoiceStatus.OVERDUE,
+        },
+      });
+
+      if (result.count > 0) {
+        this.logger.warn(`Đã cập nhật ${result.count} hóa đơn thành QUÁ HẠN (OVERDUE).`);
+      } else {
+        this.logger.log('Không có hóa đơn nào quá hạn hôm nay.');
+      }
+    } catch (error) {
+      this.logger.error('Lỗi khi chạy Cron Job checkOverdueInvoices:', error);
+    }
   }
 }

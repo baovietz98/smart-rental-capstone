@@ -150,7 +150,7 @@ export default function IssueDetailScreen() {
         </TouchableOpacity>
       </View>
 
-      <ScrollView contentContainerStyle={{ padding: 24, paddingBottom: 100 }}>
+      <ScrollView contentContainerStyle={{ padding: 24, paddingBottom: 150 }}>
         {/* Main Info Card */}
         <View className="bg-white p-6 rounded-[24px] shadow-sm border border-gray-100 mb-6">
           <View className="flex-row items-center gap-3 mb-4">

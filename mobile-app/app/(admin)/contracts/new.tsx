@@ -2,7 +2,7 @@ import {
   View,
   Text,
   ScrollView,
-  TouchableOpacity,
+  Pressable,
   ActivityIndicator,
   Alert,
   TextInput,
@@ -14,6 +14,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { useState, useEffect, useMemo } from "react";
 import DateTimePicker from "@react-native-community/datetimepicker";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 const formatCurrency = (value: number) =>
   new Intl.NumberFormat("vi-VN").format(value);
@@ -28,6 +29,7 @@ export default function NewContract() {
   }>();
   const router = useRouter();
   const queryClient = useQueryClient();
+  const insets = useSafeAreaInsets();
 
   // Form state
   const [selectedBuildingId, setSelectedBuildingId] = useState<number | null>(
@@ -109,7 +111,7 @@ export default function NewContract() {
       setPrice(selectedRoom.price?.toString() || "");
       setDeposit(selectedRoom.depositPrice?.toString() || "");
     }
-  }, [selectedRoom]);
+  }, [selectedRoom, params.roomPrice]);
 
   const formatDate = (d: Date) =>
     `${d.getDate().toString().padStart(2, "0")}/${(d.getMonth() + 1).toString().padStart(2, "0")}/${d.getFullYear()}`;
@@ -134,16 +136,19 @@ export default function NewContract() {
           finalTenantId = tenantRes.data.id;
         } catch (error: any) {
           console.log("Error creating inline tenant", error);
+          const message = error.response?.data?.message;
           throw new Error(
-            error.response?.data?.message || "Không thể tạo khách mới",
+            (Array.isArray(message) ? message[0] : message) ||
+              "Không thể tạo khách mới",
           );
         }
       }
 
       // Convert local initialIndexes string values to numbers
+      // Object.keys gives strings, direct index into initialIndexes handles it correctly
       const numericIndexes: Record<string, number> = {};
       Object.keys(initialIndexes).forEach((key) => {
-        numericIndexes[key] = Number(initialIndexes[Number(key)]);
+        numericIndexes[key] = Number(initialIndexes[key as any]);
       });
 
       return api.post("/contracts", {
@@ -164,10 +169,9 @@ export default function NewContract() {
       ]);
     },
     onError: (err: any) => {
-      Alert.alert(
-        "Lỗi",
-        err.response?.data?.message || "Không thể tạo hợp đồng",
-      );
+      const message =
+        err.response?.data?.message || err.message || "Không thể tạo hợp đồng";
+      Alert.alert("Lỗi", Array.isArray(message) ? message[0] : message);
     },
   });
 
@@ -185,13 +189,16 @@ export default function NewContract() {
   return (
     <View className="flex-1 bg-[#F9FAFB]">
       {/* HEADER */}
-      <View className="px-6 py-4 bg-white border-b border-gray-100 flex-row items-center gap-4">
-        <TouchableOpacity
+      <View
+        className="px-6 pb-4 bg-white border-b border-gray-100 flex-row items-center gap-4"
+        style={{ paddingTop: Math.max(insets.top, 16) }}
+      >
+        <Pressable
           className="w-10 h-10 bg-gray-50 rounded-full items-center justify-center border border-gray-100"
           onPress={() => router.back()}
         >
           <FontAwesome5 name="arrow-left" size={16} color="#374151" />
-        </TouchableOpacity>
+        </Pressable>
         <View>
           <Text className="text-xl font-bold text-gray-900 font-serif">
             Tạo hợp đồng
@@ -202,7 +209,12 @@ export default function NewContract() {
         </View>
       </View>
 
-      <ScrollView contentContainerStyle={{ padding: 20, paddingBottom: 120 }}>
+      <ScrollView
+        contentContainerStyle={{
+          padding: 20,
+          paddingBottom: Math.max(insets.bottom + 120, 150),
+        }}
+      >
         {/* Step 1: Building & Room */}
         <View className="bg-white rounded-2xl p-5 border border-gray-100 mb-4">
           <Text className="text-xs font-bold text-gray-500 uppercase mb-3">
@@ -222,7 +234,7 @@ export default function NewContract() {
               >
                 <View className="flex-row gap-2">
                   {buildings.map((b: any) => (
-                    <TouchableOpacity
+                    <Pressable
                       key={b.id}
                       onPress={() => {
                         setSelectedBuildingId(b.id);
@@ -243,7 +255,7 @@ export default function NewContract() {
                       >
                         {b.name}
                       </Text>
-                    </TouchableOpacity>
+                    </Pressable>
                   ))}
                 </View>
               </ScrollView>
@@ -259,7 +271,7 @@ export default function NewContract() {
               ) : (
                 <View className="flex-row flex-wrap gap-2">
                   {rooms.map((r: any) => (
-                    <TouchableOpacity
+                    <Pressable
                       key={r.id}
                       onPress={() => setSelectedRoomId(r.id)}
                       className={`px-3 py-2 rounded-xl border ${
@@ -280,7 +292,7 @@ export default function NewContract() {
                       <Text className="text-[10px] text-gray-500">
                         {formatCurrency(r.price)} đ
                       </Text>
-                    </TouchableOpacity>
+                    </Pressable>
                   ))}
                 </View>
               )}
@@ -313,26 +325,48 @@ export default function NewContract() {
 
           {/* Tab Switcher */}
           <View className="flex-row p-1 bg-gray-100 rounded-xl mb-4">
-            <TouchableOpacity
+            <Pressable
               onPress={() => setIsNewTenantTab(false)}
-              className={`flex-1 py-2 items-center rounded-lg ${!isNewTenantTab ? "bg-white shadow-sm" : ""}`}
+              className={`flex-1 py-2 items-center rounded-lg ${!isNewTenantTab ? "bg-white" : ""}`}
+              style={
+                !isNewTenantTab
+                  ? {
+                      shadowColor: "#000",
+                      shadowOffset: { width: 0, height: 1 },
+                      shadowOpacity: 0.05,
+                      shadowRadius: 2,
+                      elevation: 1,
+                    }
+                  : undefined
+              }
             >
               <Text
                 className={`font-bold text-xs ${!isNewTenantTab ? "text-gray-900" : "text-gray-500"}`}
               >
                 Tìm khách cũ
               </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
+            </Pressable>
+            <Pressable
               onPress={() => setIsNewTenantTab(true)}
-              className={`flex-1 py-2 items-center rounded-lg ${isNewTenantTab ? "bg-white shadow-sm" : ""}`}
+              className={`flex-1 py-2 items-center rounded-lg ${isNewTenantTab ? "bg-white" : ""}`}
+              style={
+                isNewTenantTab
+                  ? {
+                      shadowColor: "#000",
+                      shadowOffset: { width: 0, height: 1 },
+                      shadowOpacity: 0.05,
+                      shadowRadius: 2,
+                      elevation: 1,
+                    }
+                  : undefined
+              }
             >
               <Text
                 className={`font-bold text-xs ${isNewTenantTab ? "text-[#DA7756]" : "text-gray-500"}`}
               >
                 Tạo khách mới
               </Text>
-            </TouchableOpacity>
+            </Pressable>
           </View>
 
           {/* Panel: Existing Tenant */}
@@ -350,7 +384,7 @@ export default function NewContract() {
 
               <ScrollView style={{ maxHeight: 200 }}>
                 {tenants.map((t: any) => (
-                  <TouchableOpacity
+                  <Pressable
                     key={t.id}
                     onPress={() => setSelectedTenantId(t.id)}
                     className={`p-3 rounded-xl flex-row items-center gap-3 mb-1 ${
@@ -387,7 +421,7 @@ export default function NewContract() {
                         color="#DA7756"
                       />
                     )}
-                  </TouchableOpacity>
+                  </Pressable>
                 ))}
               </ScrollView>
             </View>
@@ -471,7 +505,7 @@ export default function NewContract() {
               <Text className="text-xs font-semibold text-gray-600 mb-1">
                 Ngày bắt đầu
               </Text>
-              <TouchableOpacity
+              <Pressable
                 className="bg-gray-50 border border-gray-200 rounded-xl p-3 flex-row items-center justify-between"
                 onPress={() => setShowStartPicker(true)}
               >
@@ -479,7 +513,7 @@ export default function NewContract() {
                   {formatDate(startDate)}
                 </Text>
                 <Ionicons name="calendar" size={16} color="#9CA3AF" />
-              </TouchableOpacity>
+              </Pressable>
               {showStartPicker && (
                 <DateTimePicker
                   value={startDate}
@@ -496,7 +530,7 @@ export default function NewContract() {
               <Text className="text-xs font-semibold text-gray-600 mb-1">
                 Ngày kết thúc
               </Text>
-              <TouchableOpacity
+              <Pressable
                 className="bg-gray-50 border border-gray-200 rounded-xl p-3 flex-row items-center justify-between"
                 onPress={() => setShowEndPicker(true)}
               >
@@ -504,7 +538,7 @@ export default function NewContract() {
                   {formatDate(endDate)}
                 </Text>
                 <Ionicons name="calendar" size={16} color="#9CA3AF" />
-              </TouchableOpacity>
+              </Pressable>
               {showEndPicker && (
                 <DateTimePicker
                   value={endDate}
@@ -522,10 +556,12 @@ export default function NewContract() {
           {/* Services Setup */}
           {indexServices.length > 0 && (
             <View className="mt-5 pt-5 border-t border-gray-100">
-              <Text className="text-sm font-bold text-gray-800 mb-3 flex-row items-center">
-                <Ionicons name="flash" size={16} color="#EAB308" /> Chốt chỉ số
-                điện/nước ban đầu
-              </Text>
+              <View className="flex-row items-center mb-3">
+                <Ionicons name="flash" size={16} color="#EAB308" />
+                <Text className="text-sm font-bold text-gray-800 ml-2">
+                  Chốt chỉ số điện/nước ban đầu
+                </Text>
+              </View>
 
               <View className="flex-row flex-wrap gap-3">
                 {indexServices.map((service: any) => (
@@ -558,14 +594,23 @@ export default function NewContract() {
         </View>
 
         {/* SUBMIT BUTTON */}
-        <TouchableOpacity
+        <Pressable
           onPress={() => createMutation.mutate()}
           disabled={!canSubmit || createMutation.isPending}
           className={`py-4 mt-6 rounded-xl flex-row justify-center items-center gap-2 ${
-            canSubmit
-              ? "bg-[#DA7756] shadow-lg shadow-orange-200"
-              : "bg-gray-200"
+            canSubmit ? "bg-[#DA7756]" : "bg-gray-200"
           }`}
+          style={
+            canSubmit
+              ? {
+                  shadowColor: "#fed7aa",
+                  shadowOffset: { width: 0, height: 4 },
+                  shadowOpacity: 0.3,
+                  shadowRadius: 10,
+                  elevation: 5,
+                }
+              : undefined
+          }
         >
           {createMutation.isPending ? (
             <ActivityIndicator color="white" size="small" />
@@ -585,7 +630,7 @@ export default function NewContract() {
               </Text>
             </>
           )}
-        </TouchableOpacity>
+        </Pressable>
       </ScrollView>
     </View>
   );

@@ -146,7 +146,7 @@ export default function CreateIssueScreen() {
         </Text>
       </View>
 
-      <ScrollView contentContainerStyle={{ padding: 24 }}>
+      <ScrollView contentContainerStyle={{ padding: 24, paddingBottom: 150 }}>
         <View className="bg-white p-6 rounded-[24px] shadow-sm border border-gray-100 space-y-4">
           {/* Room Selection */}
 

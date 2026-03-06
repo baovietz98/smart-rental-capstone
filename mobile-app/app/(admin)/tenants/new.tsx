@@ -10,7 +10,7 @@ import {
 } from "react-native";
 import { useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { FontAwesome5, MaterialCommunityIcons } from "@expo/vector-icons";
+import { FontAwesome5 } from "@expo/vector-icons";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { Controller, useForm, useFieldArray } from "react-hook-form";
@@ -135,7 +135,7 @@ export default function AddTenantScreen() {
         </Text>
       </View>
 
-      <ScrollView contentContainerStyle={{ padding: 24, paddingBottom: 100 }}>
+      <ScrollView contentContainerStyle={{ padding: 24, paddingBottom: 150 }}>
         <View className="bg-white p-6 rounded-[24px] shadow-sm border border-gray-100 space-y-4">
           {/* CCCD Images */}
           <View>
@@ -386,7 +386,14 @@ export default function AddTenantScreen() {
         </View>
 
         <TouchableOpacity
-          className="bg-[#DA7756] p-4 rounded-xl mt-6 items-center shadow-lg shadow-orange-200"
+          className="bg-[#DA7756] p-4 rounded-xl mt-6 items-center"
+          style={{
+            elevation: 4,
+            shadowColor: "#DA7756",
+            shadowOpacity: 0.3,
+            shadowRadius: 8,
+            shadowOffset: { width: 0, height: 4 },
+          }}
           onPress={handleSubmit(onSubmit)}
           disabled={createMutation.isPending}
         >

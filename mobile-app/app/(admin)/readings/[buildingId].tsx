@@ -24,21 +24,26 @@ dayjs.locale("vi");
 
 export default function BuildingReadingsScreen() {
   const router = useRouter();
-  const { buildingId, name } = useLocalSearchParams();
+  const { buildingId, name, month } = useLocalSearchParams();
   const queryClient = useQueryClient();
 
-  // State for Month Selection
-  const [selectedMonth, setSelectedMonth] = useState(dayjs().format("MM-YYYY"));
+  // State for Month Selection. Default to nav param 'month' if available, otherwise current month.
+  const [selectedMonth, setSelectedMonth] = useState(
+    (month as string) || dayjs().format("MM-YYYY"),
+  );
+
+  // Sync selectedMonth if URL param changes
+  useEffect(() => {
+    if (month) {
+      setSelectedMonth(month as string);
+    }
+  }, [month]);
 
   // State for Input Data: { [contractId_serviceId]: newIndex }
   const [inputValues, setInputValues] = useState<Record<string, string>>({});
 
   // 1. Fetch Prepare Data
-  const {
-    data: rooms,
-    isLoading,
-    refetch,
-  } = useQuery({
+  const { data: rooms, isLoading } = useQuery({
     queryKey: ["readings-prepare", buildingId, selectedMonth],
     queryFn: async () => {
       const res = await api.get("/readings/prepare-bulk", {
@@ -146,12 +151,26 @@ export default function BuildingReadingsScreen() {
             </Text>
           </View>
           <TouchableOpacity
-            className={`w-10 h-10 rounded-full items-center justify-center shadow-md ${
+            className={`w-10 h-10 rounded-full items-center justify-center ${
               bulkCreateMutation.isPending ||
               Object.keys(inputValues).length === 0
                 ? "bg-gray-300"
-                : "bg-[#DA7756] shadow-orange-200"
+                : "bg-[#DA7756]"
             }`}
+            style={
+              !(
+                bulkCreateMutation.isPending ||
+                Object.keys(inputValues).length === 0
+              )
+                ? {
+                    shadowColor: "#fed7aa",
+                    shadowOffset: { width: 0, height: 4 },
+                    shadowOpacity: 0.3,
+                    shadowRadius: 6,
+                    elevation: 4,
+                  }
+                : undefined
+            }
             onPress={handleSave}
             disabled={
               bulkCreateMutation.isPending ||
@@ -194,7 +213,7 @@ export default function BuildingReadingsScreen() {
       >
         <ScrollView
           className="flex-1 px-4 pt-4"
-          contentContainerStyle={{ paddingBottom: 100 }}
+          contentContainerStyle={{ paddingBottom: 150 }}
           keyboardShouldPersistTaps="handled"
         >
           {isLoading ? (

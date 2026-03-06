@@ -594,30 +594,50 @@ export class ReadingsService {
   /**
    * Lấy danh sách các phòng chưa chốt số tháng này
    */
-  async getUnreadRooms(month: string, serviceId: number) {
-    // Lấy tất cả hợp đồng đang active
+  async getUnreadRooms(month: string, buildingId?: number) {
+    // 1. Lấy tất cả hợp đồng đang active
+    const whereContract: any = { isActive: true };
+    if (buildingId) {
+      whereContract.room = { buildingId };
+    }
+
     const activeContracts = await this.prisma.contract.findMany({
-      where: { isActive: true },
+      where: whereContract,
       include: { room: { include: { building: true } }, tenant: true },
     });
 
-    // Lấy các bản ghi đã chốt tháng này
+    // 2. Lấy danh sách các dịch vụ INDEX đang hoạt động
+    const indexServices = await this.prisma.service.findMany({
+      where: { type: 'INDEX', isActive: true },
+      select: { id: true },
+    });
+    const indexServiceIds = indexServices.map((s) => s.id);
+
+    // 3. Lấy các bản ghi đã chốt tháng này
     const existingReadings = await this.prisma.serviceReading.findMany({
-      where: { month, serviceId },
-      select: { contractId: true },
+      where: { month, serviceId: { in: indexServiceIds } },
+      select: { contractId: true, serviceId: true },
     });
 
-    const readContractIds = new Set(existingReadings.map((r) => r.contractId));
+    // 4. Group theo contractId
+    const readCounts = new Map<number, Set<number>>();
+    for (const r of existingReadings) {
+      if (!readCounts.has(r.contractId)) readCounts.set(r.contractId, new Set());
+      readCounts.get(r.contractId)?.add(r.serviceId);
+    }
 
-    // Lọc ra các hợp đồng chưa chốt
-    const unreadContracts = activeContracts.filter(
-      (c) => !readContractIds.has(c.id),
-    );
+    // 5. Lọc ra các hợp đồng chưa chốt ĐỦ các dịch vụ INDEX
+    const unreadContracts = activeContracts.filter((c) => {
+      const readServices = readCounts.get(c.id);
+      if (!readServices) return true; // Chưa có chỉ số nào
+      return readServices.size < indexServiceIds.length; // Có nhưng chưa đủ
+    });
 
     return unreadContracts.map((c) => ({
       contractId: c.id,
       roomId: c.room.id,
       roomName: c.room.name,
+      buildingId: c.room.building.id,
       buildingName: c.room.building.name,
       tenantName: c.tenant.fullName,
     }));

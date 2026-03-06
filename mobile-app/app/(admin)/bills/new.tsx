@@ -331,7 +331,10 @@ export default function NewBill() {
         </View>
       </SafeAreaView>
 
-      <ScrollView className="flex-1 p-5">
+      <ScrollView
+        className="flex-1"
+        contentContainerStyle={{ padding: 20, paddingBottom: 150 }}
+      >
         {/* Step 1: Select Building */}
         <View className="mb-5">
           <Text className="text-gray-700 font-bold mb-2">1. Chọn Tòa nhà</Text>
@@ -362,7 +365,8 @@ export default function NewBill() {
               setRoomModalVisible(true);
             }}
             disabled={!selectedBuilding}
-            className={`bg-white p-4 rounded-xl border border-gray-200 flex-row justify-between items-center ${!selectedBuilding ? "opacity-50" : ""}`}
+            className="bg-white p-4 rounded-xl border border-gray-200 flex-row justify-between items-center"
+            style={!selectedBuilding ? { opacity: 0.5 } : undefined}
           >
             <Text
               className={

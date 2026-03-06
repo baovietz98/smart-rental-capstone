@@ -134,12 +134,15 @@ export class ReadingsController {
   @Roles('ADMIN')
   @ApiOperation({ summary: 'Lấy danh sách phòng chưa chốt số tháng này' })
   @ApiQuery({ name: 'month', example: '11-2025' })
-  @ApiQuery({ name: 'serviceId', type: Number, description: 'ID dịch vụ' })
+  @ApiQuery({ name: 'buildingId', required: false, type: Number })
   getUnreadRooms(
     @Query('month') month: string,
-    @Query('serviceId', ParseIntPipe) serviceId: number,
+    @Query('buildingId') buildingId?: string,
   ) {
-    return this.readingsService.getUnreadRooms(month, serviceId);
+    return this.readingsService.getUnreadRooms(
+      month,
+      buildingId ? parseInt(buildingId, 10) : undefined,
+    );
   }
 
   @Get('stats/:month')
