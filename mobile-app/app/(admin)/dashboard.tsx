@@ -105,27 +105,21 @@ export default function Dashboard() {
 
         const actions: any[] = [];
 
-        // Readings Actions
-        unreadReadingsRes.data
-          .slice(0, 10)
-          .forEach((room: any, index: number) => {
-            const uniqueId = room.roomId
-              ? `reading-${room.roomId}`
-              : `reading-fallback-${index}`;
-            const rName = room.roomName || room.name || "??";
-
-            actions.push({
-              id: uniqueId,
-              type: "READING",
-              title: `Phòng ${rName}`,
-              subtitle: "Chưa chốt chỉ số",
-              icon: "flash-outline",
-              iconColor: "text-amber-500",
-              iconBg: "bg-amber-50",
-              actionText: "Chốt số",
-              route: `/(admin)/readings/${room.buildingId || selectedBuilding?.id || ""}?month=${currentMonth}`,
-            });
+        // Readings: show ONE grouped summary item instead of per-room items
+        const unreadCount = unreadReadingsRes.data.length;
+        if (unreadCount > 0) {
+          actions.push({
+            id: "reading-summary",
+            type: "READING",
+            title: `${unreadCount} phòng chưa chốt điện nước`,
+            subtitle: `Tháng ${currentMonth}`,
+            icon: "flash",
+            iconColor: "text-amber-500",
+            iconBg: "bg-amber-50",
+            actionText: "Chốt ngay",
+            route: `/(admin)/readings`,
           });
+        }
 
         // Payment Actions
         overdueList.slice(0, 10).forEach((inv: any, index: number) => {
@@ -158,6 +152,7 @@ export default function Dashboard() {
             amount: badDebtTotal,
             count: overdueList.length,
           },
+          unreadReadingsCount: unreadCount,
           actions: actions.slice(0, 20),
         };
       } catch (err) {

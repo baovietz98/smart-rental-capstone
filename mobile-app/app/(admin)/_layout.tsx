@@ -3,12 +3,24 @@ import * as SecureStore from "expo-secure-store";
 import { Ionicons } from "@expo/vector-icons";
 import { Platform, View, TouchableOpacity, Text, Modal } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { api } from "@/lib/api";
+import dayjs from "dayjs";
 
 function CustomTabBar({ state, descriptors, navigation }: any) {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [unreadReadingsCount, setUnreadReadingsCount] = useState(0);
+
+  const currentMonth = dayjs().format("MM-YYYY");
+
+  useEffect(() => {
+    api
+      .get("/readings/unread", { params: { month: currentMonth } })
+      .then((res) => setUnreadReadingsCount(res.data?.length ?? 0))
+      .catch(() => {});
+  }, [currentMonth]);
 
   // Get current active route from the state object
   const currentRouteName = state.routes[state.index].name;
@@ -47,11 +59,19 @@ function CustomTabBar({ state, descriptors, navigation }: any) {
       bgColor: "#CFFAFE",
     },
     {
+      label: "Tài chính",
+      icon: "stats-chart",
+      route: "finance",
+      color: "#16A34A",
+      bgColor: "#F0FDF4",
+    },
+    {
       label: "Chốt điện nước",
       icon: "flash",
       route: "readings",
       color: "#F59E0B",
       bgColor: "#FEF3C7",
+      badge: unreadReadingsCount > 0 ? unreadReadingsCount : null,
     },
     {
       label: "Quản lý sự cố",
@@ -264,7 +284,6 @@ function CustomTabBar({ state, descriptors, navigation }: any) {
                         backgroundColor: "white",
                         alignItems: "center",
                         justifyContent: "center",
-                        // Icon shadow
                         shadowColor: item.color,
                         shadowOffset: { width: 0, height: 2 },
                         shadowOpacity: 0.1,
@@ -276,6 +295,36 @@ function CustomTabBar({ state, descriptors, navigation }: any) {
                         size={20}
                         color={item.color}
                       />
+                      {/* Badge */}
+                      {(item as any).badge && (
+                        <View
+                          style={{
+                            position: "absolute",
+                            top: -5,
+                            right: -5,
+                            backgroundColor: "#EF4444",
+                            borderRadius: 10,
+                            minWidth: 18,
+                            height: 18,
+                            alignItems: "center",
+                            justifyContent: "center",
+                            paddingHorizontal: 3,
+                            borderWidth: 1.5,
+                            borderColor: "white",
+                          }}
+                        >
+                          <Text
+                            style={{
+                              color: "white",
+                              fontSize: 9,
+                              fontWeight: "800",
+                              lineHeight: 12,
+                            }}
+                          >
+                            {(item as any).badge}
+                          </Text>
+                        </View>
+                      )}
                     </View>
 
                     <View>
@@ -378,6 +427,10 @@ export default function AdminLayout() {
         options={{ href: null, title: "Thông báo" }}
       />
       <Tabs.Screen name="issues" options={{ href: null, title: "Sự cố" }} />
+      <Tabs.Screen
+        name="finance"
+        options={{ href: null, title: "Tài chính" }}
+      />
     </Tabs>
   );
 }
