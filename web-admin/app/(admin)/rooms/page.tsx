@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, Suspense } from "react";
 import { message, Spin, Empty, Checkbox, Dropdown, Modal, Tooltip } from "antd";
 import {
   PlusOutlined,
@@ -39,6 +39,27 @@ const formatCurrency = (value: number) =>
   new Intl.NumberFormat("vi-VN").format(value);
 
 export default function AllRoomsPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="h-64 flex items-center justify-center">
+          <Spin
+            indicator={
+              <LoadingOutlined
+                style={{ fontSize: 48, color: "#D97757" }}
+                spin
+              />
+            }
+          />
+        </div>
+      }
+    >
+      <AllRoomsPageContent />
+    </Suspense>
+  );
+}
+
+function AllRoomsPageContent() {
   const router = useRouter();
 
   // Data State

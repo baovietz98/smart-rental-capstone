@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, Suspense } from "react";
 import {
   Plus,
   Calendar,
@@ -26,6 +26,20 @@ import { useSearchParams } from "next/navigation";
 import CreateContractWizard from "@/components/contracts/CreateContractWizard";
 
 export default function ContractsPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex justify-center py-12">
+          <Loader2 className="animate-spin w-8 h-8 text-[#D97757]" />
+        </div>
+      }
+    >
+      <ContractsPageContent />
+    </Suspense>
+  );
+}
+
+function ContractsPageContent() {
   const searchParams = useSearchParams();
   const [contracts, setContracts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
