@@ -26,8 +26,8 @@ export default function BillList() {
 
   const {
     data: bills,
-    isLoading,
-    refetch,
+    isLoading: isBillsLoading,
+    refetch: refetchBills,
   } = useQuery({
     queryKey: ["bills", currentMonthStr],
     queryFn: async () => {
@@ -37,6 +37,41 @@ export default function BillList() {
       return res.data;
     },
   });
+
+  const {
+    data: buildings,
+    isLoading: isBuildingsLoading,
+    refetch: refetchBuildings,
+  } = useQuery({
+    queryKey: ["buildings-active"],
+    queryFn: async () => {
+      const res = await api.get("/buildings");
+      return res.data;
+    },
+  });
+
+  const isLoading = isBillsLoading || isBuildingsLoading;
+
+  const refetchAll = () => {
+    refetchBills();
+    refetchBuildings();
+  };
+
+  const { totalActiveRooms, missingInvoices } = useMemo(() => {
+    let activeRoomsCount = 0;
+    if (buildings && Array.isArray(buildings)) {
+      buildings.forEach((b: any) => {
+        activeRoomsCount += b.rentedRooms || 0;
+      });
+    }
+    const allInvoicesCount = bills ? bills.length : 0;
+    const missing = Math.max(0, activeRoomsCount - allInvoicesCount);
+
+    return {
+      totalActiveRooms: activeRoomsCount,
+      missingInvoices: missing,
+    };
+  }, [buildings, bills]);
 
   const filteredBills = useMemo(() => {
     if (!bills) return [];
@@ -133,6 +168,36 @@ export default function BillList() {
         </View>
       </View>
 
+      {/* Missing Invoices Warning */}
+      {missingInvoices > 0 && !isLoading && (
+        <TouchableOpacity
+          onPress={() => router.push("/(admin)/bills/new")}
+          className="mx-6 mt-4 mb-1 bg-amber-50 rounded-2xl p-4 border border-amber-200 flex-row items-center shadow-sm"
+        >
+          <View className="w-10 h-10 bg-amber-100 rounded-full items-center justify-center mr-3">
+            <MaterialCommunityIcons
+              name="alert-circle-outline"
+              size={24}
+              color="#D97706"
+            />
+          </View>
+          <View className="flex-1">
+            <Text className="text-amber-800 font-bold text-sm">
+              Còn thiếu hóa đơn
+            </Text>
+            <Text className="text-amber-700 text-xs mt-0.5" numberOfLines={2}>
+              Có {missingInvoices} phòng đang thuê chưa được tạo hóa đơn trong
+              tháng {currentMonthStr}.
+            </Text>
+          </View>
+          <MaterialCommunityIcons
+            name="chevron-right"
+            size={20}
+            color="#D97706"
+          />
+        </TouchableOpacity>
+      )}
+
       {/* FILTERS */}
       <View className="px-6 py-3">
         <ScrollView horizontal showsHorizontalScrollIndicator={false}>
@@ -178,7 +243,7 @@ export default function BillList() {
             refreshControl={
               <RefreshControl
                 refreshing={isLoading}
-                onRefresh={refetch}
+                onRefresh={refetchAll}
                 tintColor="#DA7756"
               />
             }

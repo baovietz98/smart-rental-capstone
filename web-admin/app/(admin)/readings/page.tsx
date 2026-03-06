@@ -6,10 +6,11 @@ import {
   Form,
   InputNumber,
   Select,
-  message,
   DatePicker,
   Popconfirm,
   Input,
+  Image,
+  message,
 } from "antd";
 import {
   Plus,
@@ -20,6 +21,7 @@ import {
   Check,
   Loader2,
   AlertTriangle,
+  Camera,
 } from "lucide-react";
 import { readingsApi } from "@/lib/api/readings";
 import { servicesApi } from "@/lib/api/services";
@@ -35,6 +37,7 @@ import dayjs from "dayjs";
 import axios from "@/lib/axios-client";
 
 export default function ReadingsPage() {
+  const [messageApi, contextHolder] = message.useMessage();
   const [readings, setReadings] = useState<ServiceReading[]>([]);
   const [loading, setLoading] = useState(true);
   const [services, setServices] = useState<Service[]>([]);
@@ -75,7 +78,7 @@ export default function ReadingsPage() {
       setUnreadRooms(unreadData);
     } catch (error) {
       console.error(error);
-      message.error("Lỗi tải dữ liệu");
+      messageApi.error("Lỗi tải dữ liệu");
     } finally {
       setLoading(false);
     }
@@ -111,7 +114,7 @@ export default function ReadingsPage() {
       });
 
       if (readings.length === 0) {
-        message.warning("Chưa nhập chỉ số nào!");
+        messageApi.warning("Chưa nhập chỉ số nào!");
         setModalLoading(false);
         return;
       }
@@ -124,7 +127,7 @@ export default function ReadingsPage() {
       const failures = response.filter((r: BulkCreateResult) => !r.success);
 
       if (successes > 0) {
-        message.success(`Đã lưu thành công ${successes} chỉ số!`);
+        messageApi.success(`Đã lưu thành công ${successes} chỉ số!`);
       }
 
       if (failures.length > 0) {
@@ -132,8 +135,8 @@ export default function ReadingsPage() {
         const errorMsg = failures
           .map((f: BulkCreateResult) => `Dịch vụ ${f.serviceId}: ${f.error}`)
           .join("\n");
-        message.warning({
-          content: `Có ${failures.length} chỉ số lỗi: ${errorMsg}`,
+        messageApi.warning({
+          content: `Có ${failures.length} chỉ số lỗi: \n${errorMsg}`,
           style: { whiteSpace: "pre-wrap" }, // Allow multiline
           duration: 5,
         });
@@ -146,7 +149,7 @@ export default function ReadingsPage() {
       }
     } catch (error) {
       console.error(error);
-      message.error("Lỗi hệ thống khi lưu chỉ số");
+      messageApi.error("Lỗi hệ thống khi lưu chỉ số");
     } finally {
       setModalLoading(false);
     }
@@ -155,11 +158,22 @@ export default function ReadingsPage() {
   const handleDelete = async (id: number) => {
     try {
       await readingsApi.delete(id);
-      message.success("Đã xóa bản ghi!");
+      messageApi.success("Đã xóa bản ghi!");
       fetchData();
     } catch (error) {
       console.error(error);
-      message.error("Lỗi khi xóa");
+      messageApi.error("Lỗi khi xóa");
+    }
+  };
+
+  const handleApprove = async (id: number) => {
+    try {
+      await readingsApi.update(id, { isConfirmed: true } as any);
+      messageApi.success("Đã duyệt số liệu khách gửi!");
+      fetchData();
+    } catch (error) {
+      console.error(error);
+      messageApi.error("Lỗi khi duyệt số liệu");
     }
   };
 
@@ -285,47 +299,110 @@ export default function ReadingsPage() {
     },
     {
       title: "Trạng thái",
-      dataIndex: "isBilled",
-      key: "isBilled",
+      key: "status",
       className:
         "bg-gray-50 text-gray-500 uppercase text-[11px] tracking-wider font-semibold py-3",
-      render: (isBilled: boolean) => (
-        <span
-          className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
-            isBilled
-              ? "bg-green-100 text-green-800"
-              : "bg-orange-100 text-orange-800"
-          }`}
-        >
-          {isBilled ? "Đã lên HĐ" : "Chưa lên HĐ"}
-        </span>
+      render: (_: unknown, record: ServiceReading) => (
+        <div className="flex flex-col gap-1">
+          {record.isBilled ? (
+            <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800 w-fit">
+              Đã lên HĐ
+            </span>
+          ) : (
+            <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-800 w-fit">
+              Chưa lên HĐ
+            </span>
+          )}
+          {typeof record.isConfirmed === "boolean" && !record.isConfirmed && (
+            <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-bold leading-tight bg-amber-100 text-amber-700 w-fit border border-amber-200">
+              Chờ duyệt
+            </span>
+          )}
+          {typeof record.isConfirmed === "boolean" &&
+            record.isConfirmed &&
+            record.type === "TENANT" && (
+              <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-bold leading-tight bg-blue-100 text-blue-700 w-fit border border-blue-200">
+                Đã duyệt
+              </span>
+            )}
+        </div>
       ),
+    },
+    {
+      title: "Minh chứng",
+      key: "images",
+      align: "center" as const,
+      className:
+        "bg-gray-50 text-gray-500 uppercase text-[11px] tracking-wider font-semibold py-3",
+      render: (_: unknown, record: ServiceReading) => {
+        if (!record.imageUrls || record.imageUrls.length === 0)
+          return <span className="text-gray-300">-</span>;
+
+        return (
+          <Image.PreviewGroup>
+            <div className="flex justify-center -space-x-2">
+              {record.imageUrls.map((url, i) => (
+                <div
+                  key={i}
+                  className="w-8 h-8 rounded-full border-2 border-white shadow-sm overflow-hidden bg-gray-50"
+                >
+                  <Image
+                    src={url}
+                    alt={`Proof ${i}`}
+                    className="w-full h-full object-cover cursor-zoom-in"
+                  />
+                </div>
+              ))}
+            </div>
+          </Image.PreviewGroup>
+        );
+      },
     },
     {
       title: "Thao tác",
       key: "action",
+      align: "right" as const,
       className:
         "bg-gray-50 text-gray-500 uppercase text-[11px] tracking-wider font-semibold py-3",
       render: (_: unknown, record: ServiceReading) =>
         !record.isBilled && (
-          <Popconfirm
-            title="Xác nhận xóa?"
-            description="Hành động này không thể hoàn tác."
-            onConfirm={() => handleDelete(record.id)}
-            okText="Xóa"
-            cancelText="Hủy"
-            okButtonProps={{ danger: true, type: "primary" }}
-          >
-            <button className="text-gray-400 hover:text-red-500 transition-colors p-1">
-              <Trash2 size={16} />
-            </button>
-          </Popconfirm>
+          <div className="flex items-center justify-end gap-2">
+            {typeof record.isConfirmed === "boolean" && !record.isConfirmed && (
+              <Popconfirm
+                title="Duyệt chốt số này?"
+                description="Bạn xác nhận số liệu Khách gửi là chính xác?"
+                onConfirm={() => handleApprove(record.id)}
+                okText="Duyệt"
+                cancelText="Hủy"
+              >
+                <button
+                  className="flex items-center gap-1 text-[11px] font-bold px-2 py-1 bg-emerald-50 text-emerald-600 border border-emerald-200 hover:bg-emerald-600 hover:text-white rounded transition-colors"
+                  title="Duyệt chốt số"
+                >
+                  <Check size={14} /> Duyệt
+                </button>
+              </Popconfirm>
+            )}
+            <Popconfirm
+              title="Xác nhận xóa?"
+              description="Hành động này không thể hoàn tác."
+              onConfirm={() => handleDelete(record.id)}
+              okText="Xóa"
+              cancelText="Hủy"
+              okButtonProps={{ danger: true, type: "primary" }}
+            >
+              <button className="text-gray-400 hover:text-red-500 transition-colors p-1.5 rounded-md hover:bg-red-50">
+                <Trash2 size={16} />
+              </button>
+            </Popconfirm>
+          </div>
         ),
     },
   ];
 
   return (
     <div className="claude-page p-3 md:p-6 lg:p-12">
+      {contextHolder}
       <div className="max-w-7xl mx-auto">
         {/* HEADER */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-3 md:gap-4 mb-6 md:mb-8">

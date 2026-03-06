@@ -2,6 +2,7 @@
 
 import React from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import {
   Zap,
   AlertCircle,
@@ -85,21 +86,21 @@ export default function TenantServicesPage() {
               title="Bảng tin & Thông báo"
               bg="bg-pink-50"
               color="text-pink-600"
-              path="/tenant/news"
+              path="/tenant/bulletin"
             />
             <ListItem
               icon={<Phone size={20} />}
               title="Danh bạ BQL"
               bg="bg-indigo-50"
               color="text-indigo-600"
-              path="#" // Placeholder
+              path="/tenant/contacts"
             />
             <ListItem
               icon={<HelpCircle size={20} />}
               title="Hướng dẫn sử dụng"
               bg="bg-teal-50"
               color="text-teal-600"
-              path="#"
+              path="/tenant/guide"
             />
           </div>
         </div>
@@ -131,21 +132,23 @@ function ServiceCard({ title, desc, icon, bg, iconColor, onClick }: any) {
 
 function ListItem({ icon, title, bg, color, path }: any) {
   return (
-    <div className="bg-white p-4 rounded-xl border border-slate-100 shadow-sm active:bg-slate-50 cursor-pointer hover:border-indigo-100 hover:shadow transition-all group flex items-center justify-between">
-      <div className="flex items-center gap-4">
-        <div
-          className={`w-10 h-10 ${bg} ${color} rounded-lg flex items-center justify-center`}
-        >
-          {icon}
+    <Link href={path} className="block">
+      <div className="bg-white p-4 rounded-xl border border-slate-100 shadow-sm active:bg-slate-50 hover:border-indigo-100 hover:shadow transition-all group flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          <div
+            className={`w-10 h-10 ${bg} ${color} rounded-lg flex items-center justify-center`}
+          >
+            {icon}
+          </div>
+          <span className="font-bold text-slate-700 text-sm group-hover:text-slate-900 transition-colors">
+            {title}
+          </span>
         </div>
-        <span className="font-bold text-slate-700 text-sm group-hover:text-slate-900 transition-colors">
-          {title}
-        </span>
+        <ChevronRight
+          size={18}
+          className="text-slate-300 group-hover:text-indigo-400"
+        />
       </div>
-      <ChevronRight
-        size={18}
-        className="text-slate-300 group-hover:text-indigo-400"
-      />
-    </div>
+    </Link>
   );
 }

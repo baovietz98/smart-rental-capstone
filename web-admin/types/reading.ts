@@ -42,7 +42,8 @@ export interface CreateReadingDto {
 }
 
 export interface UpdateReadingDto {
-    newIndex: number;
+    newIndex?: number;
+    isConfirmed?: boolean;
 }
 
 export interface ReadingStats {

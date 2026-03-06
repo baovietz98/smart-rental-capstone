@@ -6,7 +6,6 @@ import {
   Form,
   Select,
   DatePicker,
-  Button,
   Table,
   InputNumber,
   Input,
@@ -25,6 +24,7 @@ import {
 import dayjs from "dayjs";
 import { buildingsApi, Building, Room } from "@/lib/api/buildings";
 import { invoicesApi } from "@/lib/api/invoices";
+import { readingsApi } from "@/lib/api/readings";
 import { Invoice, InvoiceLineItem } from "@/types/invoice";
 import axiosClient from "@/lib/axios-client";
 
@@ -45,11 +45,13 @@ export default function CreateInvoiceModal({
   const [rooms, setRooms] = useState<Room[]>([]);
   const [selectedBuilding, setSelectedBuilding] = useState<number | null>(null);
 
-  // Draft Data
   const [draftInvoice, setDraftInvoice] = useState<Invoice | null>(null);
   const [lineItems, setLineItems] = useState<
     (InvoiceLineItem & { _id: string })[]
   >([]);
+
+  // State for unread rooms warning
+  const [unreadRoomIds, setUnreadRoomIds] = useState<number[] | null>(null);
 
   const [form] = Form.useForm();
 
@@ -61,8 +63,32 @@ export default function CreateInvoiceModal({
       form.setFieldValue("month", dayjs());
       setDraftInvoice(null);
       setLineItems([]);
+      setUnreadRoomIds(null);
+      setRooms([]); // Clear rooms so it doesn't show old data
+      setSelectedBuilding(null); // Clear selected building
     }
   }, [isOpen]);
+
+  const fetchUnreadRooms = async (
+    buildingId: number | null | undefined,
+    monthStr: string | null | undefined,
+  ) => {
+    if (!buildingId || !monthStr) {
+      setUnreadRoomIds(null);
+      return;
+    }
+
+    try {
+      setUnreadRoomIds(null); // Show loading state briefly
+      // The backend returns rooms that haven't finalized readings
+      const unreadData = await readingsApi.getUnreadRooms(monthStr, buildingId);
+      // Backend returns array of { roomId: number, ... }
+      setUnreadRoomIds(unreadData.map((r: { roomId: number }) => r.roomId));
+    } catch (error) {
+      console.error("Lỗi lấy danh sách phòng chưa chốt số:", error);
+      // Fail silently to not block invoice creation
+    }
+  };
 
   const fetchBuildings = async () => {
     try {
@@ -76,10 +102,15 @@ export default function CreateInvoiceModal({
 
   const handleBuildingChange = async (buildingId: number) => {
     setSelectedBuilding(buildingId);
-    form.setFieldValue("roomId", null);
+    form.setFieldValue("roomId", undefined);
     try {
       const data = await buildingsApi.getRooms(buildingId);
       setRooms(data);
+
+      const currentMonth = form.getFieldValue("month");
+      if (currentMonth) {
+        fetchUnreadRooms(buildingId, currentMonth.format("MM-YYYY"));
+      }
     } catch (error) {
       console.error(error);
       message.error("Lỗi tải danh sách phòng");
@@ -399,12 +430,50 @@ export default function CreateInvoiceModal({
               >
                 <Select
                   placeholder="Chọn phòng..."
-                  options={rooms.map((r) => ({ label: r.name, value: r.id }))}
                   disabled={!selectedBuilding}
                   className="h-12 text-base"
                   popupClassName="claude-select-popup"
                   dropdownStyle={{ backgroundColor: "#ffffff" }}
-                />
+                  optionLabelProp="label"
+                >
+                  {rooms.map((r) => {
+                    const isUnread =
+                      unreadRoomIds !== null && unreadRoomIds.includes(r.id);
+                    const isRented = r.status === "RENTED";
+                    return (
+                      <Select.Option
+                        key={r.id}
+                        value={r.id}
+                        label={r.name}
+                        disabled={!isRented}
+                      >
+                        <div className="flex items-center justify-between w-full">
+                          <div className="flex items-center gap-2">
+                            <span>{r.name}</span>
+                            {!isRented && (
+                              <span className="text-[10px] bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded uppercase font-medium">
+                                Trống
+                              </span>
+                            )}
+                          </div>
+                          {isRented &&
+                            unreadRoomIds !== null &&
+                            (isUnread ? (
+                              <span className="flex items-center gap-1 text-[10px] font-bold text-amber-600 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded uppercase tracking-wider">
+                                <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span>
+                                Chưa chốt số
+                              </span>
+                            ) : (
+                              <span className="flex items-center gap-1 text-[10px] font-bold text-emerald-600 bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 rounded uppercase tracking-wider">
+                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                                Đã chốt số
+                              </span>
+                            ))}
+                        </div>
+                      </Select.Option>
+                    );
+                  })}
+                </Select>
               </Form.Item>
             </div>
             <Form.Item
@@ -421,6 +490,13 @@ export default function CreateInvoiceModal({
                 picker="month"
                 format="MM-YYYY"
                 className="w-full h-12 rounded-xl text-base"
+                allowClear={false}
+                onChange={(date) => {
+                  form.setFieldValue("roomId", undefined);
+                  if (date && selectedBuilding) {
+                    fetchUnreadRooms(selectedBuilding, date.format("MM-YYYY"));
+                  }
+                }}
               />
             </Form.Item>
 

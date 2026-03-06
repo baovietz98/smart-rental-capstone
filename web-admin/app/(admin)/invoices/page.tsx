@@ -10,8 +10,10 @@ import {
   Clock,
   AlertCircle,
   Download,
+  Info,
 } from "lucide-react";
 import { invoicesApi } from "@/lib/api/invoices";
+import axios from "@/lib/axios-client";
 import { Invoice, InvoiceStatus } from "@/types/invoice";
 import InvoiceDetailModal from "@/components/invoices/InvoiceDetailModal";
 import dayjs from "dayjs";
@@ -27,12 +29,34 @@ export default function InvoicesPage() {
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [stats, setStats] = useState({
+    totalActiveRooms: 0,
+    missingInvoices: 0,
+  });
 
   const fetchInvoices = async () => {
     setLoading(true);
     try {
-      const data = await invoicesApi.getAll(filters);
-      setInvoices(data);
+      const [filteredInvoices, allInvoicesMonth, buildingsRes] =
+        await Promise.all([
+          invoicesApi.getAll(filters),
+          invoicesApi.getAll({ month: filters.month }),
+          axios.get("/buildings"),
+        ]);
+      setInvoices(filteredInvoices);
+
+      let activeRoomsCount = 0;
+      if (buildingsRes.data && Array.isArray(buildingsRes.data)) {
+        buildingsRes.data.forEach((b: { rentedRooms?: number }) => {
+          activeRoomsCount += b.rentedRooms || 0;
+        });
+      }
+
+      const missing = Math.max(0, activeRoomsCount - allInvoicesMonth.length);
+      setStats({
+        totalActiveRooms: activeRoomsCount,
+        missingInvoices: missing,
+      });
     } catch (error) {
       console.error(error);
       message.error("Lỗi tải danh sách hóa đơn");
@@ -83,7 +107,7 @@ export default function InvoicesPage() {
           `HD${inv.id}`,
           `"${inv.contract?.room.name || ""}"`,
           `"${inv.contract?.room.building.name || ""}"`,
-          `"${inv.contract?.tenant.fullName || ""}"`,
+          `"${inv.contract?.tenant.name || ""}"`,
           `"${inv.contract?.tenant.phone || ""}"`,
           `"${inv.month}"`,
           inv.totalAmount,
@@ -320,6 +344,36 @@ export default function InvoicesPage() {
           }))}
         />
       </div>
+
+      {/* MISSING INVOICES NOTIFICATION */}
+      {stats.missingInvoices > 0 && !loading && (
+        <div className="mb-6 md:mb-8 bg-amber-50 border border-amber-200 text-amber-900 px-4 py-3 md:py-4 rounded-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-sm transition-all">
+          <div className="flex items-center gap-3">
+            <div className="bg-amber-100 p-2 md:p-2.5 rounded-lg text-amber-600 shrink-0">
+              <Info size={20} className="md:w-[22px] md:h-[22px]" />
+            </div>
+            <div>
+              <p className="font-bold text-sm md:text-base">
+                Thông báo tạo hóa đơn
+              </p>
+              <p className="text-xs md:text-sm text-amber-800 mt-0.5">
+                Có{" "}
+                <span className="font-extrabold">
+                  {stats.missingInvoices}/{stats.totalActiveRooms}
+                </span>{" "}
+                phòng đang thuê chưa được tạo hóa đơn trong tháng{" "}
+                <span className="font-bold">{filters.month}</span>.
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={() => setIsCreateModalOpen(true)}
+            className="w-full sm:w-auto text-xs font-bold uppercase tracking-wider bg-amber-500 text-white px-4 py-2 md:py-2.5 rounded-lg hover:bg-amber-600 transition-colors shadow-sm"
+          >
+            Tạo ngay
+          </button>
+        </div>
+      )}
 
       {/* DESKTOP TABLE VIEW */}
       <div className="hidden md:block bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden">

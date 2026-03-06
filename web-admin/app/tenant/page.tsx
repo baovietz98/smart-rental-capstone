@@ -122,7 +122,9 @@ export default function TenantDashboard() {
           subtitle:
             inv.status === "PAID"
               ? `Đã thanh toán: ${formatCurrency(inv.totalAmount)}`
-              : `Cần thanh toán: ${formatCurrency(inv.totalAmount)}`,
+              : inv.status === "PARTIAL"
+                ? `Còn nợ: ${formatCurrency(inv.totalAmount - (inv.paidAmount || 0))}`
+                : `Cần thanh toán: ${formatCurrency(inv.totalAmount)}`,
           date: inv.createdAt,
           status: inv.status,
           amount: inv.totalAmount,

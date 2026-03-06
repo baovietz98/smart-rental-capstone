@@ -12,6 +12,7 @@ import {
   MapPin,
   ChevronRight,
   ArrowLeft,
+  Star,
 } from "lucide-react";
 import axiosClient from "@/lib/axios-client";
 import { formatCurrency } from "@/lib/utils";
@@ -255,6 +256,26 @@ export default function TenantContractsPage() {
           </div>
         </div>
 
+        {/* 3.1. Room Amenities / Assets */}
+        {contract.room.assets && contract.room.assets.length > 0 && (
+          <div>
+            <h3 className="font-bold text-lg text-slate-900 mb-3 px-1 flex items-center gap-2">
+              <Star size={18} className="text-amber-500" /> Tiện ích phòng
+            </h3>
+            <div className="flex flex-wrap gap-2">
+              {contract.room.assets.map((asset: string, index: number) => (
+                <div
+                  key={index}
+                  className="bg-white border border-slate-200 text-slate-700 px-3 py-1.5 rounded-xl text-sm font-medium shadow-sm flex items-center gap-1.5"
+                >
+                  <div className="w-1.5 h-1.5 rounded-full bg-emerald-400"></div>
+                  {asset}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* 4. Recent Invoices */}
         <div>
           <div className="flex items-center justify-between mb-3 px-1">
@@ -274,6 +295,7 @@ export default function TenantContractsPage() {
                 .slice(0, 3)
                 .map((invoice: any, index: number) => {
                   const isPaid = invoice.status === "PAID";
+                  const isPartial = invoice.status === "PARTIAL";
                   const isOverdue = invoice.status === "OVERDUE";
 
                   // Parse date logic safely handling MM-YYYY format
@@ -294,7 +316,7 @@ export default function TenantContractsPage() {
                     >
                       <div className="flex items-center gap-4">
                         <div
-                          className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-transform group-hover:scale-105 ${isPaid ? "bg-emerald-50 text-emerald-600" : isOverdue ? "bg-red-50 text-red-600" : "bg-orange-50 text-orange-600"}`}
+                          className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-transform group-hover:scale-105 ${isPaid ? "bg-emerald-50 text-emerald-600" : isOverdue ? "bg-red-50 text-red-600" : isPartial ? "bg-amber-50 text-amber-600" : "bg-orange-50 text-orange-600"}`}
                         >
                           <FileText size={20} />
                         </div>
@@ -304,7 +326,12 @@ export default function TenantContractsPage() {
                             {date.isValid() ? date.format("MM/YYYY") : "N/A"}
                           </div>
                           <div className="text-base font-bold text-slate-900">
-                            {formatCurrency(invoice.totalAmount)}
+                            {isPartial
+                              ? `Còn nợ: ${formatCurrency(
+                                  invoice.totalAmount -
+                                    (invoice.paidAmount || 0),
+                                )}`
+                              : formatCurrency(invoice.totalAmount)}
                           </div>
                         </div>
                       </div>
@@ -316,6 +343,10 @@ export default function TenantContractsPage() {
                       ) : isOverdue ? (
                         <div className="text-[10px] font-extrabold text-red-700 bg-red-100 px-3 py-1.5 rounded-lg border border-red-200 shadow-sm whitespace-nowrap">
                           QUÁ HẠN
+                        </div>
+                      ) : isPartial ? (
+                        <div className="text-[10px] font-extrabold text-amber-700 bg-amber-100 px-3 py-1.5 rounded-lg border border-amber-200 shadow-sm whitespace-nowrap">
+                          TRẢ 1 PHẦN
                         </div>
                       ) : (
                         <div className="text-[10px] font-extrabold text-orange-700 bg-orange-100 px-3 py-1.5 rounded-lg border border-orange-200 shadow-sm whitespace-nowrap">

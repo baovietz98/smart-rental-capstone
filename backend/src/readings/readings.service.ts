@@ -472,6 +472,7 @@ export class ReadingsService {
         newIndex,
         usage,
         totalCost,
+        ...(dto.isConfirmed !== undefined && { isConfirmed: dto.isConfirmed }),
       },
       include: { service: true },
     });

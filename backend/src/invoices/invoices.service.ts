@@ -128,6 +128,13 @@ export class InvoicesService implements OnModuleInit {
     const readings = allReadings.filter(r => !r.isBilled);
     console.log('DEBUG: Filtered unbilled readings:', readings.length);
 
+    const unconfirmedReadings = readings.filter(r => r.isConfirmed === false);
+    if (unconfirmedReadings.length > 0) {
+      throw new BadRequestException(
+        `Tháng ${dto.month} có chỉ số điện/nước của Khách đang chờ duyệt. Vui lòng kiểm tra và duyệt trước khi lập hóa đơn.`,
+      );
+    }
+
     // Logic: Nếu có service INDEX mà không tìm thấy reading tương ứng -> Báo lỗi
     const indexServices = await this.prisma.service.findMany({
       where: { type: 'INDEX', isActive: true },

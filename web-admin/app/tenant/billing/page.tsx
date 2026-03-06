@@ -24,7 +24,6 @@ export default function TenantBillingPage() {
   const [contract, setContract] = useState<any>(null);
   const [filter, setFilter] = useState("ALL"); // ALL, UNPAID, PAID
   const [selectedInvoice, setSelectedInvoice] = useState<any>(null);
-  const [isDemoMode, setIsDemoMode] = useState(false);
 
   useEffect(() => {
     fetchInvoices();
@@ -111,10 +110,10 @@ export default function TenantBillingPage() {
         return (
           inv.status === "PENDING" ||
           inv.status === "PUBLISHED" ||
-          inv.status === "SENT" ||
-          inv.status === "OVERDUE" ||
-          inv.status === "PARTIAL"
+          inv.status === "SENT"
         );
+      if (filter === "PARTIAL") return inv.status === "PARTIAL";
+      if (filter === "OVERDUE") return inv.status === "OVERDUE";
       if (filter === "PAID") return inv.status === "PAID";
       return true;
     })
@@ -186,17 +185,21 @@ export default function TenantBillingPage() {
       {/* Filters */}
       <div className="px-5 mb-4">
         <div className="flex bg-slate-100 p-1 rounded-xl">
-          {["ALL", "UNPAID", "PAID"].map((key) => (
+          {["ALL", "UNPAID", "PARTIAL", "OVERDUE", "PAID"].map((key) => (
             <button
               key={key}
               onClick={() => setFilter(key)}
-              className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all ${filter === key ? "bg-white text-slate-900 shadow-sm" : "text-slate-400 hover:text-slate-600"}`}
+              className={`flex-1 py-2 px-1 rounded-lg text-[11px] sm:text-xs font-bold transition-all ${filter === key ? "bg-white text-slate-900 shadow-sm" : "text-slate-400 hover:text-slate-600"}`}
             >
               {key === "ALL"
                 ? "Tất cả"
                 : key === "UNPAID"
                   ? "Chưa trả"
-                  : "Đã trả"}
+                  : key === "PARTIAL"
+                    ? "Trả 1 phần"
+                    : key === "OVERDUE"
+                      ? "Quá hạn"
+                      : "Đã trả"}
             </button>
           ))}
         </div>
@@ -250,10 +253,14 @@ export default function TenantBillingPage() {
                 <div className="flex justify-between items-end border-t border-slate-50 pt-3 mt-2">
                   <div>
                     <p className="text-xs text-slate-400 font-bold uppercase tracking-wider mb-0.5">
-                      Tổng tiền
+                      {inv.status === "PARTIAL" ? "Còn nợ" : "Tổng tiền"}
                     </p>
                     <p className="text-lg font-bold text-slate-900">
-                      {formatCurrency(inv.totalAmount)}
+                      {inv.status === "PARTIAL"
+                        ? formatCurrency(
+                            inv.totalAmount - (inv.paidAmount || 0),
+                          )
+                        : formatCurrency(inv.totalAmount)}
                     </p>
                   </div>
                   <div className="w-8 h-8 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 group-hover:bg-indigo-50 group-hover:text-indigo-600 transition-colors">
@@ -338,31 +345,16 @@ export default function TenantBillingPage() {
               {/* Payment Section (Real VietQR) */}
               {selectedInvoice.status !== "PAID" && (
                 <div className="bg-indigo-50 rounded-xl p-4 border border-indigo-100 flex flex-col gap-4">
-                  {/* Demo Mode Toggle */}
-                  <div className="flex items-center justify-between border-b border-indigo-200 pb-3 mb-1">
-                    <span className="text-sm font-bold text-indigo-900">
-                      Thanh toán QR
-                    </span>
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs font-semibold text-indigo-600">
-                        Chế độ Demo (1.000đ)
-                      </span>
-                      <Switch
-                        size="small"
-                        checked={isDemoMode}
-                        onChange={setIsDemoMode}
-                      />
-                    </div>
-                  </div>
+                  {/* Removed Demo Mode Toggle */}
 
                   <div className="flex flex-col items-center gap-4 text-center sm:flex-row sm:text-left">
                     <div className="bg-white p-2 rounded-lg shadow-sm shrink-0">
                       {/* VietQR Dynamic */}
                       <img
                         src={`https://img.vietqr.io/image/MB-9300131000273-compact2.png?amount=${
-                          isDemoMode ? 1000 : selectedInvoice.debtAmount
+                          selectedInvoice.debtAmount
                         }&addInfo=${encodeURIComponent(
-                          `HD${selectedInvoice.id} ${isDemoMode ? "DEMO" : ""}`,
+                          `HD${selectedInvoice.id}`,
                         )}&accountName=CAMELSTAY`}
                         alt="VietQR"
                         className="w-32 h-auto"
@@ -384,11 +376,6 @@ export default function TenantBillingPage() {
                       <p className="text-[10px] text-indigo-400 mt-1 italic">
                         *Nội dung: <b>HD{selectedInvoice.id}</b> (Vui lòng giữ
                         nguyên)
-                        {isDemoMode && (
-                          <span className="block font-bold text-orange-500">
-                            (ĐANG DÙNG CHẾ ĐỘ DEMO - 1.000đ)
-                          </span>
-                        )}
                       </p>
                     </div>
                   </div>
@@ -493,13 +480,38 @@ export default function TenantBillingPage() {
                     </span>
                   </div>
                 )}
-                <div className="border-t border-slate-200 my-2 pt-2 flex justify-between items-center">
-                  <span className="text-slate-900 font-bold text-lg">
-                    Tổng cộng
-                  </span>
-                  <span className="text-indigo-600 font-bold text-xl">
-                    {formatCurrency(selectedInvoice.totalAmount)}
-                  </span>
+                <div className="border-t border-slate-200 my-2 pt-2 flex flex-col gap-1">
+                  <div className="flex justify-between items-center">
+                    <span className="text-slate-900 font-bold text-lg">
+                      Tổng cộng
+                    </span>
+                    <span className="text-indigo-600 font-bold text-xl">
+                      {formatCurrency(selectedInvoice.totalAmount)}
+                    </span>
+                  </div>
+                  {selectedInvoice.status === "PARTIAL" && (
+                    <>
+                      <div className="flex justify-between items-center mt-1 pt-2 border-t border-slate-100">
+                        <span className="text-emerald-600 font-medium text-sm">
+                          Đã thanh toán
+                        </span>
+                        <span className="text-emerald-700 font-bold text-base">
+                          {formatCurrency(selectedInvoice.paidAmount || 0)}
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center pt-1 border-t border-dashed border-red-200 mt-1">
+                        <span className="text-red-500 font-bold text-sm">
+                          Còn nợ (cần thanh toán)
+                        </span>
+                        <span className="text-red-600 font-bold text-lg">
+                          {formatCurrency(
+                            selectedInvoice.totalAmount -
+                              (selectedInvoice.paidAmount || 0),
+                          )}
+                        </span>
+                      </div>
+                    </>
+                  )}
                 </div>
               </div>
             </div>

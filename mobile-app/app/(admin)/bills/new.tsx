@@ -56,6 +56,20 @@ export default function NewBill() {
     enabled: !!selectedBuilding,
   });
 
+  // Fetch Unread Rooms
+  const monthStringForQuery = `${String(date.getMonth() + 1).padStart(2, "0")}-${date.getFullYear()}`;
+  const { data: unreadRoomIds, isLoading: isLoadingUnread } = useQuery({
+    queryKey: ["rooms-unread", selectedBuilding?.id, monthStringForQuery],
+    queryFn: async () => {
+      if (!selectedBuilding) return null;
+      const res = await api.get("/readings/unread", {
+        params: { month: monthStringForQuery, buildingId: selectedBuilding.id },
+      });
+      return res.data.map((r: any) => r.roomId);
+    },
+    enabled: !!selectedBuilding,
+  });
+
   // Form handling
   const { handleSubmit, setValue } = useForm({
     defaultValues: {
@@ -652,40 +666,68 @@ export default function NewBill() {
               <ActivityIndicator color="#DA7756" />
             ) : (
               <ScrollView>
-                {rooms?.map((r: any) => (
-                  <TouchableOpacity
-                    key={r.id}
-                    onPress={() => {
-                      setSelectedRoom(r);
-                      setRoomModalVisible(false);
-                      // Reset preview
-                      setPreviewData(null);
-                    }}
-                    className="p-4 border-b border-gray-100 flex-row justify-between items-center"
-                  >
-                    <View>
-                      <Text className="text-base text-gray-800 font-medium">
-                        Phòng {r.name}
-                      </Text>
-                      <Text className="text-xs text-gray-500">
-                        Giá: {formatCurrency(r.price)}
-                      </Text>
-                    </View>
-                    {r.contracts && r.contracts.length > 0 ? (
-                      <View className="bg-green-100 px-2 py-1 rounded">
-                        <Text className="text-green-700 text-[10px] font-bold">
-                          ĐÃ THUÊ
+                {rooms?.map((r: any) => {
+                  const isRented = r.contracts && r.contracts.length > 0;
+
+                  return (
+                    <TouchableOpacity
+                      key={r.id}
+                      onPress={() => {
+                        if (!isRented) return; // Disable empty rooms
+                        setSelectedRoom(r);
+                        setRoomModalVisible(false);
+                        // Reset preview
+                        setPreviewData(null);
+                      }}
+                      className={`p-4 border-b border-gray-100 flex-row justify-between items-center ${!isRented ? "opacity-50" : ""}`}
+                      disabled={!isRented}
+                    >
+                      <View>
+                        <Text className="text-base text-gray-800 font-medium">
+                          Phòng {r.name}
+                        </Text>
+                        <Text className="text-xs text-gray-500">
+                          Giá: {formatCurrency(r.price)}
                         </Text>
                       </View>
-                    ) : (
-                      <View className="bg-gray-100 px-2 py-1 rounded">
-                        <Text className="text-gray-500 text-[10px] font-bold">
-                          TRỐNG
-                        </Text>
+                      <View className="items-end">
+                        {isRented ? (
+                          <>
+                            <View className="px-2 py-1 rounded bg-gray-100 flex-row items-center border border-gray-200 mb-1">
+                              <View className="w-1.5 h-1.5 rounded-full bg-gray-400 mr-1" />
+                              <Text className="text-gray-600 text-[9px] font-bold">
+                                ĐANG THUÊ
+                              </Text>
+                            </View>
+                            {unreadRoomIds !== null &&
+                              unreadRoomIds !== undefined &&
+                              (unreadRoomIds.includes(r.id) ? (
+                                <View className="px-2 py-1 rounded bg-amber-50 flex-row items-center border border-amber-200">
+                                  <View className="w-1.5 h-1.5 rounded-full bg-amber-500 mr-1" />
+                                  <Text className="text-amber-600 text-[9px] font-bold">
+                                    CHƯA CHỐT SỐ
+                                  </Text>
+                                </View>
+                              ) : (
+                                <View className="px-2 py-1 rounded bg-emerald-50 flex-row items-center border border-emerald-200">
+                                  <View className="w-1.5 h-1.5 rounded-full bg-emerald-500 mr-1" />
+                                  <Text className="text-emerald-600 text-[9px] font-bold">
+                                    ĐÃ CHỐT SỐ
+                                  </Text>
+                                </View>
+                              ))}
+                          </>
+                        ) : (
+                          <View className="bg-gray-100 px-2 py-1 rounded border border-gray-200">
+                            <Text className="text-gray-500 text-[10px] font-bold">
+                              TRỐNG
+                            </Text>
+                          </View>
+                        )}
                       </View>
-                    )}
-                  </TouchableOpacity>
-                ))}
+                    </TouchableOpacity>
+                  );
+                })}
               </ScrollView>
             )}
             <TouchableOpacity
