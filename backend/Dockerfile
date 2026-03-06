@@ -2,25 +2,39 @@
 FROM node:20-alpine AS base
 WORKDIR /app
 
-# Builder stage
-FROM base AS builder
+# Install all dependencies (including dev)
+FROM base AS deps
 COPY package.json package-lock.json ./
 RUN npm ci
+
+# Builder stage - build the app
+FROM base AS builder
+COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 RUN npx prisma generate
 RUN npm run build
-# Prune dev dependencies
-RUN npm prune --production
+
+# Production dependencies only
+FROM base AS prod-deps
+COPY package.json package-lock.json ./
+RUN npm ci --omit=dev
 
 # Production stage
 FROM base AS production
-COPY --from=builder /app/dist ./dist
-COPY --from=builder /app/node_modules ./node_modules
-COPY --from=builder /app/package.json ./package.json
-COPY --from=builder /app/prisma ./prisma
+ENV NODE_ENV=production
 
-# Add wait-for-it script or similar if complex dependency wait is needed, 
-# but for now we rely on restart: always in docker-compose
+# Copy production node_modules
+COPY --from=prod-deps /app/node_modules ./node_modules
+
+# Copy built application
+COPY --from=builder /app/dist ./dist
+
+# Copy prisma schema for migrations
+COPY --from=builder /app/prisma ./prisma
+COPY --from=builder /app/package.json ./package.json
+
+# Regenerate Prisma Client for Linux Alpine
+RUN npx prisma generate
 
 EXPOSE 4000
 CMD ["node", "dist/main"]
