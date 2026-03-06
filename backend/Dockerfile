@@ -37,4 +37,4 @@ COPY --from=builder /app/package.json ./package.json
 RUN npx prisma generate
 
 EXPOSE 4000
-CMD ["node", "dist/main"]
+CMD ["node", "dist/src/main"]
