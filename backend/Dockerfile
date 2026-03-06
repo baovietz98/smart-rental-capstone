@@ -7,6 +7,7 @@ FROM base AS builder
 COPY package.json package-lock.json ./
 RUN npm ci
 COPY . .
+RUN npx prisma generate
 RUN npm run build
 # Prune dev dependencies
 RUN npm prune --production
