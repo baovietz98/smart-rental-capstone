@@ -1,0 +1,197 @@
+Table Building {
+  id Int [pk, increment]
+  name String
+  address String
+  createdAt DateTime [default: `now()`]
+}
+
+Table Room {
+  id Int [pk, increment]
+  name String
+  floor Int [default: 1]
+  area Float
+  price Float
+  depositPrice Float
+  maxTenants Int [default: 2]
+  status RoomStatus [default: 'AVAILABLE']
+  gender Gender [default: 'ALL']
+  buildingId Int
+  assets Json
+}
+
+Ref: Room.buildingId > Building.id
+
+Table Tenant {
+  id Int [pk, increment]
+  fullName String
+  phone String [unique]
+  cccd String
+  info Json
+}
+
+Table Contract {
+  id Int [pk, increment]
+  startDate DateTime
+  endDate DateTime
+  deposit Float
+  paidDeposit Float [default: 0]
+  price Float
+  paymentDay Int [default: 5]
+  isActive Boolean [default: true]
+  roomId Int
+  tenantId Int
+  initialIndexes Json
+  numTenants Int [default: 1]
+}
+
+Ref: Contract.roomId > Room.id
+Ref: Contract.tenantId > Tenant.id
+
+Table Service {
+  id Int [pk, increment]
+  name String
+  price Float
+  unit String
+  type ServiceType
+  isActive Boolean [default: true]
+  calculationType CalculationType [default: 'PER_ROOM']
+}
+
+Table ServiceReading {
+  id Int [pk, increment]
+  month String
+  invoiceId Int
+  contractId Int
+  createdAt DateTime [default: `now()`]
+  isBilled Boolean [default: false]
+  newIndex Float
+  oldIndex Float
+  readingDate DateTime [default: `now()`]
+  serviceId Int
+  totalCost Float
+  unitPrice Float
+  updatedAt DateTime
+  usage Float
+  isMeterReset Boolean [default: false]
+  note String
+
+  indexes {
+    (contractId, serviceId, month) [unique]
+  }
+}
+
+Ref: ServiceReading.contractId > Contract.id [delete: cascade]
+Ref: ServiceReading.serviceId > Service.id
+
+Table Invoice {
+  id Int [pk, increment]
+  month String
+  paidAmount Float [default: 0]
+  status InvoiceStatus [default: 'DRAFT']
+  contractId Int
+  createdAt DateTime [default: `now()`]
+  debtAmount Float [default: 0]
+  discount Float [default: 0]
+  dueDate DateTime
+  extraCharge Float [default: 0]
+  lineItems Json
+  note String
+  paymentHistory Json
+  previousDebt Float [default: 0]
+  publishedAt DateTime
+  roomCharge Float
+  serviceCharge Float
+  totalAmount Float
+  updatedAt DateTime
+  accessCode String [unique]
+
+  indexes {
+    (contractId, month) [unique]
+  }
+}
+
+Ref: Invoice.contractId > Contract.id
+
+Table Transaction {
+  id Int [pk, increment]
+  code String [unique]
+  contractId Int
+  invoiceId Int
+  amount Float
+  type TransactionType
+  date DateTime [default: `now()`]
+  note String
+  createdAt DateTime [default: `now()`]
+  updatedAt DateTime
+}
+
+Ref: Transaction.contractId > Contract.id
+Ref: Transaction.invoiceId > Invoice.id
+
+Table Issue {
+  id Int [pk, increment]
+  title String
+  description String
+  status String [default: "OPEN"]
+  roomId Int
+  createdAt DateTime [default: `now()`]
+}
+
+Ref: Issue.roomId > Room.id
+
+Table User {
+  id Int [pk, increment]
+  email String [unique]
+  password String
+  name String
+  role UserRole [default: 'ADMIN']
+  isActive Boolean [default: true]
+  refreshToken String
+  resetToken String
+  resetTokenExp DateTime
+  createdAt DateTime [default: `now()`]
+  updatedAt DateTime
+}
+
+Enum RoomStatus {
+  AVAILABLE
+  RENTED
+  MAINTENANCE
+}
+
+Enum ServiceType {
+  INDEX
+  FIXED
+}
+
+Enum CalculationType {
+  PER_ROOM
+  PER_PERSON
+  PER_USAGE
+}
+
+Enum InvoiceStatus {
+  DRAFT
+  PUBLISHED
+  PARTIAL
+  PAID
+  OVERDUE
+  CANCELLED
+}
+
+Enum TransactionType {
+  DEPOSIT
+  INVOICE_PAYMENT
+  OTHER
+}
+
+Enum Gender {
+  ALL
+  MALE
+  FEMALE
+}
+
+Enum UserRole {
+  ADMIN
+  TENANT
+}
